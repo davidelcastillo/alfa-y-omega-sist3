@@ -54,6 +54,9 @@ model Producto {
   unidad  Unidad  @relation(fields: [unidadId], references: [id])
 
   stockProductos StockPorDeposito[]  // Relación con stock en depósitos
+
+  @@index([estado], name: "idx_producto_estado")
+  @@index([nombre, rubroId], name: "idx_producto_nombre_rubro")
 }
 
 //
