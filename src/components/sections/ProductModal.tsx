@@ -13,21 +13,55 @@ onClose: () => void
 onSave: (payload: Omit<Product, 'id'> & { id?: number }) => void
 }) {
 const [form, setForm] = useState<Omit<Product, 'id'>>({ descripcion: '', rubro: '', marca: '', unidad: 'Unidad', precioVenta: 0, precioLista: 0, estado: 'Activo' })
+const [nombre, setNombre] = useState('');
 
 useEffect(() => {
 if (product) {
-const { id, ...rest } = product
-setForm(rest)
+  const { id, ...rest } = product
+  setForm(rest)
+  setNombre('');
 } else {
-setForm({ descripcion: '', rubro: '', marca: '', unidad: 'Unidad', precioVenta: 0, precioLista: 0, estado: 'Activo' })
+  setForm({ descripcion: '', rubro: '', marca: '', unidad: 'Unidad', precioVenta: 0, precioLista: 0, estado: 'Activo' })
+  setNombre('');
 }
 }, [product, open])
 
-const handleSubmit = (e: React.FormEvent) => {
+/*const handleSubmit = (e: React.FormEvent) => {
 e.preventDefault()
 onSave(product ? { ...form, id: product.id } : form)
-}
+}  esto servia*/
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
+  // Map rápido desde tu form actual -> DTO del backend
+  const payload = {
+    nombre: nombre.trim() || 'Producto sin nombre',
+    descripcion: form.descripcion || '',
+    rubroId: 1,     //fijo por ahora
+    marcaId: 1,     //fijo por ahora
+    unidadId: 1,    //fijo por ahora
+    precioCompra: Number(form.precioLista) || 0,  // usamos 'precioLista' como compra
+    precioVenta: Number(form.precioVenta) || 0,
+    estado: form.estado === 'Activo',             
+  };
+
+  const res = await fetch('/api/productos', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  const json = await res.json();
+  if (!res.ok) {
+    console.error(json);
+    alert(`Error al crear: ${json?.error ?? 'desconocido'}`);
+    return;
+  }
+
+  // Opcional: avisar al padre / refrescar tabla
+  onSave?.(product ? { ...form, id: product.id } : form);
+  onClose();
+};
 
 if (!open) return null
 
@@ -43,18 +77,19 @@ if (!open) return null
 
 
 <form onSubmit={handleSubmit} className="p-8">
-<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-<Input label="Descripción *" required value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} />
-<Select label="Rubro *" required value={form.rubro} onChange={(e) => setForm({ ...form, rubro: e.target.value })}>
-<option value="">Seleccionar rubro</option>
-{rubros.map((r) => (<option key={r} value={r}>{r}</option>))}
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <Input label="Nombre *" required value={nombre} onChange={(e) => setNombre(e.target.value)}/>
+    <Input label="Descripción *" required value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} />
+    <Select label="Rubro *" required value={form.rubro} onChange={(e) => setForm({ ...form, rubro: e.target.value })}>
+      <option value="">Seleccionar rubro</option>
+      {rubros.map((r) => (<option key={r} value={r}>{r}</option>))}
 </Select>
 <Input label="Marca *" required value={form.marca} onChange={(e) => setForm({ ...form, marca: e.target.value })} />
 <Select label="Unidad *" required value={form.unidad} onChange={(e) => setForm({ ...form, unidad: e.target.value })}>
 {['Unidad','Kg','Lt','Mt','Caja','Par'].map((u) => (<option key={u} value={u}>{u}</option>))}
 </Select>
-<Input label="Precio Venta *" type="number" step="0.1" required value={form.precioVenta} onChange={(e) => setForm({ ...form, precioVenta: Number(e.target.value) })} />
-<Input label="Precio Lista *" type="number" step="0.1" required value={form.precioLista} onChange={(e) => setForm({ ...form, precioLista: Number(e.target.value) })} />
+      <Input label="Precio Venta *" type="number" step="0.1" required value={form.precioVenta} onChange={(e) => setForm({ ...form, precioVenta: Number(e.target.value || 0) })} />
+      <Input label="Precio Lista *" type="number" step="0.1" required value={form.precioLista} onChange={(e) => setForm({ ...form, precioLista: Number(e.target.value || 0) })} />
 <Select label="Estado" value={form.estado} onChange={(e) => setForm({ ...form, estado: e.target.value as Product['estado'] })}>
 <option value="Activo">Activo</option>
 <option value="Inactivo">Inactivo</option>
