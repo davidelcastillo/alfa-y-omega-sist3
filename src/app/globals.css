@@ -1,26 +1,63 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+
+/* Tokens (Tailwind v4, CSS-first) */
+@theme {
+--color-primary-pink: #FF407D;
+--color-light-pink: #FFCAD4;
+--color-primary-blue: #40679E;
+--color-dark-blue: #1B3C73;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+/* Utilidades personalizadas del diseño original */
+.gradient-bg {
+background: linear-gradient(135deg, var(--color-light-pink) 0%, var(--color-primary-pink) 50%, var(--color-primary-blue) 100%);
+}
+.glass-effect {
+background: rgba(255, 255, 255, 0.95);
+backdrop-filter: blur(10px);
+border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.card-hover { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+.card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(255, 64, 125, 0.15); }
+
+
+.btn-primary {
+background: linear-gradient(135deg, var(--color-primary-pink) 0%, var(--color-light-pink) 100%);
+transition: all 0.3s ease;
+box-shadow: 0 4px 15px rgba(255, 64, 125, 0.2);
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(255, 64, 125, 0.3); }
+
+
+.input-focus:focus {
+border-color: var(--color-primary-pink) !important;
+box-shadow: 0 0 0 3px rgba(255, 64, 125, 0.1);
+transform: scale(1.02);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-}
+.status-active { background: linear-gradient(135deg, #10B981 0%, #34D399 100%); }
+.status-inactive { background: linear-gradient(135deg, #EF4444 0%, #F87171 100%); }
+
+
+.menu-item { transition: all 0.3s ease; }
+.menu-item:hover { background: linear-gradient(135deg, var(--color-primary-pink) 0%, var(--color-light-pink) 100%); transform: translateX(8px); }
+
+
+.hamburger-line { transition: all 0.3s ease; }
+.hamburger-active .hamburger-line:nth-child(1) { transform: rotate(45deg) translate(6px, 6px); }
+.hamburger-active .hamburger-line:nth-child(2) { opacity: 0; }
+.hamburger-active .hamburger-line:nth-child(3) { transform: rotate(-45deg) translate(6px, -6px); }
+
+
+.slide-in { animation: slideIn 0.3s ease-out; }
+@keyframes slideIn { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+
+.fade-in { animation: fadeIn 0.5s ease-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+
+.logo-glow { filter: drop-shadow(0 0 10px rgba(255, 64, 125, 0.3)); }
