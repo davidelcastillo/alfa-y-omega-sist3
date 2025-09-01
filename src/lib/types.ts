@@ -1,13 +1,15 @@
-export type Estado = 'Activo' | 'Inactivo'
-
-
-export type Product = {
-id: number
-descripcion: string
-rubro: 'Electrónicos' | 'Hogar' | 'Deportes' | 'Ropa' | string
-marca: string
-unidad: 'Unidad' | 'Kg' | 'Lt' | 'Mt' | 'Caja' | 'Par' | string
-precioVenta: number
-precioLista: number
-estado: Estado
+export type UIProduct = {
+  id: number
+  nombre: string            
+  descripcion?: string
+  rubro: string
+  marca: string
+  unidad: string
+  precioVenta: number
+  precioLista: number        // mapeamos precioCompra -> precioLista para la tabla
+  estado: 'Activo' | 'Inactivo'
+    // IDs para filtrar client-side sin otra llamada
+  rubroId: number
+  unidadId: number
+  estadoBool: boolean
 }
