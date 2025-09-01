@@ -1,0 +1,107 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Rubro {
+  id        Int        @id @default(autoincrement())
+  nombre    String
+  productos Producto[]
+}
+
+model Unidad {
+  id        Int        @id @default(autoincrement())
+  nombre    String
+  productos Producto[]
+}
+
+model Marca {
+  id        Int        @id @default(autoincrement())
+  nombre    String
+  productos Producto[]
+}
+
+model Producto {
+  id             Int                @id @default(autoincrement())
+  nombre         String
+  descripcion    String?
+  rubroId        Int
+  marcaId        Int
+  unidadId       Int
+  precioCompra   Float
+  precioVenta    Float
+  estado         Boolean            @default(true)
+  marca          Marca              @relation(fields: [marcaId], references: [id])
+  rubro          Rubro              @relation(fields: [rubroId], references: [id])
+  unidad         Unidad             @relation(fields: [unidadId], references: [id])
+  stockProductos StockPorDeposito[]
+
+  @@index([estado], map: "idx_producto_estado")
+  @@index([nombre, rubroId], map: "idx_producto_nombre_rubro")
+}
+
+model Deposito {
+  id          Int                @id @default(autoincrement())
+  nombre      String
+  ubicacion   String
+  tipo        String
+  capacidad   Int?
+  estado      Boolean            @default(true)
+  movimientos MovimientoStock[]
+  stock       StockPorDeposito[]
+}
+
+model StockPorDeposito {
+  id                 Int                 @id @default(autoincrement())
+  productoId         Int
+  depositoId         Int
+  stockActual        Int                 @default(0)
+  stockMinimo        Int                 @default(0)
+  stockMaximo        Int?
+  capacidadMaxima    Int?
+  detallesMovimiento DetalleMovimiento[]
+  deposito           Deposito            @relation(fields: [depositoId], references: [id])
+  producto           Producto            @relation(fields: [productoId], references: [id])
+
+  @@unique([productoId, depositoId])
+}
+
+model MovimientoStock {
+  id                Int                 @id @default(autoincrement())
+  depositoId        Int
+  tipoMovimientoId  Int
+  tipoComprobanteId Int
+  fecha             DateTime            @default(now())
+  hora              DateTime            @default(now())
+  detalles          DetalleMovimiento[]
+  deposito          Deposito            @relation(fields: [depositoId], references: [id])
+  tipoComprobante   TipoComprobante     @relation(fields: [tipoComprobanteId], references: [id])
+  tipoMovimiento    TipoMovimiento      @relation(fields: [tipoMovimientoId], references: [id])
+}
+
+model DetalleMovimiento {
+  id           Int              @id @default(autoincrement())
+  movimientoId Int
+  stockId      Int
+  cantidad     Int
+  movimiento   MovimientoStock  @relation(fields: [movimientoId], references: [id])
+  stock        StockPorDeposito @relation(fields: [stockId], references: [id])
+}
+
+model TipoComprobante {
+  id          Int               @id @default(autoincrement())
+  nombre      String
+  movimientos MovimientoStock[]
+}
+
+model TipoMovimiento {
+  id            Int               @id @default(autoincrement())
+  nombre        String
+  ingresoEgreso Boolean
+  movimientos   MovimientoStock[]
+}
