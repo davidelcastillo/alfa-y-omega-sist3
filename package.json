@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "cross-env NODE_OPTIONS=--dns-result-order=ipv4first next dev --turbopack",
+    "dev": "set NODE_OPTIONS=--dns-result-order=ipv4first && next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint"
@@ -28,6 +28,10 @@
     "eslint-config-next": "15.5.2",
     "prisma": "^6.15.0",
     "tailwindcss": "^4.1.12",
+    "tsx": "^4.20.5",
     "typescript": "^5"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seeds/seed.ts"
   }
 }
