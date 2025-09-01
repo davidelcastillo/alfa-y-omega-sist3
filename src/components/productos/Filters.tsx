@@ -1,45 +1,121 @@
 'use client'
-import Input from '@/components/ui/Input'
-import Select from '@/components/ui/Select'
-import Button from '@/components/ui/Button'
+import { useEffect, useState } from 'react'
 
-export type FiltersState = {
+type Catalogo = { id: number; nombre: string }
+export type ProductFilters = {
   search: string
-  rubro: string
-  estado: string
+  rubroId: number | ''
+  unidadId: number | ''
+  estado: 'Activo' | 'Inactivo' | ''
 }
 
-export default function Filters({ state, rubros, estados, onChange, onApply }: {
-  state: FiltersState
-  rubros: readonly string[]
-  estados: readonly string[]
-  onChange: (patch: Partial<FiltersState>) => void
-  onApply: () => void
-}) {  return (
+const DEFAULTS: ProductFilters = { search: '', rubroId: '', unidadId: '', estado: '' }
+
+export default function Filters({
+  rubros,
+  unidades,
+  value = DEFAULTS,
+  onChange,
+  onApply,
+}: {
+  rubros: Catalogo[]
+  unidades: Catalogo[]
+  value?: ProductFilters
+  onChange: (f: ProductFilters) => void
+  onApply?: () => void
+}) {
+  const [filters, setFilters] = useState<ProductFilters>(value)
+
+  useEffect(() => { setFilters(value) }, [value])
+
+  function set<K extends keyof ProductFilters>(key: K, val: ProductFilters[K]) {
+    const next = { ...filters, [key]: val }
+    setFilters(next)
+    onChange(next)
+  }
+
+  function reset() {
+    setFilters(DEFAULTS)
+    onChange(DEFAULTS)
+  }
+
+  return (
     <div className="glass-effect rounded-2xl p-8 mb-8 card-hover">
       <h3 className="text-xl font-semibold text-dark-blue mb-6">Filtros de Búsqueda</h3>
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Input
-          label="Buscar producto"
-          placeholder="Descripción, marca..."
-          value={state.search}
-          onChange={(e) => onChange({ search: e.target.value })}
-        />
-        <Select label="Rubro" value={state.rubro} onChange={(e) => onChange({ rubro: e.target.value })}>
-          <option value="">Todos los rubros</option>
-          {rubros.map((r) => (
-            <option key={r} value={r}>{r}</option>
-          ))}
-        </Select>
-        <Select label="Estado" value={state.estado} onChange={(e) => onChange({ estado: e.target.value })}>
-          <option value="">Todos</option>
-          {estados.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </Select>
-        <div className="flex items-end">
-          <Button onClick={onApply} className="w-full bg-gradient-to-r from-primary-blue to-dark-blue text-white">Filtrar Resultados</Button>
+        {/* Buscar */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-3">Buscar producto</label>
+          <input
+            type="text"
+            placeholder="Descripción, marca..."
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl input-focus transition-all"
+            value={filters.search}
+            onChange={(e) => set('search', e.target.value)}
+          />
         </div>
+
+        {/* Rubro */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-3">Rubro</label>
+          <select
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl input-focus transition-all"
+            value={filters.rubroId}
+            onChange={(e) => set('rubroId', e.target.value ? Number(e.target.value) : '')}
+          >
+            <option value="">Todos los rubros</option>
+            {rubros.map((r) => (
+              <option key={r.id} value={r.id}>{r.nombre}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Unidad (nuevo) */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-3">Unidad</label>
+          <select
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl input-focus transition-all"
+            value={filters.unidadId}
+            onChange={(e) => set('unidadId', e.target.value ? Number(e.target.value) : '')}
+          >
+            <option value="">Todas</option>
+            {unidades.map((u) => (
+              <option key={u.id} value={u.id}>{u.nombre}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Estado */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-3">Estado</label>
+          <select
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl input-focus transition-all"
+            value={filters.estado}
+            onChange={(e) => set('estado', e.target.value as ProductFilters['estado'])}
+          >
+            <option value="">Todos</option>
+            <option value="Activo">Activo</option>
+            <option value="Inactivo">Inactivo</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-3 mt-6">
+        <button
+          type="button"
+          onClick={reset}
+          className="px-6 py-3 border-2 border-gray-200 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+        >
+          Limpiar
+        </button>
+        <button
+          type="button"
+          onClick={onApply}
+          className="px-6 py-3 bg-gradient-to-r from-primary-blue to-dark-blue text-white rounded-xl font-medium"
+        >
+          Aplicar
+        </button>
       </div>
     </div>
   )
