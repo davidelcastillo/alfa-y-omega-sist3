@@ -23,11 +23,11 @@ export default function HomePage() {
       </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <Link href="/productos" className="glass-effect rounded-2xl p-6 card-hover">
+          <Link href="/Productos" className="glass-effect rounded-2xl p-6 card-hover">
             <h2 className="text-2xl font-semibold mb-2">Productos</h2>
             <p className="text-gray-600">Gestión de catálogo, precios y estado.</p>
           </Link>
-          <Link href="/depositos" className="glass-effect rounded-2xl p-6 card-hover">
+          <Link href="/Depositos" className="glass-effect rounded-2xl p-6 card-hover">
             <h2 className="text-2xl font-semibold mb-2">Depósitos</h2>
             <p className="text-gray-600">Administración de depósitos y capacidades.</p>
           </Link>
