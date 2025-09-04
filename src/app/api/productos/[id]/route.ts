@@ -6,9 +6,12 @@ import { z } from "zod";
 const productoSchema = z.object({
   nombre: z.string().min(1),
   descripcion: z.string().optional(),
+  rubroId: z.number().int().positive(),
+  marcaId: z.number().int().positive(),
+  unidadId: z.number().int().positive(),
   precioCompra: z.number().positive(),
   precioVenta: z.number().positive(),
-  estado: z.boolean(),
+
 });
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
