@@ -3,7 +3,7 @@ import type { CreateProductoDTO } from '@/app/api/productos/schema';
 import { Prisma } from '@/generated/prisma'; // o import { Prisma } from '@prisma/client'
 
 export async function createProducto(data: CreateProductoDTO) {
-  // 1) Validar FK existen
+  // 1) Validar FK existen y reglas de negocio
   const [rubro, marca, unidad] = await Promise.all([
     prisma.rubro.findUnique({ where: { id: data.rubroId } }),
     prisma.marca.findUnique({ where: { id: data.marcaId } }),
@@ -13,8 +13,21 @@ export async function createProducto(data: CreateProductoDTO) {
   if (!rubro)  throw new Error('Rubro no existe');
   if (!marca)  throw new Error('Marca no existe');
   if (!unidad) throw new Error('Unidad no existe');
+  if (data.precioVenta < data.precioCompra) {
+    throw new Error('Precio de venta no puede ser menor al precio de compra');
+  }
+  if (data.precioCompra < 0 || data.precioVenta < 0) {
+    throw new Error('Precios no pueden ser negativos');
+  }
+  if (!data.nombre || !data.nombre.trim()) {
+    throw new Error('Nombre es requerido');
+  }
+  if (data.descripcion && !data.descripcion.trim()) {
+    data.descripcion = undefined;
+  }
 
-  // 2) Crear producto (y opcionalmente stocks por depósito)
+
+  // 2) Crear producto 
   const result = await prisma.$transaction(async (tx) => {
     const producto = await tx.producto.create({
       data: {
@@ -46,7 +59,7 @@ export type BuscarProductosParams = {
   sort?: 'nombre' | 'precioVenta' | 'id' | 'rubroId' | 'marcaId' | 'unidadId' | 'estado';
   order?: 'asc' | 'desc';
   take?: number;
-  cursor?: number; // id es Int?
+  cursor?: number; // ID del último ítem de la página anterior es de tipo number
 };
 
 export async function buscarProductos(params: BuscarProductosParams) {
