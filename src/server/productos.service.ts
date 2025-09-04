@@ -10,6 +10,7 @@ export async function createProducto(data: CreateProductoDTO) {
     prisma.unidad.findUnique({ where: { id: data.unidadId } }),
   ]);
 
+  
   if (!rubro)  throw new Error('Rubro no existe');
   if (!marca)  throw new Error('Marca no existe');
   if (!unidad) throw new Error('Unidad no existe');
