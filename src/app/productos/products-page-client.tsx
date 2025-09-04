@@ -6,16 +6,16 @@ import Filters, { type ProductFilters } from '@/components/productos/Filters'
 import ProductsTable from '@/components/productos/ProductsTable'
 import ProductModal from '@/components/productos/ProductModal'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { softDeleteProducto } from '@/lib/api'
 
 import type { UIProduct } from '@/lib/types'
 import type { Catalogo } from '@/server/productos.queries'
-import type { Product, SortKey, SortOrder } from '@/lib/types'
+import type { Product, SortKey, SortOrder } from '@/lib/types' //este error hay que arreglar
 
 const DEFAULT_FILTERS: ProductFilters = { search: '', rubroId: '', unidadId: '', estado: '' }
 
 const sortProducts = (products: UIProduct[], sortKey: SortKey, sortOrder: SortOrder) => {
   if (!sortKey || !sortOrder) return products
-  
   return [...products].sort((a, b) => {
     const aValue = a[sortKey]
     const bValue = b[sortKey]
@@ -23,14 +23,11 @@ const sortProducts = (products: UIProduct[], sortKey: SortKey, sortOrder: SortOr
     if (typeof aValue === 'string' && typeof bValue === 'string') {
       return sortOrder === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue)
     }
-    
     if (typeof aValue === 'number' && typeof bValue === 'number') {
       return sortOrder === 'asc' ? aValue - bValue : bValue - aValue
     }
-
-    if (aValue === null || aValue === undefined) return sortOrder === 'asc' ? 1 : -1
-    if (bValue === null || bValue === undefined) return sortOrder === 'asc' ? -1 : 1
-    
+    if (aValue == null) return sortOrder === 'asc' ? 1 : -1
+    if (bValue == null) return sortOrder === 'asc' ? -1 : 1
     return 0
   })
 }
@@ -51,7 +48,14 @@ export default function ProductsPageClient({
   const [filters, setFilters] = useState<ProductFilters>(DEFAULT_FILTERS)
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Product | null>(null)
-  
+  const [deletingId, setDeletingId] = useState<number | null>(null)
+
+  // Sync con server cuando cambia initialProducts (después de router.refresh())
+  useEffect(() => {
+    setProducts(initialProducts)
+  }, [initialProducts])
+
+  // --- Orden ---
   const [sortState, setSortState] = useState<{ key: SortKey; order: SortOrder }>(() => {
     const sortKey = searchParams.get('orderBy') as SortKey
     const sortOrder = searchParams.get('order') as SortOrder
@@ -75,50 +79,85 @@ export default function ProductsPageClient({
       return { key, order: newOrder }
     })
   }, [])
-  
-  useEffect(() => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (sortState.key && sortState.order) {
-      params.set('orderBy', sortState.key);
-      params.set('order', sortState.order);
-    } else {
-      params.delete('orderBy');
-      params.delete('order');
-    }
-    router.push(`?${params.toString()}`, { scroll: false });
-  }, [sortState, router, searchParams]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (sortState.key && sortState.order) {
+      params.set('orderBy', sortState.key)
+      params.set('order', sortState.order)
+    } else {
+      params.delete('orderBy')
+      params.delete('order')
+    }
+    router.push(`?${params.toString()}`, { scroll: false })
+  }, [sortState, router, searchParams])
+
+  // --- Filtro + Orden ---
   const filteredAndSorted = useMemo(() => {
     const q = filters.search.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
-    
     const filtered = products.filter((p) => {
-      const searchable = [p.nombre, p.marca, p.rubro, p.unidad, p.descripcion ?? ''].join(' ').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
+      const searchable = [p.nombre, p.marca, p.rubro, p.unidad, p.descripcion ?? '']
+        .join(' ')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/\p{Diacritic}/gu, '')
       const bySearch = !q || searchable.includes(q)
-      const byRubro = !filters.rubroId || p.rubroId === Number(filters.rubroId)
+      const byRubro  = !filters.rubroId  || p.rubroId  === Number(filters.rubroId)
       const byUnidad = !filters.unidadId || p.unidadId === Number(filters.unidadId)
-      const byEstado = !filters.estado || (filters.estado === 'Activo' && p.estadoBool) || (filters.estado === 'Inactivo' && !p.estadoBool)
+      const byEstado = !filters.estado
+        || (filters.estado === 'Activo' && p.estadoBool)
+        || (filters.estado === 'Inactivo' && !p.estadoBool)
       return bySearch && byRubro && byUnidad && byEstado
     })
-    
     return sortProducts(filtered, sortState.key, sortState.order)
   }, [products, filters, sortState])
-  
+
+  // --- Acciones ---
   const openNew = () => { setEditing(null); setModalOpen(true) }
+
   const onEdit = (id: number) => {
     const p = products.find(x => x.id === id)
     const asProduct: Product | null = p ? {
-      id: p.id, nombre: p.nombre, descripcion: p.descripcion, rubro: p.rubro,
-      marca: p.marca, unidad: p.unidad, precioVenta: p.precioVenta,
-      precioLista: p.precioLista, estado: p.estado,
+      id: p.id,
+      nombre: p.nombre,
+      descripcion: p.descripcion,
+      rubro: p.rubro,
+      marca: p.marca,
+      unidad: p.unidad,
+      precioVenta: p.precioVenta,
+      precioLista: p.precioLista,
+      estado: p.estado,
     } : null
     setEditing(asProduct)
     setModalOpen(true)
   }
-  const onDelete = (id: number) => setProducts(prev => prev.filter(p => p.id !== id))
-  const onSave = () => { setModalOpen(false); router.refresh() }
+
+  const onSave = () => {
+    setModalOpen(false)
+    router.refresh() // trae initialProducts frescos -> useEffect sync arriba
+  }
+
+  const onDelete = async (id: number) => {
+    if (!confirm('¿Desea dejar inactivo este producto?')) return
+    try {
+      setDeletingId(id)
+      await softDeleteProducto(id) // PUT /api/productos/:id/eliminar
+      // Optimista en UI:
+      setProducts(prev =>
+        prev.map(p => (p.id === id ? { ...p, estado: 'Inactivo', estadoBool: false } : p))
+      )
+      // Si querés revalidar con server:
+      // router.refresh()
+    } catch (e: any) {
+      alert(e?.message ?? 'No se pudo eliminar')
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   return (
     <>
+      {/* Breadcrumb */}
       <div className="flex items-center space-x-2 text-sm text-gray-600 mb-6">
         <span>Inicio</span>
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -127,6 +166,7 @@ export default function ProductsPageClient({
         <span className="text-primary-pink font-medium">Productos</span>
       </div>
 
+      {/* Action Bar */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 space-y-4 lg:space-y-0">
         <div>
           <h2 className="text-4xl font-bold bg-gradient-to-r from-primary-pink to-primary-blue bg-clip-text text-transparent mb-2">
@@ -145,27 +185,29 @@ export default function ProductsPageClient({
         </button>
       </div>
 
+      {/* Stats */}
       <StatsCards products={products as unknown as Product[]} />
 
-      {
-<Filters
-  rubros={rubros}
-  unidades={unidades}
-  value={filters}
-  onChange={setFilters}
-  onApply={() => {}}
-/>
-}
+      {/* Filtros */}
+      <Filters
+        rubros={rubros}
+        unidades={unidades}
+        value={filters}
+        onChange={setFilters}
+        onApply={() => {}}
+      />
 
-      
+      {/* Tabla */}
       <ProductsTable
-        products={filteredAndSorted as unknown as Product[]}
+        products={filteredAndSorted}   // 👈 acá estaba el error: usar la variable correcta
         onEdit={onEdit}
         onDelete={onDelete}
         onSort={handleSort}
         sortState={sortState}
+        // si querés deshabilitar botón al borrar, podés pasar deletingId y usarlo en la fila
       />
-      
+
+      {/* Footer / Paginación básica */}
       <div className="flex flex-col md:flex-row justify-between items-center mt-8 gap-4">
         <p className="text-gray-600 font-medium">
           Mostrando <span className="font-bold text-primary-pink">{filteredAndSorted.length}</span> de{' '}
@@ -178,6 +220,7 @@ export default function ProductsPageClient({
         </div>
       </div>
 
+      {/* Modal */}
       <ProductModal
         open={modalOpen}
         product={editing}
