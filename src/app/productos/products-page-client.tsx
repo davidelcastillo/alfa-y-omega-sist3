@@ -1,16 +1,39 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect, useCallback } from 'react'
 import StatsCards from '@/components/productos/StatsCards'
 import Filters, { type ProductFilters } from '@/components/productos/Filters'
 import ProductsTable from '@/components/productos/ProductsTable'
 import ProductModal from '@/components/productos/ProductModal'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 import type { UIProduct } from '@/lib/types'
 import type { Catalogo } from '@/server/productos.queries'
-import type { Product } from '@/lib/types' // para el modal
+import type { Product, SortKey, SortOrder } from '@/lib/types'
 
 const DEFAULT_FILTERS: ProductFilters = { search: '', rubroId: '', unidadId: '', estado: '' }
+
+const sortProducts = (products: UIProduct[], sortKey: SortKey, sortOrder: SortOrder) => {
+  if (!sortKey || !sortOrder) return products
+  
+  return [...products].sort((a, b) => {
+    const aValue = a[sortKey]
+    const bValue = b[sortKey]
+
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+      return sortOrder === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue)
+    }
+    
+    if (typeof aValue === 'number' && typeof bValue === 'number') {
+      return sortOrder === 'asc' ? aValue - bValue : bValue - aValue
+    }
+
+    if (aValue === null || aValue === undefined) return sortOrder === 'asc' ? 1 : -1
+    if (bValue === null || bValue === undefined) return sortOrder === 'asc' ? -1 : 1
+    
+    return 0
+  })
+}
 
 export default function ProductsPageClient({
   initialProducts,
@@ -21,128 +44,81 @@ export default function ProductsPageClient({
   rubros: Catalogo[]
   unidades: Catalogo[]
 }) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
 
-    const [products, setProducts] = useState<UIProduct[]>(initialProducts)
-
-const [filters, setFilters] = useState<ProductFilters>({
-  search: '',
-  rubroId: '',
-  unidadId: '',
-  estado: '',
-})
+  const [products, setProducts] = useState<UIProduct[]>(initialProducts)
+  const [filters, setFilters] = useState<ProductFilters>(DEFAULT_FILTERS)
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Product | null>(null)
+  
+  const [sortState, setSortState] = useState<{ key: SortKey; order: SortOrder }>(() => {
+    const sortKey = searchParams.get('orderBy') as SortKey
+    const sortOrder = searchParams.get('order') as SortOrder
+    return { key: sortKey, order: sortOrder }
+  })
 
-  // Filtrado client-side sobre lo traído de DB
-/*  const filtered = useMemo(() => {
-    return products.filter((p) => {
-      const q = filters.search.toLowerCase()
-      const bySearch = !q || (p.descripcion + ' ' + p.marca).toLowerCase().includes(q)
-      const byRubro  = !filters.rubroId  || p.rubroId  === filters.rubroId
-      const byUnidad = !filters.unidadId || p.unidadId === filters.unidadId
-      const byEstado = !filters.estado
-        || (filters.estado === 'Activo' && p.estadoBool)
-        || (filters.estado === 'Inactivo' && !p.estadoBool)
+  useEffect(() => {
+    const sortKey = searchParams.get('orderBy') as SortKey
+    const sortOrder = searchParams.get('order') as SortOrder
+    setSortState({ key: sortKey, order: sortOrder })
+  }, [searchParams])
+
+  const handleSort = useCallback((key: SortKey) => {
+    setSortState(prev => {
+      let newOrder: SortOrder
+      if (prev.key === key) {
+        newOrder = prev.order === 'asc' ? 'desc' : (prev.order === 'desc' ? null : 'asc')
+      } else {
+        newOrder = 'asc'
+      }
+      return { key, order: newOrder }
+    })
+  }, [])
+  
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (sortState.key && sortState.order) {
+      params.set('orderBy', sortState.key);
+      params.set('order', sortState.order);
+    } else {
+      params.delete('orderBy');
+      params.delete('order');
+    }
+    router.push(`?${params.toString()}`, { scroll: false });
+  }, [sortState, router, searchParams]);
+
+  const filteredAndSorted = useMemo(() => {
+    const q = filters.search.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
+    
+    const filtered = products.filter((p) => {
+      const searchable = [p.nombre, p.marca, p.rubro, p.unidad, p.descripcion ?? ''].join(' ').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
+      const bySearch = !q || searchable.includes(q)
+      const byRubro = !filters.rubroId || p.rubroId === Number(filters.rubroId)
+      const byUnidad = !filters.unidadId || p.unidadId === Number(filters.unidadId)
+      const byEstado = !filters.estado || (filters.estado === 'Activo' && p.estadoBool) || (filters.estado === 'Inactivo' && !p.estadoBool)
       return bySearch && byRubro && byUnidad && byEstado
     })
-  }, [products, filters])*/
-  const filtered = useMemo(() => {
-  // normaliza: minusculas + saca acentos
-  const norm = (s: string) =>
-    s.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
-
-  const q = norm(filters.search.trim());
-
-  return products.filter((p) => {
-    const searchable = norm(
-      [p.nombre, p.marca, p.rubro, p.unidad, p.descripcion ?? ''].join(' ')
-    );
-
-    const bySearch = !q || searchable.includes(q);
-    const byRubro  = !filters.rubroId  || p.rubroId  === filters.rubroId;
-    const byUnidad = !filters.unidadId || p.unidadId === filters.unidadId;
-    const byEstado = !filters.estado
-      || (filters.estado === 'Activo' && p.estadoBool)
-      || (filters.estado === 'Inactivo' && !p.estadoBool);
-
-    return bySearch && byRubro && byUnidad && byEstado;
-  });
-}, [products, filters]);
-
+    
+    return sortProducts(filtered, sortState.key, sortState.order)
+  }, [products, filters, sortState])
+  
   const openNew = () => { setEditing(null); setModalOpen(true) }
-
   const onEdit = (id: number) => {
-    // UIProduct -> Product (solo campos que usa el modal)
     const p = products.find(x => x.id === id)
     const asProduct: Product | null = p ? {
-      id: p.id,
-      nombre: p.nombre,
-      descripcion: p.descripcion,
-      rubro: p.rubro,
-      marca: p.marca,
-      unidad: p.unidad,
-      precioVenta: p.precioVenta,
-      precioLista: p.precioLista,
-      estado: p.estado,
+      id: p.id, nombre: p.nombre, descripcion: p.descripcion, rubro: p.rubro,
+      marca: p.marca, unidad: p.unidad, precioVenta: p.precioVenta,
+      precioLista: p.precioLista, estado: p.estado,
     } : null
     setEditing(asProduct)
     setModalOpen(true)
   }
-
   const onDelete = (id: number) => setProducts(prev => prev.filter(p => p.id !== id))
-
-  // 🔔 Nota: hoy el modal hace POST a /api/productos; acá seguimos actualizando la UI local como antes.
-  // Si querés sincronizar 100% con DB después del POST, podés reemplazar por router.refresh() (server re-fetch).
-  const onSave = (payload: Omit<Product, 'id'> & { id?: number }) => {
-    setProducts(prev => {
-      if (payload.id) {
-        // edición local
-        return prev.map(p =>
-          p.id === payload.id
-            ? {
-                ...p,
-                nombre: payload.nombre,
-                descripcion: payload.descripcion,
-                rubro: payload.rubro,
-                marca: payload.marca,
-                unidad: payload.unidad,
-                precioVenta: payload.precioVenta,
-                precioLista: payload.precioLista,
-                estado: payload.estado,
-                rubroId: rubros.find(r => r.nombre === payload.rubro)?.id ?? p.rubroId,
-                unidadId: unidades.find(u => u.nombre === payload.unidad)?.id ?? p.unidadId,
-                estadoBool: payload.estado === 'Activo',
-              }
-            : p
-        )
-      } else {
-        // alta local
-        const newId = Math.max(0, ...prev.map(p => p.id)) + 1
-        return [
-          ...prev,
-          {
-            id: newId,
-            nombre: payload.nombre,
-            descripcion: payload.descripcion,
-            rubro: payload.rubro,
-            marca: payload.marca,
-            unidad: payload.unidad,
-            precioVenta: payload.precioVenta,
-            precioLista: payload.precioLista,
-            estado: payload.estado,
-            rubroId: rubros.find(r => r.nombre === payload.rubro)?.id ?? 0,
-            unidadId: unidades.find(u => u.nombre === payload.unidad)?.id ?? 0,
-            estadoBool: payload.estado === 'Activo',
-          },
-        ]
-      }
-    })
-    setModalOpen(false)
-  }
+  const onSave = () => { setModalOpen(false); router.refresh() }
 
   return (
     <>
-      {/* Breadcrumb */}
       <div className="flex items-center space-x-2 text-sm text-gray-600 mb-6">
         <span>Inicio</span>
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -151,7 +127,6 @@ const [filters, setFilters] = useState<ProductFilters>({
         <span className="text-primary-pink font-medium">Productos</span>
       </div>
 
-      {/* Action Bar */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 space-y-4 lg:space-y-0">
         <div>
           <h2 className="text-4xl font-bold bg-gradient-to-r from-primary-pink to-primary-blue bg-clip-text text-transparent mb-2">
@@ -159,7 +134,6 @@ const [filters, setFilters] = useState<ProductFilters>({
           </h2>
           <p className="text-gray-600 text-lg">Administra tu catálogo de productos de manera eficiente</p>
         </div>
-
         <button
           onClick={openNew}
           className="btn-primary text-white px-8 py-4 rounded-xl font-semibold flex items-center gap-3 text-lg"
@@ -171,29 +145,30 @@ const [filters, setFilters] = useState<ProductFilters>({
         </button>
       </div>
 
-      {/* Stats */}
       <StatsCards products={products as unknown as Product[]} />
 
-      {/* Filtros (con catálogos reales) */}
-      <Filters
-        rubros={rubros}
-        unidades={unidades}
-        value={filters}
-        onChange={setFilters}
-        onApply={() => { /* opcional; el filtrado ya es en vivo */ }}
-      />
+      {
+<Filters
+  rubros={rubros}
+  unidades={unidades}
+  value={filters}
+  onChange={setFilters}
+  onApply={() => {}}
+/>
+}
 
-      {/* Tabla */}
+      
       <ProductsTable
-        products={filtered as unknown as Product[]}
+        products={filteredAndSorted as unknown as Product[]}
         onEdit={onEdit}
         onDelete={onDelete}
+        onSort={handleSort}
+        sortState={sortState}
       />
-
-      {/* Paginación placeholder */}
+      
       <div className="flex flex-col md:flex-row justify-between items-center mt-8 gap-4">
         <p className="text-gray-600 font-medium">
-          Mostrando <span className="font-bold text-primary-pink">{filtered.length}</span> de{' '}
+          Mostrando <span className="font-bold text-primary-pink">{filteredAndSorted.length}</span> de{' '}
           <span className="font-bold text-primary-pink">{products.length}</span> productos
         </p>
         <div className="flex gap-2">
@@ -203,11 +178,11 @@ const [filters, setFilters] = useState<ProductFilters>({
         </div>
       </div>
 
-      {/* Modal (le pasamos solo los nombres de rubros para mantener su API actual) */}
       <ProductModal
         open={modalOpen}
         product={editing}
         rubros={rubros.map(r => r.nombre)}
+        unidades={unidades.map(u => u.nombre)}
         onClose={() => setModalOpen(false)}
         onSave={onSave}
       />
