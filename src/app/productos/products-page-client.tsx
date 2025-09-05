@@ -7,6 +7,19 @@ import ProductsTable from '@/components/productos/ProductsTable'
 import ProductModal from '@/components/productos/ProductModal'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { softDeleteProducto } from '@/lib/api'
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog"
+
+
 
 import type { UIProduct } from '@/lib/types'
 import type { Catalogo } from '@/server/productos.queries'
@@ -50,6 +63,11 @@ export default function ProductsPageClient({
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Product | null>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [modalId, setModalId] = useState<number | null>(null)
+  const [showConfirmEdit, setShowConfirmEdit] = useState(false);
+  const [productToEdit, setProductToEdit] = useState<Product | null>(null);
+
+
 
   // 👉 estado de paginación
   const [page, setPage] = useState(1)
@@ -143,10 +161,11 @@ export default function ProductsPageClient({
   const onEdit = (id: number) => {
     const p = products.find(x => x.id === id);
     if (p) {
-      setEditing(p as unknown as Product);
+      setProductToEdit(p); // guardamos qué producto se quiere editar
+      setShowConfirmEdit(true); // activamos el modal de confirmación
     }
-    setModalOpen(true);
   };
+
 
   //  Modificación clave: Esta función maneja tanto la creación como la actualización.
   const onSave = async (payload: { id?: number; [key: string]: any }) => {
@@ -176,7 +195,6 @@ export default function ProductsPageClient({
   };
 
   const onDelete = async (id: number) => {
-    if (!confirm('¿Desea dejar inactivo este producto?')) return
     try {
       setDeletingId(id)
       await softDeleteProducto(id) // PUT /api/productos/:id/eliminar
@@ -189,6 +207,24 @@ export default function ProductsPageClient({
       alert(e?.message ?? 'No se pudo eliminar')
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  const confirmarEliminacion = async () => {
+    if (modalId === null) return
+    try {
+      setDeletingId(modalId)
+      await softDeleteProducto(modalId)
+      setProducts(prev =>
+        prev.map(p =>
+          p.id === modalId ? { ...p, estado: "Inactivo", estadoBool: false } : p
+        )
+      )
+    } catch (e: any) {
+      alert(e?.message ?? "No se pudo eliminar")
+    } finally {
+      setDeletingId(null)
+      setModalId(null)
     }
   }
 
@@ -241,10 +277,62 @@ export default function ProductsPageClient({
         //products={filteredAndSorted}
         products={pageItems}
         onEdit={onEdit}
-        onDelete={onDelete}
+        onDelete={(id) => setModalId(id)}
         onSort={handleSort}
         sortState={sortState}
       />
+
+      {/* Modal de confirmacion de eliminar*/}
+      <AlertDialog open={modalId !== null} onOpenChange={() => setModalId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Confirmar acción?</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Está seguro que desea dejar inactivo este producto?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="px-6 py-3 border-2 border-gray-200 rounded-xl hover:bg-gray-50 transition-colors font-medium">Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+            onClick={confirmarEliminacion}
+            className="px-6 py-3 bg-gradient-to-r from-primary-blue to-dark-blue text-white rounded-xl font-medium"
+            >
+              Aceptar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Modal de confirmacion edicion */}
+      <AlertDialog open={showConfirmEdit} onOpenChange={setShowConfirmEdit}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Editar Producto?</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro que deseas editar este producto? Se abrirá el formulario con sus datos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+            className="px-6 py-3 border-2 border-gray-200 rounded-xl hover:bg-gray-50 transition-colors font-medium">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (productToEdit) {
+                  setEditing(productToEdit);
+                  setModalOpen(true);
+                }
+                setShowConfirmEdit(false);
+              }}
+              className="px-6 py-3 bg-gradient-to-r from-primary-blue to-dark-blue text-white rounded-xl font-medium"
+            >
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
 
       {/* Footer / Paginación */}
       <div className="flex flex-col md:flex-row justify-between items-center mt-8 gap-4">
