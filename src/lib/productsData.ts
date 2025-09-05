@@ -5,9 +5,9 @@ export const depositsMock: Deposito[] = [
   {
     id: 1,
     nombre: 'Depósito Central',
-    provincia: 'Buenos Aires',
-    ciudad: 'La Plata',
-    ubicacion: 'Av. Principal 123, Ciudad',
+    provincia: 'Salta',
+    ciudad: 'Rosario de Lerma',
+    ubicacion: 'Avenida siempreviva 742, ciudad',
     tipo: 'Principal',
     capacidad: 1500,
     itemsStock: 450,
