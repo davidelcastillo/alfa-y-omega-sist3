@@ -47,6 +47,7 @@ export default function ProductModal({
     unidadId: 0,
   })
 
+
   useEffect(() => {
     if (product) {
       setForm({
@@ -64,6 +65,7 @@ export default function ProductModal({
         marcaId: (product as any).marcaId || 0,
         unidadId: (product as any).unidadId || 0,
       });
+     
     } else {
       setForm({
         descripcion: '',
@@ -77,7 +79,7 @@ export default function ProductModal({
       setNombre('');
       setSel({ rubroId: 0, marcaId: 0, unidadId: 0 });
     }
-  }, [product, open]);
+  }, [product, open]); 
 
   useEffect(() => {
     if (!open) return
@@ -211,17 +213,21 @@ export default function ProductModal({
               label="Precio Venta *"
               type="number"
               step="0.1"
+              min={0} //ya no baja del 0
               required
               value={form.precioVenta}
               onChange={(e) => setForm({ ...form, precioVenta: Number(e.target.value || 0) })}
+              
             />
             <Input
               label="Precio Lista *"
               type="number"
               step="0.1"
+              min={0}
               required
               value={form.precioLista}
               onChange={(e) => setForm({ ...form, precioLista: Number(e.target.value || 0) })}
+              
             />
 
             <Select
