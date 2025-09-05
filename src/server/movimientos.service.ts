@@ -27,8 +27,8 @@ export async function crearMovimiento(data: CreateMovimientoDTO) {
     // Deduplicar por producto para validar/actualizar stock eficientemente
     const agregados = new Map<number, number>();
     for (const d of data.detalles) {
-      if (d.cantidad <= 0) throw new Error(`Cantidad inválida para producto ${d.productoId}`);
-      agregados.set(d.productoId, (agregados.get(d.productoId) ?? 0) + d.cantidad);
+        if (d.cantidad <= 0) throw new Error(`Cantidad inválida para producto ${d.productoId}`);
+        agregados.set(d.productoId, (agregados.get(d.productoId) ?? 0) + d.cantidad);
     }
     const productIds = [...agregados.keys()];
 
@@ -108,5 +108,5 @@ export async function crearMovimiento(data: CreateMovimientoDTO) {
   }, { isolationLevel: "Serializable" });
 }
 
-// Si te resulta más cómodo seguir importando 'createMovimiento':
+
 export { crearMovimiento as createMovimiento };
