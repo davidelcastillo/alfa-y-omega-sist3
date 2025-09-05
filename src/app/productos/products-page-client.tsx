@@ -20,6 +20,7 @@ const sortProducts = (products: UIProduct[], sortKey: SortKey, sortOrder: SortOr
   return [...products].sort((a, b) => {
     const aValue = a[sortKey]
     const bValue = b[sortKey]
+
     if (typeof aValue === 'string' && typeof bValue === 'string') {
       return sortOrder === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue)
     }
@@ -133,53 +134,57 @@ export default function ProductsPageClient({
   const pageItems = filteredAndSorted.slice(start, start + PAGE_SIZE)
 
   // --- Acciones ---
-  const openNew = () => { setEditing(null); setModalOpen(true) }
+  const openNew = () => {
+    setEditing(null);
+    setModalOpen(true);
+  };
 
+  //creo que esto causa error, se puede mejorar
   const onEdit = (id: number) => {
-    const p = products.find(x => x.id === id)
-    const asProduct: Product | null = p ? {
-      id: p.id,
-      nombre: p.nombre,
-      descripcion: p.descripcion,
-      rubro: p.rubro,
-      marca: p.marca,
-      unidad: p.unidad,
-      precioVenta: p.precioVenta,
-      precioLista: p.precioLista,
-      estado: p.estado,
-    } : null
-    setEditing(asProduct)
-    setModalOpen(true)
-  }
+    const p = products.find(x => x.id === id);
+    if (p) {
+      setEditing(p as unknown as Product);
+    }
+    setModalOpen(true);
+  };
 
+  //  Modificación clave: Esta función maneja tanto la creación como la actualización.
   const onSave = async (payload: { id?: number; [key: string]: any }) => {
     try {
       const url = payload.id ? `/api/productos/${payload.id}` : '/api/productos'
       const method = payload.id ? 'PUT' : 'POST'
+
       const res = await fetch(url, {
-        method,
+        //method,
+        method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-      })
+      });
       const json = await res.json()
+
+      //if (!res.ok) {
+      //  throw new Error(json?.error ?? 'Error al guardar el producto');
+      //}
       if (!res.ok) throw new Error(json?.error ?? 'Error al guardar el producto')
       setModalOpen(false)
-      setEditing(null)
-      router.refresh()
+       setEditing(null)
+      router.refresh();
     } catch (e: any) {
-      alert(e?.message ?? 'Hubo un error al guardar el producto.')
+      console.error('Error al guardar el producto:', e);
+      alert(e?.message ?? 'Hubo un error al guardar el producto.');
     }
-  }
+  };
 
   const onDelete = async (id: number) => {
     if (!confirm('¿Desea dejar inactivo este producto?')) return
     try {
       setDeletingId(id)
       await softDeleteProducto(id) // PUT /api/productos/:id/eliminar
+      // Optimista en UI:
       setProducts(prev =>
         prev.map(p => (p.id === id ? { ...p, estado: 'Inactivo', estadoBool: false } : p))
       )
-      // router.refresh()  // si preferís revalidar desde el server
+      // router.refresh()
     } catch (e: any) {
       alert(e?.message ?? 'No se pudo eliminar')
     } finally {
@@ -193,7 +198,8 @@ export default function ProductsPageClient({
       <div className="flex items-center space-x-2 text-sm text-gray-600 mb-6">
         <span>Inicio</span>
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+          <path strokeLinecap="round" strokeLinecap="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+          {/* <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /> */}
         </svg>
         <span className="text-primary-pink font-medium">Productos</span>
       </div>
@@ -211,7 +217,8 @@ export default function ProductsPageClient({
           className="btn-primary text-white px-8 py-4 rounded-xl font-semibold flex items-center gap-3 text-lg"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            <path strokeLinecap="round" strokeLinecap="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            {/* <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /> */}
           </svg>
           <span>Nuevo Producto</span>
         </button>
@@ -229,8 +236,9 @@ export default function ProductsPageClient({
         onApply={() => {}}
       />
 
-      {/* Tabla (con paginado) */}
+      {/* Tabla con paginacion */}
       <ProductsTable
+        //products={filteredAndSorted}
         products={pageItems}
         onEdit={onEdit}
         onDelete={onDelete}
@@ -240,12 +248,11 @@ export default function ProductsPageClient({
 
       {/* Footer / Paginación */}
       <div className="flex flex-col md:flex-row justify-between items-center mt-8 gap-4">
-        <p className="text-gray-600 font-medium">
+      <p className="text-gray-600 font-medium">
           {totalItems === 0
             ? <>Mostrando <span className="font-bold text-primary-pink">0</span> de <span className="font-bold text-primary-pink">0</span> productos</>
             : <>Mostrando <span className="font-bold text-primary-pink">{start + 1}-{end}</span> de <span className="font-bold text-primary-pink">{totalItems}</span> productos</>}
         </p>
-
         <div className="flex items-center gap-2">
           <button
             onClick={() => setPage(p => Math.max(1, p - 1))}
@@ -277,7 +284,7 @@ export default function ProductsPageClient({
         product={editing}
         rubros={rubros.map(r => r.nombre)}
         unidades={unidades.map(u => u.nombre)}
-        onClose={() => { setModalOpen(false); setEditing(null) }}
+        onClose={() => { setModalOpen(false); setEditing(null); }}
         onSave={onSave}
       />
     </>
