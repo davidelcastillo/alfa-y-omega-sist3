@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { estados } from "@/lib/productsData";
 
 // Definimos el esquema de validación (para chequear que las variables ingresadas sean validas)
 const productoSchema = z.object({
@@ -11,6 +12,7 @@ const productoSchema = z.object({
   unidadId: z.number().int().positive(),
   precioCompra: z.number().positive(),
   precioVenta: z.number().positive(),
+  estado: z.boolean(),
 
 });
 

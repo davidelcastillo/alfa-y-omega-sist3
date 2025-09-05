@@ -10,7 +10,7 @@ import { softDeleteProducto } from '@/lib/api'
 
 import type { UIProduct } from '@/lib/types'
 import type { Catalogo } from '@/server/productos.queries'
-import type { Product, SortKey, SortOrder } from '@/lib/types' //este error hay que arreglar
+import type { Product, SortKey, SortOrder } from '@/lib/types'
 
 const DEFAULT_FILTERS: ProductFilters = { search: '', rubroId: '', unidadId: '', estado: '' }
 
@@ -113,29 +113,45 @@ export default function ProductsPageClient({
   }, [products, filters, sortState])
 
   // --- Acciones ---
-  const openNew = () => { setEditing(null); setModalOpen(true) }
+  const openNew = () => {
+    setEditing(null);
+    setModalOpen(true);
+  };
 
   const onEdit = (id: number) => {
-    const p = products.find(x => x.id === id)
-    const asProduct: Product | null = p ? {
-      id: p.id,
-      nombre: p.nombre,
-      descripcion: p.descripcion,
-      rubro: p.rubro,
-      marca: p.marca,
-      unidad: p.unidad,
-      precioVenta: p.precioVenta,
-      precioLista: p.precioLista,
-      estado: p.estado,
-    } : null
-    setEditing(asProduct)
-    setModalOpen(true)
-  }
+    const p = products.find(x => x.id === id);
+    if (p) {
+      setEditing(p as unknown as Product);
+    }
+    setModalOpen(true);
+  };
 
-  const onSave = () => {
-    setModalOpen(false)
-    router.refresh() // trae initialProducts frescos -> useEffect sync arriba
-  }
+  //  Modificación clave: Esta función maneja tanto la creación como la actualización.
+  const onSave = async (payload: { id?: number; [key: string]: any }) => {
+    try {
+      const url = payload.id ? `/api/productos/${payload.id}` : '/api/productos';
+      const method = payload.id ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+
+      if (!res.ok) {
+        throw new Error(json?.error ?? 'Error al guardar el producto');
+      }
+
+      // alert(`Producto ${payload.id ? 'actualizado' : 'creado'} con éxito.`);
+      // Ya no necesitamos la alerta, el modal se cerrará automáticamente
+      // y la tabla se actualizará.
+      router.refresh();
+    } catch (e: any) {
+      console.error('Error al guardar el producto:', e);
+      alert(e?.message ?? 'Hubo un error al guardar el producto.');
+    }
+  };
 
   const onDelete = async (id: number) => {
     if (!confirm('¿Desea dejar inactivo este producto?')) return
@@ -161,7 +177,7 @@ export default function ProductsPageClient({
       <div className="flex items-center space-x-2 text-sm text-gray-600 mb-6">
         <span>Inicio</span>
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+          <path strokeLinecap="round" strokeLinecap="round" strokeWidth="2" d="M9 5l7 7-7 7" />
         </svg>
         <span className="text-primary-pink font-medium">Productos</span>
       </div>
@@ -179,7 +195,7 @@ export default function ProductsPageClient({
           className="btn-primary text-white px-8 py-4 rounded-xl font-semibold flex items-center gap-3 text-lg"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            <path strokeLinecap="round" strokeLinecap="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
           <span>Nuevo Producto</span>
         </button>
@@ -199,7 +215,7 @@ export default function ProductsPageClient({
 
       {/* Tabla */}
       <ProductsTable
-        products={filteredAndSorted}   // 👈 acá estaba el error: usar la variable correcta
+        products={filteredAndSorted}
         onEdit={onEdit}
         onDelete={onDelete}
         onSort={handleSort}
@@ -226,7 +242,7 @@ export default function ProductsPageClient({
         product={editing}
         rubros={rubros.map(r => r.nombre)}
         unidades={unidades.map(u => u.nombre)}
-        onClose={() => setModalOpen(false)}
+        onClose={() => { setModalOpen(false); setEditing(null); }}
         onSave={onSave}
       />
     </>
