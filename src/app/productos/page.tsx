@@ -1,6 +1,17 @@
 // src/app/productos/page.tsx
 import { fetchCatalogos, fetchProductos } from '@/server/productos.queries'
 import ProductsPageClient from './products-page-client'
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction
+} from "@/components/ui/alert-dialog"
+
 
 export const revalidate = 0 // o: export const dynamic = 'force-dynamic'
 
