@@ -57,7 +57,7 @@ export default function Filters({
           <label className="block text-sm font-semibold text-gray-700 mb-3">Buscar producto</label>
           <input
             type="text"
-            placeholder="Descripción, marca..."
+            placeholder="Producto/Descripción/Marca"
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl input-focus transition-all"
             value={filters.search}
             onChange={(e) => set('search', e.target.value)}
