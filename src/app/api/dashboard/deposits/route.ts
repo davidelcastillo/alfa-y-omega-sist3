@@ -1,87 +1,124 @@
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+// src/app/api/dashboard/deposits/route.ts
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
-// Simple in-memory cache with TTL
-const CACHE_TTL_MS = 60 * 1000; // 1 minute
+type Row = {
+  depositoId: number;
+  nombre: string;
+  tipo: string;
+  estado: boolean;
+  skuCount: number;
+  totalUnits: number;
+  productsBelowMin: number;
+  productsAtZero: number;
+  productsOverMax: number;
+  occupancyPercent: number | null;
+  lastMovementAt: Date | null;
+};
 
-interface Metrics {
-  totalDepositos: number;
-  activos: number;
-  inactivos: number;
-  capacidadTotal: number;
-  capacidadPromedio: number;
-  totalStock: number;
-  porTipo: { tipo: string; cantidad: number }[];
-}
+type Payload = {
+  updatedAt: string;
+  totals: {
+    deposits: number;
+    skuCount: number;
+    totalUnits: number;
+    productsBelowMin: number;
+    productsAtZero: number;
+    productsOverMax: number;
+  };
+  deposits: Row[];
+};
 
-interface CacheEntry {
-  data: { ok: true; metrics: Metrics };
-  expires: number;
-}
+// --- Caché simple en memoria (scope de módulo)
+const DEFAULT_TTL_MS = 60_000;
+let cache:
+  | { expires: number; payload: Payload }
+  | null = null;
 
-let cache: CacheEntry | null = null;
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const ttl = Math.max(
+    5_000,
+    Math.min(5 * 60_000, Number(searchParams.get('ttl')) || DEFAULT_TTL_MS),
+  );
 
-export async function GET() {
+  // HIT de caché
   const now = Date.now();
   if (cache && cache.expires > now) {
-    return NextResponse.json(cache.data);
+    const res = NextResponse.json({ ok: true, cached: true, data: cache.payload });
+    res.headers.set('x-cache', 'HIT');
+    return res;
   }
 
   try {
-    const [statusCounts, tipoCounts, capacityAgg, stockAgg] = await prisma.$transaction([
-      prisma.deposito.groupBy({
-        by: ["estado"],
-        _count: { _all: true },
-      }),
-      prisma.deposito.groupBy({
-        by: ["tipo"],
-        _count: { _all: true },
-      }),
-      prisma.deposito.aggregate({
-        _sum: { capacidad: true },
-        _avg: { capacidad: true },
-      }),
-      prisma.stockPorDeposito.aggregate({
-        _sum: { stockActual: true },
-      }),
-    ]);
+    // Consulta agregada por depósito (PostgreSQL)
+    const rows = (await prisma.$queryRaw<Row[]>`
+      SELECT
+        d.id AS "depositoId",
+        d.nombre,
+        d.tipo,
+        d.estado,
+        COALESCE(COUNT(spd.id), 0)::int                    AS "skuCount",
+        COALESCE(SUM(spd."stockActual"), 0)::int           AS "totalUnits",
+        COALESCE(SUM(CASE WHEN spd."stockActual" <= spd."stockMinimo" THEN 1 ELSE 0 END), 0)::int
+          AS "productsBelowMin",
+        COALESCE(SUM(CASE WHEN spd."stockActual" = 0 THEN 1 ELSE 0 END), 0)::int
+          AS "productsAtZero",
+        COALESCE(SUM(CASE
+            WHEN spd."stockMaximo" IS NOT NULL AND spd."stockActual" > spd."stockMaximo" THEN 1
+            ELSE 0
+        END), 0)::int AS "productsOverMax",
+        CASE
+          WHEN COALESCE(SUM(NULLIF(spd."stockMaximo", 0)), 0) > 0
+            THEN ROUND(
+              (SUM(spd."stockActual")::numeric / SUM(NULLIF(spd."stockMaximo", 0))::numeric) * 100
+            , 2)
+          ELSE NULL
+        END AS "occupancyPercent",
+        MAX(ms.fecha) AS "lastMovementAt"
+      FROM "Deposito" d
+      LEFT JOIN "StockPorDeposito" spd ON spd."depositoId" = d.id
+      LEFT JOIN "MovimientoStock" ms ON ms."depositoId" = d.id
+      GROUP BY d.id, d.nombre, d.tipo, d.estado
+      ORDER BY d.nombre ASC;
+    `) as Row[];
 
-    const totalDepositos = statusCounts.reduce(
-      (acc, s) => acc + s._count._all,
-      0
-    );
-    const activos =
-      statusCounts.find((s) => s.estado === true)?._count._all ?? 0;
-    const inactivos =
-      statusCounts.find((s) => s.estado === false)?._count._all ?? 0;
-
-    const response: CacheEntry["data"] = {
-      ok: true,
-      metrics: {
-        totalDepositos,
-        activos,
-        inactivos,
-        capacidadTotal: capacityAgg._sum.capacidad ?? 0,
-        capacidadPromedio: capacityAgg._avg.capacidad ?? 0,
-        totalStock: stockAgg._sum.stockActual ?? 0,
-        porTipo: tipoCounts.map((t) => ({
-          tipo: t.tipo,
-          cantidad: t._count._all,
-        })),
+    // Totales globales
+    const totals = rows.reduce(
+      (acc, r) => {
+        acc.deposits += 1;
+        acc.skuCount += r.skuCount;
+        acc.totalUnits += r.totalUnits;
+        acc.productsBelowMin += r.productsBelowMin;
+        acc.productsAtZero += r.productsAtZero;
+        acc.productsOverMax += r.productsOverMax;
+        return acc;
       },
+      {
+        deposits: 0,
+        skuCount: 0,
+        totalUnits: 0,
+        productsBelowMin: 0,
+        productsAtZero: 0,
+        productsOverMax: 0,
+      }
+    );
+
+    const payload: Payload = {
+      updatedAt: new Date().toISOString(),
+      totals,
+      deposits: rows,
     };
 
-    cache = { data: response, expires: now + CACHE_TTL_MS };
-    return NextResponse.json(response);
+    // Guardar en caché
+    cache = { expires: now + ttl, payload };
+
+    const res = NextResponse.json({ ok: true, cached: false, data: payload });
+    res.headers.set('x-cache', 'MISS');
+    res.headers.set('cache-ttl-ms', String(ttl));
+    return res;
   } catch (err) {
-    console.error(err);
-    return NextResponse.json(
-      {
-        ok: false,
-        error: err instanceof Error ? err.message : "Error interno",
-      },
-      { status: 500 }
-    );
+    console.error('[GET /api/dashboard/deposits]', err);
+    return NextResponse.json({ ok: false, error: 'Internal Server Error' }, { status: 500 });
   }
 }
-
