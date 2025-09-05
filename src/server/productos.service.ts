@@ -14,9 +14,7 @@ export async function createProducto(data: CreateProductoDTO) {
   if (!rubro)  throw new Error('Rubro no existe');
   if (!marca)  throw new Error('Marca no existe');
   if (!unidad) throw new Error('Unidad no existe');
-  if (data.precioVenta < data.precioCompra) {
-    throw new Error('Precio de venta no puede ser menor al precio de compra');
-  }
+  
   if (data.precioCompra < 0 || data.precioVenta < 0) {
     throw new Error('Precios no pueden ser negativos');
   }
