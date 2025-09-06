@@ -24,6 +24,18 @@ export async function createProducto(data: CreateProductoDTO) {
   if (data.descripcion && !data.descripcion.trim()) {
     data.descripcion = undefined;
   }
+//si se encuentra el mismo nombre en la base de datos se revisa si es igual en los demas campos
+  const existingProducto = await prisma.producto.findFirst({
+    where: {
+      nombre: data.nombre, 
+      rubroId: data.rubroId,
+      marcaId: data.marcaId,
+      unidadId: data.unidadId
+    },
+  });
+  if (existingProducto) {
+    throw new Error('Ya existe el producto registrado con esos datos');
+  }
 
 
   // 2) Crear producto 
