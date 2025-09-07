@@ -18,16 +18,16 @@ export default function HomePage() {
           <h2 className="text-4xl font-bold bg-gradient-to-r from-primary-pink to-primary-blue bg-clip-text text-transparent mb-2">
             Bienvenido al ERP
           </h2>
-          <p className="text-gray-600 text-lg">Elegí un módulo para comenzar: (este diseño es provisional, si gusta idea entonces lo mejoro)</p>
+          <p className="text-gray-600 text-lg">Elegí un módulo para comenzar:</p>
         </div> 
       </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <Link href="/Productos" className="glass-effect rounded-2xl p-6 card-hover">
+          <Link href="/productos" className="glass-effect rounded-2xl p-6 card-hover">
             <h2 className="text-2xl font-semibold mb-2">Productos</h2>
             <p className="text-gray-600">Gestión de catálogo, precios y estado.</p>
           </Link>
-          <Link href="/Depositos" className="glass-effect rounded-2xl p-6 card-hover">
+          <Link href="/depositos" className="glass-effect rounded-2xl p-6 card-hover">
             <h2 className="text-2xl font-semibold mb-2">Depósitos</h2>
             <p className="text-gray-600">Administración de depósitos y capacidades.</p>
           </Link>

@@ -6,13 +6,12 @@ import Input from '@/components/ui/Input'
 import Select from '@/components/ui/Select'
 import SearchableSelect from '@/components/ui/SearchableSelect'
 
-
 type CatalogoOption = { id: number; nombre: string }
 
 export default function ProductModal({
   open,
   product,
-  rubros: _rubrosProp, // ya no se usa; ahora vienen de la API
+  rubros: _rubrosProp,
   onClose,
   onSave,
 }: {
@@ -20,9 +19,8 @@ export default function ProductModal({
   product?: Product | null
   rubros: readonly string[]
   onClose: () => void
-  onSave: (payload: Omit<Product, 'id'> & { id?: number }) => void
+  onSave: (payload: { id?: number; [key: string]: any }) => Promise<void>
 }) {
-  // Estado original de tu form (texto/números)
   const [form, setForm] = useState<Omit<Product, 'id'>>({
     descripcion: '',
     rubro: '',
@@ -33,8 +31,8 @@ export default function ProductModal({
     estado: 'Activo',
   })
   const [nombre, setNombre] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
 
-  // Catálogos desde la BD
   const [catalogs, setCatalogs] = useState<{
     rubros: CatalogoOption[]
     marcas: CatalogoOption[]
@@ -43,19 +41,31 @@ export default function ProductModal({
   const [loadingCats, setLoadingCats] = useState(false)
   const [catsError, setCatsError] = useState<string | null>(null)
 
-  // IDs seleccionados para enviar al backend
   const [sel, setSel] = useState<{ rubroId: number | 0; marcaId: number | 0; unidadId: number | 0 }>({
     rubroId: 0,
     marcaId: 0,
     unidadId: 0,
   })
 
-  // Reset form cuando abre o cambia el producto
+
   useEffect(() => {
     if (product) {
-      const { id, ...rest } = product
-      setForm(rest)
-      setNombre('')
+      setForm({
+        descripcion: product.descripcion,
+        rubro: product.rubro,
+        marca: product.marca,
+        unidad: product.unidad,
+        precioVenta: product.precioVenta,
+        precioLista: product.precioLista,
+        estado: product.estado,
+      });
+      setNombre((product as any).nombre);
+      setSel({
+        rubroId: (product as any).rubroId || 0,
+        marcaId: (product as any).marcaId || 0,
+        unidadId: (product as any).unidadId || 0,
+      });
+     
     } else {
       setForm({
         descripcion: '',
@@ -65,12 +75,12 @@ export default function ProductModal({
         precioVenta: 0,
         precioLista: 0,
         estado: 'Activo',
-      })
-      setNombre('')
+      });
+      setNombre('');
+      setSel({ rubroId: 0, marcaId: 0, unidadId: 0 });
     }
-  }, [product, open])
+  }, [product, open]); 
 
-  // Cargar catálogos al abrir el modal
   useEffect(() => {
     if (!open) return
     let alive = true
@@ -88,13 +98,6 @@ export default function ProductModal({
 
         if (!alive) return
         setCatalogs({ rubros, marcas, unidades })
-
-        // Preseleccionar primeros valores si no hay selección previa
-        setSel((prev) => ({
-          rubroId: prev.rubroId || rubros[0]?.id || 0,
-          marcaId: prev.marcaId || marcas[0]?.id || 0,   // aunque no lo muestres aún
-          unidadId: prev.unidadId || unidades[0]?.id || 0,
-        }))
       } catch (e) {
         if (!alive) return
         setCatsError((e as Error).message)
@@ -108,40 +111,31 @@ export default function ProductModal({
   }, [open])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    const rubroId = sel.rubroId || catalogs.rubros[0]?.id || 1
-    const marcaId = sel.marcaId || catalogs.marcas[0]?.id || 1
-    const unidadId = sel.unidadId || catalogs.unidades[0]?.id || 1
+    e.preventDefault();
+    setIsSaving(true);
 
     const payload = {
+      ...(product && { id: product.id }),
       nombre: nombre.trim() || 'Producto sin nombre',
       descripcion: form.descripcion || '',
-      rubroId,
-      marcaId,
-      unidadId,
+      rubroId: sel.rubroId || 0,
+      marcaId: sel.marcaId || 0,
+      unidadId: sel.unidadId || 0,
       precioCompra: Number(form.precioLista) || 0,
       precioVenta: Number(form.precioVenta) || 0,
       estado: form.estado === 'Activo',
+    };
+
+    try {
+      await onSave(payload);
+      onClose();
+    } catch (error) {
+      console.error("Error al guardar el producto:", error);
+      // Podrías mostrar un mensaje de error aquí si lo deseas
+    } finally {
+      setIsSaving(false);
     }
-
-    const res = await fetch('/api/productos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-
-    const json = await res.json()
-    if (!res.ok) {
-      console.error(json)
-      alert(`Error al crear: ${json?.error ?? 'desconocido'}`)
-      return
-    }
-
-    // Avisar al padre / refrescar tabla (mantengo tu contrato)
-    onSave?.(product ? { ...form, id: product.id } : form)
-    onClose()
-  }
+  };
 
   if (!open) return null
 
@@ -189,11 +183,11 @@ export default function ProductModal({
             {/* Marcas con autocompletado*/}
             <SearchableSelect
               label="Marca *"
-              options={catalogs.marcas}        // viene del GET /api/productos/catalogos
+              options={catalogs.marcas}
               valueId={sel.marcaId || 0}
               onChange={(opt) => {
                 setSel({ ...sel, marcaId: opt?.id ?? 0 })
-                setForm({ ...form, marca: opt?.nombre ?? '' }) // opcional, solo para mostrar texto
+                setForm({ ...form, marca: opt?.nombre ?? '' })
               }}
             />
 
@@ -219,17 +213,21 @@ export default function ProductModal({
               label="Precio Venta *"
               type="number"
               step="0.1"
+              min={0} //ya no baja del 0
               required
               value={form.precioVenta}
               onChange={(e) => setForm({ ...form, precioVenta: Number(e.target.value || 0) })}
+              
             />
             <Input
               label="Precio Lista *"
               type="number"
               step="0.1"
+              min={0}
               required
               value={form.precioLista}
               onChange={(e) => setForm({ ...form, precioLista: Number(e.target.value || 0) })}
+              
             />
 
             <Select
@@ -252,8 +250,8 @@ export default function ProductModal({
             <Button type="button" variant="outline" onClick={onClose} className="px-8">
               Cancelar
             </Button>
-            <Button type="submit" className="px-8" disabled={loadingCats}>
-              {loadingCats ? 'Guardando…' : 'Guardar Producto'}
+            <Button type="submit" className="px-6" disabled={loadingCats || isSaving}>
+              {isSaving ? 'Guardando…' : 'Guardar Producto'}
             </Button>
           </div>
         </form>

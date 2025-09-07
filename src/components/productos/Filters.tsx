@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ChangeEvent } from 'react'
 
 type Catalogo = { id: number; nombre: string }
 export type ProductFilters = {
@@ -11,19 +11,27 @@ export type ProductFilters = {
 
 const DEFAULTS: ProductFilters = { search: '', rubroId: '', unidadId: '', estado: '' }
 
+// Agregamos nuevos props a la interfaz
+type Props = {
+  rubros: Catalogo[]
+  unidades: Catalogo[]
+  value?: ProductFilters
+  onChange: (f: ProductFilters) => void
+  onApply?: () => void
+  // Nuevos props para el agrupamiento
+  onGroupByChange: (by: 'rubro' | 'marca' | 'unidad' | 'estado' | null) => void
+  groupByValue: string | null
+}
+
 export default function Filters({
   rubros,
   unidades,
   value = DEFAULTS,
   onChange,
   onApply,
-}: {
-  rubros: Catalogo[]
-  unidades: Catalogo[]
-  value?: ProductFilters
-  onChange: (f: ProductFilters) => void
-  onApply?: () => void
-}) {
+  onGroupByChange,
+  groupByValue,
+}: Props) {
   const [filters, setFilters] = useState<ProductFilters>(value)
 
   useEffect(() => { setFilters(value) }, [value])
@@ -49,7 +57,7 @@ export default function Filters({
           <label className="block text-sm font-semibold text-gray-700 mb-3">Buscar producto</label>
           <input
             type="text"
-            placeholder="Descripción, marca..."
+            placeholder="Producto/Descripción/Marca"
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl input-focus transition-all"
             value={filters.search}
             onChange={(e) => set('search', e.target.value)}
@@ -71,7 +79,7 @@ export default function Filters({
           </select>
         </div>
 
-        {/* Unidad (nuevo) */}
+        {/* Unidad */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-3">Unidad</label>
           <select
@@ -100,6 +108,9 @@ export default function Filters({
           </select>
         </div>
       </div>
+      
+      {/* Botones de Agrupamiento - ¡NUEVO! */}
+      
 
       <div className="flex justify-end gap-3 mt-6">
         <button
