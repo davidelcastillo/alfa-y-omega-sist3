@@ -1,3 +1,4 @@
+/*Aqui marca errores, pero si compila, es un error de VSCODE que no reconoce POSTCSS*/
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -170,4 +171,3 @@ transform: scale(1.02);
     @apply bg-background text-foreground;
 }
 }
-
