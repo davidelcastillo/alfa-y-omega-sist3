@@ -5,8 +5,9 @@ import StatsCards from '@/components/depositos/StatsCards'
 import Filters from '@/components/depositos/Filters'
 import DepositsTable from '@/components/depositos/DepositsTable'
 import DepositModal from '@/components/depositos/DepositModal'
-import { depositsMock } from '@/lib/productsData'
+import { depositsMock } from '@/lib/deposito/productsData'
 import type { Deposito } from '@/lib/deposito/types'
+import Link from 'next/link'
 
 type FiltersState = {
   search: string
@@ -72,14 +73,33 @@ export default function DepositosPage() {
           </h2>
           <p className="text-gray-600 text-lg">Administra tus depósitos y controla el stock por ubicación</p>
         </div>
+
         <div className="flex space-x-4">
-          <button onClick={() => { setEditing(null); setOpen(true) }} className="btn-primary text-white px-8 py-4 rounded-xl font-semibold flex items-center space-x-3 text-lg">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+          {/* Nuevo Depósito */}
+          <button
+            onClick={() => { setEditing(null); setOpen(true) }}
+            className="btn-primary text-white px-8 py-4 rounded-xl font-semibold flex items-center space-x-3 text-lg"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+              />
             </svg>
             <span>Nuevo Depósito</span>
           </button>
-          
+
+          {/* Gestionar Stock (Link estilizado como botón) */}
+          <Link
+            href="/depositos/stock"
+              className="bg-gradient-to-r from-primary-blue to-dark-blue text-white px-8 py-4 rounded-xl font-semibold flex items-center space-x-3 text-lg hover:shadow-lg transition-all">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+              </svg>
+              <span>Gestionar Stock</span>
+            </Link>
         </div>
       </div>
 

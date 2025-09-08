@@ -1,12 +1,14 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { depositsMock, productsLiteMock, stockItemsMock } from '@/lib/productsData'
+import { depositsMock, productsLiteMock, stockItemsMock } from '@/lib/deposito/productsData'
 import type { Deposito, ProductoLite } from '@/lib/deposito/types'
 import StockStatsCards from '@/components/depositos/StockStatsCards'
 import StockFilters, { type StockFiltersState } from '@/components/depositos/StockFilters'
 import StockTable from '@/components/depositos/StockTable'
 import StockModal from '@/components/depositos/StockModal'
+import Link from 'next/link'
+
 
 export type StockStatus = 'bajo' | 'normal' | 'alto'
 
@@ -133,10 +135,29 @@ export default function StockPage() {
           </h2>
           <p className="text-gray-600 text-lg">Control completo del inventario por depósito</p>
         </div>
+
+        <div className="flex space-x-4">
+          <Link
+            href="/depositos"
+            className="bg-gradient-to-r from-gray-500 to-gray-700 text-white px-8 py-4 rounded-xl font-semibold flex items-center space-x-3 text-lg hover:shadow-lg transition-all"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
+            </svg>
+            <span>Volver a Depósitos</span>
+          </Link>
+        </div>
       </div>
+
 
       {/* Stats */}
       <StockStatsCards stock={filtered} deposits={involvedDeposits} />
+      
 
       {/* Filtros */}
       <StockFilters
