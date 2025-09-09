@@ -81,17 +81,36 @@ const filtered = useMemo(() => {
     if (!confirm('¿Eliminar depósito?')) return
     setDeposits(prev => prev.filter(d => d.id !== id))
   }
-  function onSave(payload: Omit<Deposito, 'id'> & { id?: number }) {
-    setDeposits(prev => {
-      if (payload.id) {
-        return prev.map(d => (d.id === payload.id ? { ...d, ...payload } as Deposito : d))
-      }
-      const newId = Math.max(0, ...prev.map(d => d.id)) + 1
-      return [...prev, { id: newId, ...payload } as Deposito]
-    })
-    setOpen(false)
-    setEditing(null)
+async function onSave(payload: Omit<Deposito, 'id'> & { id?: number }) {
+  try {
+    if (payload.id) {
+      // Si existe un id → actualización (PUT)
+      await fetch(`/api/deposito/${payload.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    } else {
+      // Si no hay id → creación (POST)
+      await fetch("/api/deposito", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    }
+
+    // Refrescar la lista después de guardar
+    const res = await fetch("/api/deposito");
+    const json = await res.json();
+    if (json.ok) setDeposits(json.data);
+
+    setOpen(false);
+    setEditing(null);
+  } catch (error) {
+    console.error("Error guardando depósito:", error);
+    alert("No se pudo guardar el depósito");
   }
+}
 
   return (
     <main className="max-w-7xl mx-auto px-6 py-8 fade-in">
