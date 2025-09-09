@@ -1,11 +1,10 @@
 'use client'
 
-import { useMemo, useState, useCallback } from 'react'
+import { useMemo, useState, useCallback, useEffect } from 'react'
 import StatsCards from '@/components/depositos/StatsCards'
 import Filters from '@/components/depositos/Filters'
 import DepositsTable from '@/components/depositos/DepositsTable'
 import DepositModal from '@/components/depositos/DepositModal'
-import { depositsMock } from '@/lib/productsData'
 import type { Deposito } from '@/lib/deposito/types'
 import type { SortKey, SortOrder } from '@/lib/types'
 
@@ -35,7 +34,7 @@ const sortDeposits = (deposits: Deposito[], sortKey: SortKey | null, sortOrder: 
 };
 
 export default function DepositosPage() {
-  const [deposits, setDeposits] = useState<Deposito[]>(depositsMock);
+  const [deposits, setDeposits] = useState<Deposito[]>([]);
   const [filters, setFilters] = useState<FiltersState>(DEFAULT_FILTERS);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Deposito | null>(null);
@@ -56,11 +55,45 @@ export default function DepositosPage() {
     });
   }, []);
 
+  // Cargar depósitos desde el backend
+  useEffect(() => {
+    async function fetchDeposits() {
+      try {
+        const res = await fetch("/api/deposito", { cache: 'no-store' });
+        const json = await res.json();
+
+        if (!json?.ok || !Array.isArray(json.data)) {
+          setDeposits([]);
+          return;
+        }
+
+        const mapped: Deposito[] = json.data.map((d: any) => ({
+          id: Number(d.id),
+          nombre: d.nombre ?? '',
+          provincia: d.provincia ?? '',
+          ciudad: d.ciudad ?? '',
+          ubicacion: d.ubicacion ?? '',
+          tipo: (d.tipo ?? 'Principal') as Deposito['tipo'],
+          capacidad: d.capacidad ?? null,
+          itemsStock: Number(d.itemsStock ?? 0),
+          estado: (d.estado ? 'Activo' : 'Inactivo') as 'Activo' | 'Inactivo',
+          descripcion: d.descripcion ?? '',
+        }));
+
+        setDeposits(mapped);
+      } catch (e) {
+        console.error('Error al cargar depósitos:', e);
+        setDeposits([]);
+      }
+    }
+    fetchDeposits();
+  }, []);
+
   // Lógica de filtrado y ordenamiento combinada
   const filteredAndSorted = useMemo(() => {
     const q = filters.search.toLowerCase();
     const filtered = deposits.filter(d => {
-      const bySearch = !q || [d.nombre, d.ubicacion, d.ciudad, d.provincia].some(s => s.toLowerCase().includes(q));
+      const bySearch = !q || [d.nombre, d.ubicacion, d.ciudad, d.provincia].some(s => (s ?? '').toLowerCase().includes(q));
       const byTipo = !filters.tipo || d.tipo === filters.tipo;
       const byEstado = !filters.estado || d.estado === filters.estado;
       return bySearch && byTipo && byEstado;
@@ -69,25 +102,26 @@ export default function DepositosPage() {
     return sortDeposits(filtered, sortState.key, sortState.order);
   }, [deposits, filters, sortState]);
 
+
   function onEdit(id: number) {
-    const dep = deposits.find(d => d.id === id) ?? null
-    setEditing(dep)
-    setOpen(true)
+    const dep = deposits.find(d => d.id === id) ?? null;
+    setEditing(dep);
+    setOpen(true);
   }
   function onDelete(id: number) {
-    if (!confirm('¿Eliminar depósito?')) return
-    setDeposits(prev => prev.filter(d => d.id !== id))
+    if (!confirm('¿Eliminar depósito?')) return;
+    setDeposits(prev => prev.filter(d => d.id !== id));
   }
   function onSave(payload: Omit<Deposito, 'id'> & { id?: number }) {
     setDeposits(prev => {
       if (payload.id) {
-        return prev.map(d => (d.id === payload.id ? { ...d, ...payload } as Deposito : d))
+        return prev.map(d => (d.id === payload.id ? { ...d, ...payload } as Deposito : d));
       }
-      const newId = Math.max(0, ...prev.map(d => d.id)) + 1
-      return [...prev, { id: newId, ...payload } as Deposito]
-    })
-    setOpen(false)
-    setEditing(null)
+      const newId = Math.max(0, ...prev.map(d => d.id)) + 1;
+      return [...prev, { id: newId, ...payload } as Deposito];
+    });
+    setOpen(false);
+    setEditing(null);
   }
 
   return (
