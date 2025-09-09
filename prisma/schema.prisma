@@ -67,8 +67,12 @@ model Deposito {
   nombre      String
   ubicacion   String
   tipo        String           // Principal, Sucursal, Temporal, Tránsito
-  capacidad   Int?             // Representada en m2
+  capacidad   Int?             // Representada en m2, ¿POR QUE ES OPCIONAL?
   estado      Boolean          @default(true)
+
+  // NUEVOS CAMPOS (opcionales por ahora)
+  provincia   String?
+  ciudad      String?
 
   stock       StockPorDeposito[]   // Inventario de productos en este depósito
   movimientos MovimientoStock[]

@@ -8,6 +8,10 @@ const depositoSchema = z.object({
   ubicacion: z.string().min(1, "La ubicación es obligatoria"),
   tipo: z.enum(["Principal", "Sucursal", "Temporal", "Tránsito"]),
   capacidad: z.number().int().positive().optional(), // m2 opcional
+
+  // NUEVOS CAMPOS (opcionales por ahora)
+  provincia: z.string().min(2).max(80).optional(),
+  ciudad: z.string().min(2).max(80).optional(),
 });
 
 export async function POST(req: Request) {
@@ -22,6 +26,10 @@ export async function POST(req: Request) {
         tipo: data.tipo,
         capacidad: data.capacidad ?? null,
         estado: true,
+        
+        // Guardamos null si no viene (porque en Prisma están como String?)
+        provincia: data.provincia ?? null,
+        ciudad: data.ciudad ?? null,
       },
     });
 
