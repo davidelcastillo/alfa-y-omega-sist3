@@ -25,8 +25,8 @@ export default function DepositosPage() {
   const filtered = useMemo(() => {
     const q = filters.search.toLowerCase()
     return deposits.filter(d => {
-      const bySearch = !q || [d.nombre, d.ubicacion, d.ciudad, d.provincia].some(s => s.toLowerCase().includes(q))
-      const byTipo   = !filters.tipo   || d.tipo === filters.tipo
+      const bySearch = !q || [d.nombre, d.ubicacion].some(s => s.toLowerCase().includes(q))
+      const byTipo = !filters.tipo || d.tipo === filters.tipo
       const byEstado = !filters.estado || d.estado === filters.estado
       return bySearch && byTipo && byEstado
     })
@@ -37,20 +37,28 @@ export default function DepositosPage() {
     setEditing(dep)
     setOpen(true)
   }
+
   function onDelete(id: number) {
     if (!confirm('¿Eliminar depósito?')) return
+    // Solo afecta los datos mock (NO toca la base de datos)
     setDeposits(prev => prev.filter(d => d.id !== id))
   }
-  function onSave(payload: Omit<Deposito, 'id'> & { id?: number }) {
-    setDeposits(prev => {
-      if (payload.id) {
-        return prev.map(d => (d.id === payload.id ? { ...d, ...payload } as Deposito : d))
-      }
-      const newId = Math.max(0, ...prev.map(d => d.id)) + 1
-      return [...prev, { id: newId, ...payload } as Deposito]
-    })
-    setOpen(false)
-    setEditing(null)
+
+  async function onSave(payload: Omit<Deposito, 'id'> & { id?: number }) {
+    try {
+      const res = await fetch('/api/depositos/nuevo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      const json = await res.json()
+      if (!res.ok) throw new Error(json?.error ?? 'Error al guardar el depósito')
+      setOpen(false)
+      setEditing(null)
+    } catch (error: any) {
+      alert(error.message)
+    }
   }
 
   return (
@@ -59,7 +67,7 @@ export default function DepositosPage() {
       <div className="flex items-center space-x-2 text-sm text-gray-600 mb-6">
         <span>Inicio</span>
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/>
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
         </svg>
         <span className="text-primary-pink font-medium">Depósito</span>
       </div>
@@ -73,31 +81,28 @@ export default function DepositosPage() {
           <p className="text-gray-600 text-lg">Administra tus depósitos y controla el stock por ubicación</p>
         </div>
         <div className="flex space-x-4">
-          <button onClick={() => { setEditing(null); setOpen(true) }} className="btn-primary text-white px-8 py-4 rounded-xl font-semibold flex items-center space-x-3 text-lg">
+          <button
+            onClick={() => {
+              setEditing(null)
+              setOpen(true)
+            }}
+            className="btn-primary text-white px-8 py-4 rounded-xl font-semibold flex items-center space-x-3 text-lg"
+          >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>
             <span>Nuevo Depósito</span>
           </button>
-          
         </div>
       </div>
 
       <StatsCards deposits={filtered} />
 
-      <Filters
-        value={filters}
-        onChange={setFilters}
-        onApply={() => { /* el filtro ya es reactivo */ }}
-      />
+      <Filters value={filters} onChange={setFilters} onApply={() => {}} />
 
-      <DepositsTable
-        deposits={filtered}
-        onEdit={onEdit}
-        onDelete={onDelete}
-      />
+      <DepositsTable deposits={filtered} onEdit={onEdit} onDelete={onDelete} />
 
-      {/* Paginación placeholder */}
+      {/* Paginación */}
       <div className="flex flex-col md:flex-row justify-between items-center mt-8 space-y-4 md:space-y-0">
         <p className="text-gray-600 font-medium">
           Mostrando <span className="font-bold text-primary-pink">{filtered.length}</span> de{' '}
@@ -113,7 +118,10 @@ export default function DepositosPage() {
       <DepositModal
         open={open}
         deposito={editing}
-        onClose={() => { setOpen(false); setEditing(null) }}
+        onClose={() => {
+          setOpen(false)
+          setEditing(null)
+        }}
         onSave={onSave}
       />
     </main>

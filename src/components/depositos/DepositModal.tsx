@@ -78,23 +78,27 @@ export default function DepositModal({
               <option value="Temporal">Temporal</option>
               <option value="Tránsito">Tránsito</option>
             </Select>
-            <Input label="Provincia *" required value={form.provincia} onChange={(e) => set('provincia', e.target.value)} />
+            <Input label="Provincia *" required value={form.provincia} onChange={(e) => set('provincia', e.target.value)} /> 
             <Input label="Ciudad *" required value={form.ciudad} onChange={(e) => set('ciudad', e.target.value)} />
             <Input label="Ubicación *" required className="md:col-span-2" value={form.ubicacion} onChange={(e) => set('ubicacion', e.target.value)} />
-            <Input label="Capacidad (m³)" type="number" step="0.01" value={form.capacidad ?? 0} onChange={(e) => set('capacidad', Number(e.target.value) || 0)} />
+            <Input
+              label="Capacidad (m³)"
+              type="number"
+              min={0}
+              step="0.01"
+              value={form.capacidad ?? 0}
+              onChange={(e) => {
+                const value = Number(e.target.value)
+                if (value >= 0) {
+                  set('capacidad', value)
+                }
+              }}
+            />
+
             <Select label="Estado" value={form.estado} onChange={(e) => set('estado', e.target.value as Estado)}>
               <option value="Activo">Activo</option>
               <option value="Inactivo">Inactivo</option>
             </Select>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-3">Descripción</label>
-              <textarea
-                rows={3}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl input-focus transition-all"
-                value={form.descripcion ?? ''}
-                onChange={(e) => set('descripcion', e.target.value)}
-              />
-            </div>
           </div>
 
           <div className="flex justify-end gap-4 mt-8">

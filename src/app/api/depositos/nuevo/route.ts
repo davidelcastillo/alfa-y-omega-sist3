@@ -7,7 +7,7 @@ const depositoSchema = z.object({
   nombre: z.string().min(1, "El nombre es obligatorio"),
   ubicacion: z.string().min(1, "La ubicación es obligatoria"),
   tipo: z.enum(["Principal", "Sucursal", "Temporal", "Tránsito"]),
-  capacidad: z.number().int().positive().optional(), // m2 opcional
+  capacidad: z.number().int().positive("La capacidad debe ser mayor que cero"),
 });
 
 export async function POST(req: Request) {
@@ -15,17 +15,34 @@ export async function POST(req: Request) {
     const body = await req.json();
     const data = depositoSchema.parse(body);
 
+    // Verificar si ya existe un depósito con el mismo nombre y ubicación
+    const depositoExistente = await prisma.deposito.findFirst({
+      where: {
+        nombre: data.nombre.trim(),
+        ubicacion: data.ubicacion.trim(),
+      },
+    });
+
+    if (depositoExistente) {
+      return NextResponse.json(
+        { error: "Ya existe un depósito con ese nombre y ubicación" },
+        { status: 400 }
+      );
+    }
+
+    // Crear nuevo depósito
     const nuevoDeposito = await prisma.deposito.create({
       data: {
-        nombre: data.nombre,
-        ubicacion: data.ubicacion,
+        nombre: data.nombre.trim(),
+        ubicacion: data.ubicacion.trim(),
         tipo: data.tipo,
-        capacidad: data.capacidad ?? null,
+        capacidad: data.capacidad,
         estado: true,
       },
     });
 
     return NextResponse.json(nuevoDeposito, { status: 201 });
+
   } catch (error) {
     console.error("Error registrando depósito:", error);
 
