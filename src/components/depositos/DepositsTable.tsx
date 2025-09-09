@@ -40,8 +40,8 @@ export default function DepositsTable({
               <tr key={d.id} className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-light-pink hover:to-transparent transition-all duration-300">
                 <td className="px-6 py-4 text-sm font-bold text-primary-pink">#{d.id}</td>
                 <td className="px-6 py-4 text-sm font-semibold text-gray-900">{d.nombre}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">{d.provincia}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">{d.ciudad}</td>
+                <td className="px-6 py-4 text-sm text-gray-600">{d.provincia || '—'}</td>
+                <td className="px-6 py-4 text-sm text-gray-600">{d.ciudad || '—'}</td>
                 <td className="px-6 py-4 text-sm text-gray-600">{d.ubicacion}</td>
                 <td className="px-6 py-4">
                   <Badge className={typeColor(d.tipo)}>{d.tipo}</Badge>
