@@ -86,7 +86,7 @@ const filtered = useMemo(() => {
 
   async function onSave(payload: Omit<Deposito, 'id'> & { id?: number }) {
     try {
-      const res = await fetch('/api/depositos/nuevo', {
+      const res = await fetch('/api/deposito/nuevo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
