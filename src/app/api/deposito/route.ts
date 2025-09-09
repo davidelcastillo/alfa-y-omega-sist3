@@ -18,6 +18,8 @@ export async function GET(req: Request) {
                 { ubicacion: { contains: search, mode: "insensitive" } },
                 { tipo: { contains: search, mode: "insensitive" } },
                 //{ capacidad: { contains: search, mode: "insensitive" } },
+                { provincia:{ contains: search, mode: "insensitive" } },
+                { ciudad:   { contains: search, mode: "insensitive" } },
               ],
             }
           : {},
