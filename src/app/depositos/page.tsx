@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect,useMemo, useState } from 'react'
 import StatsCards from '@/components/depositos/StatsCards'
 import Filters from '@/components/depositos/Filters'
 import DepositsTable from '@/components/depositos/DepositsTable'
@@ -17,20 +17,60 @@ type FiltersState = {
 const DEFAULT_FILTERS: FiltersState = { search: '', tipo: '', estado: '' }
 
 export default function DepositosPage() {
-  const [deposits, setDeposits] = useState<Deposito[]>(depositsMock)
+  const [deposits, setDeposits] = useState<Deposito[]>([])
   const [filters, setFilters] = useState<FiltersState>(DEFAULT_FILTERS)
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Deposito | null>(null)
 
-  const filtered = useMemo(() => {
-    const q = filters.search.toLowerCase()
-    return deposits.filter(d => {
-      const bySearch = !q || [d.nombre, d.ubicacion, d.ciudad, d.provincia].some(s => s.toLowerCase().includes(q))
-      const byTipo   = !filters.tipo   || d.tipo === filters.tipo
-      const byEstado = !filters.estado || d.estado === filters.estado
-      return bySearch && byTipo && byEstado
-    })
-  }, [deposits, filters])
+// Cargar depósitos desde el backend
+useEffect(() => {
+  async function fetchDeposits() {
+    try {
+      const res = await fetch("/api/deposito", { cache: 'no-store' })
+      const json = await res.json()
+
+      if (!json?.ok || !Array.isArray(json.data)) {
+        setDeposits([])
+        return
+      }
+
+      // MODIFICAR ESTO CUANDO ESTEN LAS APIS
+      const mapped: Deposito[] = json.data.map((d: any) => ({
+        id: Number(d.id),
+        nombre: d.nombre ?? '',
+        provincia: d.provincia ?? '',          // <- aún no llega: default ''
+        ciudad: d.ciudad ?? '',                // <- aún no llega: default ''
+        ubicacion: d.ubicacion ?? '',
+        tipo: (d.tipo ?? 'Principal') as Deposito['tipo'],
+        capacidad: d.capacidad ?? null,
+        itemsStock: Number(d.itemsStock ?? 0), // si no existe en API, 0
+        estado: (d.estado ? 'Activo' : 'Inactivo') as 'Activo' | 'Inactivo',
+        descripcion: d.descripcion ?? '',
+      }))
+
+      setDeposits(mapped)
+    } catch (e) {
+      console.error('Error al cargar depósitos:', e)
+      setDeposits([])
+    }
+  }
+  fetchDeposits()
+}, [])
+
+const filtered = useMemo(() => {
+  const q = filters.search.toLowerCase()
+  return deposits.filter(d => {
+    const bySearch = !q || [d.nombre, d.ubicacion, d.ciudad, d.provincia]
+      .some(s => (s ?? '').toLowerCase().includes(q))
+    const byTipo   = !filters.tipo   || d.tipo === filters.tipo
+
+    //  d.estado es 'Activo' | 'Inactivo'
+    const byEstado = !filters.estado || d.estado === filters.estado
+
+    return bySearch && byTipo && byEstado
+  })
+}, [deposits, filters])
+
 
   function onEdit(id: number) {
     const dep = deposits.find(d => d.id === id) ?? null
