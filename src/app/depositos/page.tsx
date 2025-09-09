@@ -22,25 +22,54 @@ export default function DepositosPage() {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Deposito | null>(null)
 
-  // Cargar depósitos desde el backend
-  useEffect(() => {
-    async function fetchDeposits() {
-      const res = await fetch("/api/deposito")
+// Cargar depósitos desde el backend
+useEffect(() => {
+  async function fetchDeposits() {
+    try {
+      const res = await fetch("/api/deposito", { cache: 'no-store' })
       const json = await res.json()
-      if (json.ok) setDeposits(json.data)
-    }
-    fetchDeposits()
-  }, [])
 
-  const filtered = useMemo(() => {
-    const q = filters.search.toLowerCase()
-    return deposits.filter(d => {
-      const bySearch = !q || [d.nombre, d.ubicacion, d.ciudad, d.provincia].some(s => s?.toLowerCase().includes(q))
-      const byTipo   = !filters.tipo   || d.tipo === filters.tipo
-      const byEstado = !filters.estado || (d.estado ? 'Activo' : 'Inactivo') === filters.estado
-      return bySearch && byTipo && byEstado
-    })
-  }, [deposits, filters])
+      if (!json?.ok || !Array.isArray(json.data)) {
+        setDeposits([])
+        return
+      }
+
+      // MODIFICAR ESTO CUANDO ESTEN LAS APIS
+      const mapped: Deposito[] = json.data.map((d: any) => ({
+        id: Number(d.id),
+        nombre: d.nombre ?? '',
+        provincia: d.provincia ?? '',          // <- aún no llega: default ''
+        ciudad: d.ciudad ?? '',                // <- aún no llega: default ''
+        ubicacion: d.ubicacion ?? '',
+        tipo: (d.tipo ?? 'Principal') as Deposito['tipo'],
+        capacidad: d.capacidad ?? null,
+        itemsStock: Number(d.itemsStock ?? 0), // si no existe en API, 0
+        estado: (d.estado ? 'Activo' : 'Inactivo') as 'Activo' | 'Inactivo',
+        descripcion: d.descripcion ?? '',
+      }))
+
+      setDeposits(mapped)
+    } catch (e) {
+      console.error('Error al cargar depósitos:', e)
+      setDeposits([])
+    }
+  }
+  fetchDeposits()
+}, [])
+
+const filtered = useMemo(() => {
+  const q = filters.search.toLowerCase()
+  return deposits.filter(d => {
+    const bySearch = !q || [d.nombre, d.ubicacion, d.ciudad, d.provincia]
+      .some(s => (s ?? '').toLowerCase().includes(q))
+    const byTipo   = !filters.tipo   || d.tipo === filters.tipo
+
+    //  d.estado es 'Activo' | 'Inactivo'
+    const byEstado = !filters.estado || d.estado === filters.estado
+
+    return bySearch && byTipo && byEstado
+  })
+}, [deposits, filters])
 
 
   function onEdit(id: number) {
