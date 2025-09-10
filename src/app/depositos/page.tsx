@@ -24,7 +24,6 @@ export default function DepositosPage() {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Deposito | null>(null)
 
-  // --- Helper centralizado para cargar depósitos ---
   async function loadDeposits() {
     try {
       const res = await fetch('/api/deposito', { cache: 'no-store' })
@@ -55,7 +54,6 @@ export default function DepositosPage() {
     }
   }
 
-  // Cargar depósitos al montar
   useEffect(() => {
     loadDeposits()
   }, [])
@@ -65,17 +63,15 @@ export default function DepositosPage() {
     return deposits.filter(d => {
       const bySearch =
         !q ||
-        [d.nombre, d.ubicacion, d.ciudad, d.provincia]
-          .some(s => (s ?? '').toLowerCase().includes(q))
-      const byTipo   = !filters.tipo   || d.tipo === filters.tipo
+        [d.nombre, d.ubicacion, d.ciudad, d.provincia].some(s => (s ?? '').toLowerCase().includes(q))
+      const byTipo = !filters.tipo || d.tipo === filters.tipo
       const byEstado = !filters.estado || d.estado === filters.estado
       return bySearch && byTipo && byEstado
     })
   }, [deposits, filters])
 
-  // --- Paginación ---
   const [page, setPage] = useState(1)
-  useEffect(() => { setPage(1) }, [filters]) // reset al cambiar filtros
+  useEffect(() => { setPage(1) }, [filters])
   const totalItems = filtered.length
   const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE))
   useEffect(() => {
@@ -95,10 +91,8 @@ export default function DepositosPage() {
   async function onDelete(id: number) {
     if (!confirm('¿Eliminar depósito?')) return
     try {
-      await softDeleteDeposito(id)  // usa el helper que pega a /api/deposito/[id]/eliminar
-      await loadDeposits()          // refrescá desde backend
-      // (Si quisieras update optimista, podés hacer:
-      // setDeposits(prev => prev.map(d => d.id === id ? { ...d, estado: 'Inactivo' } : d))
+      await softDeleteDeposito(id)
+      await loadDeposits()
     } catch (e: any) {
       console.error('Error eliminando depósito:', e)
       alert(e?.message ?? 'No se pudo eliminar el depósito')
@@ -108,33 +102,33 @@ export default function DepositosPage() {
   async function onSave(payload: Omit<Deposito, 'id'> & { id?: number }) {
     try {
       if (payload.id) {
-        // Si tenés endpoint PUT para actualizar, dejalo así:
         await fetch(`/api/deposito/${payload.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         })
       } else {
-        // Si tu endpoint de creación real es /api/deposito/nuevo, cambiá a esa ruta:
-        await fetch('/api/deposito', {
+        const res = await fetch('/api/deposito/nuevo', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         })
+
+        const json = await res.json()
+        if (!res.ok) throw new Error(json?.error ?? 'Error al guardar el depósito')
       }
 
       await loadDeposits()
       setOpen(false)
       setEditing(null)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error guardando depósito:', error)
-      alert('No se pudo guardar el depósito')
+      alert(error.message ?? 'No se pudo guardar el depósito')
     }
   }
 
   return (
     <main className="max-w-7xl mx-auto px-6 py-8 fade-in">
-      {/* Breadcrumb */}
       <div className="flex items-center space-x-2 text-sm text-gray-600 mb-6">
         <span>Inicio</span>
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -143,7 +137,6 @@ export default function DepositosPage() {
         <span className="text-primary-pink font-medium">Depósito</span>
       </div>
 
-      {/* Action bar */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 space-y-4 lg:space-y-0">
         <div>
           <h2 className="text-4xl font-bold bg-gradient-to-r from-primary-pink to-primary-blue bg-clip-text text-transparent mb-2">
@@ -153,7 +146,6 @@ export default function DepositosPage() {
         </div>
 
         <div className="flex space-x-4">
-          {/* Nuevo Depósito */}
           <button
             onClick={() => { setEditing(null); setOpen(true) }}
             className="btn-primary text-white px-8 py-4 rounded-xl font-semibold flex items-center space-x-3 text-lg"
@@ -164,7 +156,6 @@ export default function DepositosPage() {
             <span>Nuevo Depósito</span>
           </button>
 
-          {/* Gestionar Stock */}
           <Link
             href="/depositos/stock"
             className="bg-gradient-to-r from-primary-blue to-dark-blue text-white px-8 py-4 rounded-xl font-semibold flex items-center space-x-3 text-lg hover:shadow-lg transition-all"
@@ -182,7 +173,7 @@ export default function DepositosPage() {
       <Filters
         value={filters}
         onChange={setFilters}
-        onApply={() => { /* reactivo */ }}
+        onApply={() => {}}
       />
 
       <DepositsTable
@@ -191,7 +182,6 @@ export default function DepositosPage() {
         onDelete={onDelete}
       />
 
-      {/* Footer / Paginación */}
       <div className="flex flex-col md:flex-row justify-between items-center mt-8 gap-4">
         <p className="text-gray-600 font-medium">
           {totalItems === 0 ? (
@@ -228,7 +218,10 @@ export default function DepositosPage() {
       <DepositModal
         open={open}
         deposito={editing}
-        onClose={() => { setOpen(false); setEditing(null) }}
+        onClose={() => {
+          setOpen(false)
+          setEditing(null)
+        }}
         onSave={onSave}
       />
     </main>
