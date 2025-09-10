@@ -10,7 +10,6 @@ const depositoSchema = z.object({
   capacidad: z
     .number()
     .positive("La capacidad debe ser mayor que cero"),
-
 });
 
 export async function POST(req: Request) {
@@ -43,6 +42,10 @@ export async function POST(req: Request) {
         tipo: data.tipo,
         capacidad: data.capacidad,
         estado: true,
+        
+        // Guardamos null si no viene (porque en Prisma están como String?)
+        provincia: data.provincia ?? null,
+        ciudad: data.ciudad ?? null,
       },
     });
 

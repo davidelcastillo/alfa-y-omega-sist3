@@ -9,6 +9,10 @@ export const createDepositoSchema = z.object({
   tipo: z.string().transform((s) => (s === "Transito" ? "Tránsito" : s)).pipe(z.enum(tipos)),
   capacidad: z.union([z.number().int().nonnegative(), z.null()]).optional(),
   estado: z.boolean().optional().default(true),
+
+  // NUEVOS CAMPOS (opcionales por ahora)
+  provincia: z.string().trim().min(2).max(80).optional(),
+  ciudad: z.string().trim().min(2).max(80).optional(),
 });
 
 export type CreateDepositoInput = z.infer<typeof createDepositoSchema>;

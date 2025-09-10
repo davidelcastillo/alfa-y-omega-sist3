@@ -1,12 +1,13 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { depositsMock, productsLiteMock, stockItemsMock } from '@/lib/productsData'
+import { useMemo, useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { depositsMock, productsLiteMock, stockItemsMock } from '@/lib/deposito/productsData' // borrar este al final del sprint
 import type { Deposito, ProductoLite } from '@/lib/deposito/types'
 import StockStatsCards from '@/components/depositos/StockStatsCards'
 import StockFilters, { type StockFiltersState } from '@/components/depositos/StockFilters'
 import StockTable from '@/components/depositos/StockTable'
-import StockModal from '@/components/depositos/StockModal'
+import Link from 'next/link'
 
 export type StockStatus = 'bajo' | 'normal' | 'alto'
 
@@ -58,17 +59,25 @@ function toUI(
 }
 
 const DEFAULT_FILTERS: StockFiltersState = { depositId: '', productQuery: '', status: '' }
+const PAGE_SIZE = 10
 
 export default function StockPage() {
-  const [deposits, setDeposits] = useState(depositsMock)
+  const searchParams = useSearchParams()
+  const initialDepositId = useMemo<number | ''>(() => {
+    const v = searchParams.get('depositId')
+    const n = v ? Number(v) : NaN
+    return Number.isFinite(n) && n > 0 ? n : ''
+  }, [searchParams])
+
+  const [deposits] = useState(depositsMock)
   const [products] = useState(productsLiteMock)
   const [stock] = useState(() => toUI(deposits, products))
-  const [filters, setFilters] = useState<StockFiltersState>(DEFAULT_FILTERS)
+  const [filters, setFilters] = useState<StockFiltersState>({
+    ...DEFAULT_FILTERS,
+    depositId: initialDepositId, // preselecciona depósito desde la URL
+  })
 
-  // Modal edición/ajuste
-  const [open, setOpen] = useState(false)
-  const [editingId, setEditingId] = useState<number | null>(null)
-
+  // ---- Filtro (reactivo) ----
   const filtered = useMemo(() => {
     const byDeposit = (s: UIStock) => !filters.depositId || s.depositId === filters.depositId
     const q = filters.productQuery.trim().toLowerCase()
@@ -77,7 +86,7 @@ export default function StockPage() {
     return stock.filter(s => byDeposit(s) && byProduct(s) && byStatus(s))
   }, [stock, filters])
 
-  // para stats: capacidad total de depósitos involucrados en los resultados
+  // ---- Stats usan todos los filtrados (no solo la página) ----
   const involvedDepositIds = useMemo(
     () => Array.from(new Set(filtered.map(r => r.depositId))),
     [filtered]
@@ -87,28 +96,17 @@ export default function StockPage() {
     [deposits, involvedDepositIds]
   )
 
-  // acciones tabla
-  const onEdit = (id: number) => { setEditingId(id); setOpen(true) }
-  const onSave = (patch: Partial<UIStock> & { id: number }) => {
-    // Base demo: solo actualiza UI local en memoria
-    // (Si después querés llevarlo a DB, acá va el fetch a tu API y un refresh de datos)
-    const idx = stock.findIndex(s => s.id === patch.id)
-    if (idx >= 0) {
-      const current = stock[idx]
-      const next = {
-        ...current,
-        ...patch,
-      }
-      // sincronizar status y progress si cambió algún valor
-      next.status = statusOf(next)
-      next.progress = next.stockMaximo > 0 ? Math.min((next.stockActual / next.stockMaximo) * 100, 100) : 0
-      stock[idx] = next
-    }
-    setOpen(false)
-    setEditingId(null)
-  }
+  // ---- Paginación (como en productos) ----
+  const [page, setPage] = useState(1)
+  useEffect(() => { setPage(1) }, [filters]) // reset al cambiar filtros
 
-  const editing = editingId ? filtered.find(x => x.id === editingId) ?? null : null
+  const totalItems = filtered.length
+  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE))
+  useEffect(() => { if (page > totalPages) setPage(totalPages) }, [page, totalPages])
+
+  const start = (page - 1) * PAGE_SIZE
+  const end = Math.min(start + PAGE_SIZE, totalItems)
+  const pageItems = filtered.slice(start, end)
 
   return (
     <main className="max-w-7xl mx-auto px-6 py-8 screen-transition">
@@ -133,6 +131,18 @@ export default function StockPage() {
           </h2>
           <p className="text-gray-600 text-lg">Control completo del inventario por depósito</p>
         </div>
+
+        <div className="flex space-x-4">
+          <Link
+            href="/depositos"
+            className="bg-gradient-to-r from-gray-500 to-gray-700 text-white px-8 py-4 rounded-xl font-semibold flex items-center space-x-3 text-lg hover:shadow-lg transition-all"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            <span>Volver a Depósitos</span>
+          </Link>
+        </div>
       </div>
 
       {/* Stats */}
@@ -144,21 +154,45 @@ export default function StockPage() {
         products={products}
         value={filters}
         onChange={setFilters}
-        onApply={() => { /* opcional: ya filtra en vivo */ }}
+        onApply={() => { /* ya filtra en vivo */ }}
       />
 
-      {/* Tabla */}
-      <StockTable items={filtered} onEdit={onEdit} />
+      {/* Tabla (paginada) */}
+      <StockTable items={pageItems} />
 
-      {/* Modal edición */}
-      <StockModal
-        open={open}
-        item={editing}
-        deposits={deposits}
-        products={products}
-        onClose={() => { setOpen(false); setEditingId(null) }}
-        onSave={onSave}
-      />
+      {/* Footer / Paginación */}
+      <div className="flex flex-col md:flex-row justify-between items-center mt-8 gap-4">
+        <p className="text-gray-600 font-medium">
+          {totalItems === 0 ? (
+            <>Mostrando <span className="font-bold text-primary-pink">0</span> de <span className="font-bold text-primary-pink">0</span> items</>
+          ) : (
+            <>Mostrando <span className="font-bold text-primary-pink">{start + 1}-{end}</span> de <span className="font-bold text-primary-pink">{totalItems}</span> items</>
+          )}
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page <= 1}
+            className={`px-6 py-3 border-2 rounded-xl font-medium transition-colors
+              ${page <= 1 ? 'border-gray-200 text-gray-400 cursor-not-allowed' : 'border-gray-200 hover:bg-gray-50'}`}
+          >
+            Anterior
+          </button>
+
+          <span className="text-sm text-gray-700 px-2">
+            Página <span className="font-semibold">{Math.min(page, totalPages)}</span> de <span className="font-semibold">{totalPages}</span>
+          </span>
+
+          <button
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages}
+            className={`px-6 py-3 border-2 rounded-xl font-medium transition-colors
+              ${page >= totalPages ? 'border-gray-200 text-gray-400 cursor-not-allowed' : 'border-gray-200 hover:bg-gray-50'}`}
+          >
+            Siguiente
+          </button>
+        </div>
+      </div>
     </main>
   )
 }

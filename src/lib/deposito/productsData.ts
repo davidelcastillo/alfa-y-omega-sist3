@@ -1,5 +1,5 @@
 //esto es para los mocks, despues borrarlo
-import type { Deposito, ProductoLite, StockItem } from './deposito/types'
+import type { Deposito, ProductoLite, StockItem } from './types'
 
 export const depositsMock: Deposito[] = [
   {
