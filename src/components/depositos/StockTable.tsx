@@ -8,10 +8,8 @@ function statusClasses(status: UIStock['status']) {
 
 export default function StockTable({
   items,
-  onEdit,
 }: {
   items: UIStock[]
-  onEdit: (id: number) => void
 }) {
   return (
     <div className="glass-effect rounded-2xl overflow-hidden card-hover">
@@ -22,16 +20,29 @@ export default function StockTable({
         <table className="w-full">
           <thead className="bg-gray-50">
             <tr>
-              {['Depósito', 'Producto', 'Stock Actual', 'Stock Mínimo', 'Stock Máximo', 'Nivel', 'Estado', 'Acciones']
-                .map(h => <th key={h} className="px-4 py-4 text-left text-sm font-bold text-dark-blue">{h}</th>)
-              }
+              {[
+                'Depósito',
+                'Producto',
+                'Stock Actual',
+                'Stock Mínimo',
+                'Stock Máximo',
+                'Nivel',
+                'Estado',
+              ].map((h) => (
+                <th key={h} className="px-4 py-4 text-left text-sm font-bold text-dark-blue">
+                  {h}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {items.map(it => {
+            {items.map((it) => {
               const cls = statusClasses(it.status)
               return (
-                <tr key={it.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                <tr
+                  key={it.id}
+                  className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                >
                   <td className="px-4 py-3">
                     <div className="text-sm font-semibold text-gray-900">{it.depositNombre}</div>
                     <div className="text-xs text-gray-500">{it.depositUbicacion}</div>
@@ -42,32 +53,32 @@ export default function StockTable({
                   <td className="px-4 py-3 text-sm text-gray-600">{it.stockMaximo}</td>
                   <td className="px-4 py-3">
                     <div className="stock-progress">
-                      <div className="stock-progress-bar bg-gray-400" style={{ width: `${it.progress}%` }} />
+                      <div
+                        className="stock-progress-bar bg-gray-400"
+                        style={{ width: `${it.progress}%` }}
+                      />
                     </div>
                     <div className="text-xs text-gray-500 mt-1">{it.progress.toFixed(1)}%</div>
                   </td>
                   <td className="px-4 py-3">
                     <span className={`px-3 py-1 text-xs font-medium rounded-full ${cls.pill}`}>
-                      {it.status === 'bajo' ? 'Stock Bajo' : it.status === 'alto' ? 'Stock Alto' : 'Stock Normal'}
+                      {it.status === 'bajo'
+                        ? 'Stock Bajo'
+                        : it.status === 'alto'
+                        ? 'Stock Alto'
+                        : 'Stock Normal'}
                     </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={() => onEdit(it.id)}
-                      className="text-primary-blue hover:text-dark-blue transition-colors p-2 rounded-lg hover:bg-light-pink"
-                      aria-label="Ajustar stock"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                      </svg>
-                    </button>
                   </td>
                 </tr>
               )
             })}
 
             {items.length === 0 && (
-              <tr><td colSpan={8} className="px-6 py-10 text-center text-gray-500">Sin resultados</td></tr>
+              <tr>
+                <td colSpan={7} className="px-6 py-10 text-center text-gray-500">
+                  Sin resultados
+                </td>
+              </tr>
             )}
           </tbody>
         </table>
