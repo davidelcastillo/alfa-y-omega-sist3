@@ -85,7 +85,7 @@ export default function DepositModal({
               label="Capacidad (m³)"
               type="number"
               min={0}
-              step="0.01"
+              step="1"
               value={form.capacidad ?? 0}
               onChange={(e) => {
                 const value = Number(e.target.value)
