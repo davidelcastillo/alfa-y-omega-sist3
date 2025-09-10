@@ -8,10 +8,9 @@ const depositoSchema = z.object({
   ubicacion: z.string().min(1, "La ubicación es obligatoria"),
   tipo: z.enum(["Principal", "Sucursal", "Temporal", "Tránsito"]),
   capacidad: z.number().int().positive().optional(), // m2 opcional
+  provincia: z.string().min(1).optional(), // provincia es opcional por el momento
+  ciudad: z.string().min(1).optional(),
 
-  // NUEVOS CAMPOS (opcionales por ahora)
-  provincia: z.string().min(2).max(80).optional(),
-  ciudad: z.string().min(2).max(80).optional(),
 });
 
 export async function POST(req: Request) {
