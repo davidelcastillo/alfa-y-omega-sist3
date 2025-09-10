@@ -14,6 +14,7 @@ export interface Deposito {
   descripcion?: string
 }
 
+
 export interface ProductoLite {
   id: number
   descripcion: string
