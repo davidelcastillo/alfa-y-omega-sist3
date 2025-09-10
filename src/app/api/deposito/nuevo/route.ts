@@ -2,17 +2,22 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
-// Validaciones de entrada
+// Validaciones de entrada con Zod
 const depositoSchema = z.object({
   nombre: z.string().min(1, "El nombre es obligatorio"),
   ubicacion: z.string().min(1, "La ubicación es obligatoria"),
   tipo: z.enum(["Principal", "Sucursal", "Temporal", "Tránsito"]),
-  capacidad: z.number().int().positive("La capacidad debe ser mayor que cero"),
+  capacidad: z
+    .number()
+    .positive("La capacidad debe ser mayor que cero"),
+
 });
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+
+    // Validar los datos con Zod
     const data = depositoSchema.parse(body);
 
     // Verificar si ya existe un depósito con el mismo nombre y ubicación
@@ -47,8 +52,13 @@ export async function POST(req: Request) {
     console.error("Error registrando depósito:", error);
 
     if (error instanceof z.ZodError) {
+      console.error("❌ Error de validación Zod:", error.flatten());
+
       return NextResponse.json(
-        { error: "Datos inválidos", detalles: error.flatten() },
+        {
+          error: "Datos inválidos",
+          detalles: error.flatten(), // Muestra errores por campo
+        },
         { status: 400 }
       );
     }
