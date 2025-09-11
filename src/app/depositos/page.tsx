@@ -161,42 +161,58 @@ export default function DepositosPage() {
   }
 
   async function onSave(payload: Omit<Deposito, 'id'> & { id?: number }) {
-    try {
-      // Mapea el string 'estado' del formulario a un valor booleano para la API
-      const estadoBoolean = payload.estado === 'Activo';
-
-      // Crea el objeto de datos a enviar a la API
-      const apiPayload = {
+  try {
+    if (payload.id) {
+      // UPDATE: si tu endpoint de actualización espera boolean, dejamos el boolean acá
+      const estadoBoolean = payload.estado === 'Activo'
+      const updatePayload = {
         ...payload,
         estado: estadoBoolean,
-        capacidad: Number(payload.capacidad)
-      };
-
-      if (payload.id) {
-        await fetch(`/api/deposito/${payload.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(apiPayload),
-        });
-      } else {
-        const res = await fetch('/api/deposito/nuevo', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(apiPayload),
-        });
-
-        const json = await res.json();
-        if (!res.ok) throw new Error(json?.error ?? 'Error al guardar el depósito');
+        capacidad:
+          payload.capacidad === '' || payload.capacidad == null
+            ? undefined
+            : Number(payload.capacidad),
+        // limpia strings vacíos
+        provincia: payload.provincia?.trim() || undefined,
+        ciudad: payload.ciudad?.trim() || undefined,
       }
 
-      await loadDeposits();
-      setOpen(false);
-      setEditing(null);
-    } catch (error: any) {
-      console.error('Error guardando depósito:', error);
-      alert(error.message ?? 'No se pudo guardar el depósito');
+      await fetch(`/api/deposito/${payload.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatePayload),
+      })
+    } else {
+      // CREATE: el endpoint /nuevo espera estado como 'Activo' | 'Inactivo'
+      const createPayload = {
+        ...payload,
+        estado: payload.estado, // 👈 string, NO boolean
+        capacidad:
+          payload.capacidad === '' || payload.capacidad == null
+            ? undefined
+            : Number(payload.capacidad), // si es vacío, no mandes nada
+        provincia: payload.provincia?.trim() || undefined, // '' => undefined
+        ciudad: payload.ciudad?.trim() || undefined,       // '' => undefined
+      }
+
+      const res = await fetch('/api/deposito/nuevo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(createPayload),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json?.error ?? 'Error al guardar el depósito')
     }
+
+    await loadDeposits()
+    setOpen(false)
+    setEditing(null)
+  } catch (error: any) {
+    console.error('Error guardando depósito:', error)
+    alert(error.message ?? 'No se pudo guardar el depósito')
   }
+}
+
 
   return (
     <main className="max-w-7xl mx-auto px-6 py-8 fade-in">
