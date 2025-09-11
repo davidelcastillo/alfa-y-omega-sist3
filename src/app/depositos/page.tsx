@@ -1,13 +1,16 @@
 'use client'
 
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useCallback, useEffect } from 'react'
 import StatsCards from '@/components/depositos/StatsCards'
 import Filters from '@/components/depositos/Filters'
 import DepositsTable from '@/components/depositos/DepositsTable'
 import DepositModal from '@/components/depositos/DepositModal'
 import type { Deposito } from '@/lib/deposito/types'
-import { softDeleteDeposito } from '@/lib/api'
+import type { SortKey, SortOrder } from '@/lib/types'
 import Link from 'next/link'
+import { softDeleteDeposito } from '@/lib/api'
+
+// ---
 
 type FiltersState = {
   search: string
@@ -18,20 +21,66 @@ type FiltersState = {
 const DEFAULT_FILTERS: FiltersState = { search: '', tipo: '', estado: '' }
 const PAGE_SIZE = 10
 
-export default function DepositosPage() {
-  const [deposits, setDeposits] = useState<Deposito[]>([])
-  const [filters, setFilters] = useState<FiltersState>(DEFAULT_FILTERS)
-  const [open, setOpen] = useState(false)
-  const [editing, setEditing] = useState<Deposito | null>(null)
+// Lógica de ordenamiento para depósitos
+const sortDeposits = (deposits: Deposito[], sortKey: SortKey | null, sortOrder: SortOrder) => {
+  if (!sortKey || !sortOrder) return deposits;
+  return [...deposits].sort((a, b) => {
+    const aValue = a[sortKey as keyof Deposito] as unknown;
+    const bValue = b[sortKey as keyof Deposito] as unknown;
 
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+      return sortOrder === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+    }
+    if (typeof aValue === 'number' && typeof bValue === 'number') {
+      return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
+    }
+    return 0;
+  });
+};
+
+// ---
+
+export default function DepositosPage() {
+  const [deposits, setDeposits] = useState<Deposito[]>([]);
+  const [filters, setFilters] = useState<FiltersState>(DEFAULT_FILTERS);
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Deposito | null>(null);
+
+  // Estado para el ordenamiento
+  const [sortState, setSortState] = useState<{ key: SortKey | null; order: SortOrder }>({ key: 'id', order: 'asc' });
+
+  // Estado y efectos para la paginación
+  const [page, setPage] = useState(1);
+  useEffect(() => { setPage(1); }, [filters, sortState]);
+
+  // Lógica para manejar el clic en el encabezado de la tabla
+  const handleSort = useCallback((key: SortKey) => {
+    setSortState(prev => {
+      // Si el usuario hace clic en la misma columna
+      if (prev.key === key) {
+        // Si el orden actual es 'asc', cambia a 'desc'
+        if (prev.order === 'asc') {
+          return { key, order: 'desc' };
+        // Si el orden actual es 'desc', vuelve al estado por defecto (ID ascendente)
+        } else {
+          return { key: 'id', order: 'asc' };
+        }
+      } else {
+        // Si el usuario hace clic en una columna diferente, establece el orden ascendente
+        return { key, order: 'asc' };
+      }
+    });
+  }, []);
+
+  // Cargar depósitos desde el backend
   async function loadDeposits() {
     try {
-      const res = await fetch('/api/deposito', { cache: 'no-store' })
-      const json = await res.json()
+      const res = await fetch("/api/deposito", { cache: 'no-store' });
+      const json = await res.json();
 
-      if (!res.ok || !json?.ok || !Array.isArray(json.data)) {
-        setDeposits([])
-        return
+      if (!json?.ok || !Array.isArray(json.data)) {
+        setDeposits([]);
+        return;
       }
 
       const mapped: Deposito[] = json.data.map((d: any) => ({
@@ -45,57 +94,56 @@ export default function DepositosPage() {
         itemsStock: Number(d.itemsStock ?? 0),
         estado: (d.estado ? 'Activo' : 'Inactivo') as 'Activo' | 'Inactivo',
         descripcion: d.descripcion ?? '',
-      }))
+      }));
 
-      setDeposits(mapped)
+      setDeposits(mapped);
     } catch (e) {
-      console.error('Error al cargar depósitos:', e)
-      setDeposits([])
+      console.error('Error al cargar depósitos:', e);
+      setDeposits([]);
     }
   }
 
   useEffect(() => {
-    loadDeposits()
-  }, [])
+    loadDeposits();
+  }, []);
 
-  const filtered = useMemo(() => {
-    const q = filters.search.toLowerCase()
-    return deposits.filter(d => {
-      const bySearch =
-        !q ||
-        [d.nombre, d.ubicacion, d.ciudad, d.provincia].some(s => (s ?? '').toLowerCase().includes(q))
-      const byTipo = !filters.tipo || d.tipo === filters.tipo
-      const byEstado = !filters.estado || d.estado === filters.estado
-      return bySearch && byTipo && byEstado
-    })
-  }, [deposits, filters])
+  // Lógica de filtrado y ordenamiento combinada
+  const filteredAndSorted = useMemo(() => {
+    const q = filters.search.toLowerCase();
+    const filtered = deposits.filter(d => {
+      const bySearch = !q || [d.nombre, d.ubicacion, d.ciudad, d.provincia].some(s => (s ?? '').toLowerCase().includes(q));
+      const byTipo = !filters.tipo || d.tipo === filters.tipo;
+      const byEstado = !filters.estado || d.estado === filters.estado;
+      return bySearch && byTipo && byEstado;
+    });
+    // Aplica el ordenamiento después de filtrar
+    return sortDeposits(filtered, sortState.key, sortState.order);
+  }, [deposits, filters, sortState]);
 
-  const [page, setPage] = useState(1)
-  useEffect(() => { setPage(1) }, [filters])
-  const totalItems = filtered.length
-  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE))
+  // Lógica de paginación
+  const totalItems = filteredAndSorted.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   useEffect(() => {
-    if (page > totalPages) setPage(totalPages)
-  }, [page, totalPages])
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
-  const start = (page - 1) * PAGE_SIZE
-  const end = Math.min(start + PAGE_SIZE, totalItems)
-  const pageItems = filtered.slice(start, end)
+  const start = (page - 1) * PAGE_SIZE;
+  const end = Math.min(start + PAGE_SIZE, totalItems);
+  const pageItems = filteredAndSorted.slice(start, end);
 
   function onEdit(id: number) {
-    const dep = deposits.find(d => d.id === id) ?? null
-    setEditing(dep)
-    setOpen(true)
+    const dep = deposits.find(d => d.id === id) ?? null;
+    setEditing(dep);
+    setOpen(true);
   }
 
   async function onDelete(id: number) {
-    if (!confirm('¿Eliminar depósito?')) return
     try {
-      await softDeleteDeposito(id)
-      await loadDeposits()
+      await softDeleteDeposito(id);
+      await loadDeposits();
     } catch (e: any) {
-      console.error('Error eliminando depósito:', e)
-      alert(e?.message ?? 'No se pudo eliminar el depósito')
+      console.error('Error eliminando depósito:', e);
+      alert(e?.message ?? 'No se pudo eliminar el depósito');
     }
   }
 
@@ -106,24 +154,24 @@ export default function DepositosPage() {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
-        })
+        });
       } else {
         const res = await fetch('/api/deposito/nuevo', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
-        })
+        });
 
-        const json = await res.json()
-        if (!res.ok) throw new Error(json?.error ?? 'Error al guardar el depósito')
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.error ?? 'Error al guardar el depósito');
       }
 
-      await loadDeposits()
-      setOpen(false)
-      setEditing(null)
+      await loadDeposits();
+      setOpen(false);
+      setEditing(null);
     } catch (error: any) {
-      console.error('Error guardando depósito:', error)
-      alert(error.message ?? 'No se pudo guardar el depósito')
+      console.error('Error guardando depósito:', error);
+      alert(error.message ?? 'No se pudo guardar el depósito');
     }
   }
 
@@ -147,7 +195,7 @@ export default function DepositosPage() {
 
         <div className="flex space-x-4">
           <button
-            onClick={() => { setEditing(null); setOpen(true) }}
+            onClick={() => { setEditing(null); setOpen(true); }}
             className="btn-primary text-white px-8 py-4 rounded-xl font-semibold flex items-center space-x-3 text-lg"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
@@ -168,7 +216,7 @@ export default function DepositosPage() {
         </div>
       </div>
 
-      <StatsCards deposits={filtered} />
+      <StatsCards deposits={filteredAndSorted} />
 
       <Filters
         value={filters}
@@ -180,6 +228,8 @@ export default function DepositosPage() {
         deposits={pageItems}
         onEdit={onEdit}
         onDelete={onDelete}
+        onSort={handleSort}
+        sortState={sortState}
       />
 
       <div className="flex flex-col md:flex-row justify-between items-center mt-8 gap-4">
@@ -219,11 +269,11 @@ export default function DepositosPage() {
         open={open}
         deposito={editing}
         onClose={() => {
-          setOpen(false)
-          setEditing(null)
+          setOpen(false);
+          setEditing(null);
         }}
         onSave={onSave}
       />
     </main>
-  )
+  );
 }
