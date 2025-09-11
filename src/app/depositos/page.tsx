@@ -89,7 +89,6 @@ export default function DepositosPage() {
   }
 
   async function onDelete(id: number) {
-    if (!confirm('¿Eliminar depósito?')) return
     try {
       await softDeleteDeposito(id)
       await loadDeposits()
@@ -98,6 +97,7 @@ export default function DepositosPage() {
       alert(e?.message ?? 'No se pudo eliminar el depósito')
     }
   }
+
 
   async function onSave(payload: Omit<Deposito, 'id'> & { id?: number }) {
     try {
