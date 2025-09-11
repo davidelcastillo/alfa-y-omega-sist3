@@ -138,7 +138,6 @@ export default function DepositosPage() {
   }
 
   async function onDelete(id: number) {
-    if (!confirm('¿Eliminar depósito?')) return;
     try {
       await softDeleteDeposito(id);
       await loadDeposits();

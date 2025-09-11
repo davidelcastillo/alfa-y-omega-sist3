@@ -4,6 +4,19 @@ import Link from 'next/link'
 import type { Deposito } from '@/lib/deposito/types'
 import Badge from '@/components/ui/Badge'
 import type { SortKey, SortOrder } from '@/lib/types'
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/Button";
+import { TrashIcon } from 'lucide-react'
 
 function typeColor(tipo: Deposito['tipo']) {
   const map: Record<Deposito['tipo'], string> = {
@@ -81,10 +94,12 @@ export default function DepositsTable({
               ))}
             </tr>
           </thead>
+
           <tbody>
             {deposits.length > 0 ? (
               deposits.map(d => (
-                <tr key={d.id} className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-light-pink hover:to-transparent transition-all duration-300">
+                <tr 
+                  key={d.id} className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-light-pink hover:to-transparent transition-all duration-300">
                   <td className="px-6 py-4 text-sm font-bold text-primary-pink">#{d.id}</td>
                   <td className="px-6 py-4 text-sm font-semibold text-gray-900">{d.nombre}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">{d.provincia || '—'}</td>
@@ -96,10 +111,14 @@ export default function DepositsTable({
                   <td className="px-6 py-4 text-sm text-gray-600">{d.capacidad ? `${d.capacidad.toFixed(2)} m³` : 'N/A'}</td>
                   <td className="px-6 py-4 text-sm font-bold text-primary-blue">{d.itemsStock}</td>
                   <td className="px-6 py-4">
-                    <span className={`px-4 py-2 text-xs font-bold rounded-full text-white ${d.estado === 'Activo' ? 'status-active' : 'status-inactive'}`}>{d.estado}</span>
+                    <span 
+                      className={`px-4 py-2 text-xs font-bold rounded-full text-white ${d.estado === 'Activo' ? 'status-active' : 'status-inactive'}`}>
+                      {d.estado}
+                    </span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex space-x-3">
+                      {/* Editar */}
                       <button
                         onClick={() => onEdit(d.id)}
                         className="text-primary-blue hover:text-dark-blue transition-colors p-2 rounded-lg hover:bg-light-pink"
@@ -110,32 +129,72 @@ export default function DepositsTable({
                         </svg>
                       </button>
 
-                      <Link
-                        href={`/depositos/stock?depositId=${d.id}`}
-                        className="text-primary-blue hover:text-dark-blue transition-colors p-2 rounded-lg hover:bg-light-pink"
-                        aria-label={`Gestionar stock de ${d.nombre}`}
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                        </svg>
-                      </Link>
+                    {/* Stock */}
+                    <Link
+                      href={`/depositos/stock?depositId=${d.id}`}
+                      className="text-primary-blue hover:text-dark-blue transition-colors p-2 rounded-lg hover:bg-light-pink"
+                      aria-label={`Gestionar stock de ${d.nombre}`}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                        />
+                      </svg>
+                    </Link>
 
-                      <button
-                        onClick={() => onDelete(d.id)}
-                        className="text-red-500 hover:text-red-700 transition-colors p-2 rounded-lg hover:bg-red-50"
-                        aria-label={`Eliminar ${d.nombre}`}
+                    {/* Eliminar */}
+                    {d.estado === 'Inactivo' ? (
+                      <Button
+                        variant="ghost"
+                        className="text-gray-400 cursor-not-allowed p-2 rounded-lg"
+                        disabled
+                        aria-label={`Ya deshabilitado ${d.nombre}`}
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            ) : (
+                        <TrashIcon className="w-5 h-5" />
+                      </Button>
+                    ) : (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            className="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50"
+                            aria-label={`Eliminar ${d.nombre}`}
+                          >
+                            <TrashIcon className="w-5 h-5" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Esta acción deshabilitará el depósito <strong>{d.nombre}</strong>.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel asChild>
+                              <Button variant="outline">Cancelar</Button>
+                            </AlertDialogCancel>
+                            <AlertDialogAction asChild>
+                              <Button
+                                variant="outline"
+                                onClick={() => onDelete(d.id)}
+                              >
+                                Eliminar
+                              </Button>
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))
+          ) : (
               <tr>
-                <td colSpan={10} className="px-6 py-10 text-center text-gray-500">Sin resultados</td>
+                <td colSpan={10} className="px-6 py-10 text-center text-gray-500">
+                  Sin resultados
+                </td>
               </tr>
             )}
           </tbody>
