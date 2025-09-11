@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import type { Deposito } from '@/lib/deposito/types'
 import Badge from '@/components/ui/Badge'
+
 import type { SortKey, SortOrder } from '@/lib/types'
 import {
   AlertDialog,
@@ -63,6 +64,7 @@ export default function DepositsTable({
         <table className="w-full">
           <thead className="bg-gray-50">
             <tr>
+
               {headers.map((h) => (
                 <th
                   key={h.key || h.label}

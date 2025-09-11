@@ -14,6 +14,7 @@ const depositoSchema = z.object({
 
   provincia: z.string().min(1).optional(), // provincia es opcional por el momento
   ciudad: z.string().min(1).optional(),    // ciudad es opcional por el momento
+  estado: z.enum(["Activo", "Inactivo"]), // agregamos estaod
 });
 
 export async function POST(req: Request) {
@@ -45,7 +46,7 @@ export async function POST(req: Request) {
         ubicacion: data.ubicacion.trim(),
         tipo: data.tipo,
         capacidad: data.capacidad ?? null,
-        estado: true,
+        estado: data.estado === "Activo",
 
         // Guardamos null si no viene (porque en Prisma están como String?)
         provincia: data.provincia ?? null,
