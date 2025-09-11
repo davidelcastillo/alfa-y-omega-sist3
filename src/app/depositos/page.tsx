@@ -5,6 +5,7 @@ import StatsCards from '@/components/depositos/StatsCards'
 import Filters from '@/components/depositos/Filters'
 import DepositsTable from '@/components/depositos/DepositsTable'
 import DepositModal from '@/components/depositos/DepositModal'
+import Button from '@/components/ui/Button'
 import type { Deposito } from '@/lib/deposito/types'
 import type { SortKey, SortOrder } from '@/lib/types'
 import Link from 'next/link'
@@ -150,10 +151,9 @@ export default function DepositosPage() {
   }
 
   async function onDelete(id: number) {
-    if (!confirm('¿Eliminar depósito?')) return;
     try {
-      await softDeleteDeposito(id);
-      await loadDeposits();
+      await softDeleteDeposito(id); //deshabilita
+      await loadDeposits();  //refresca la pagina
     } catch (e: any) {
       console.error('Error eliminando depósito:', e);
       alert(e?.message ?? 'No se pudo eliminar el depósito');
@@ -300,12 +300,13 @@ export default function DepositosPage() {
               >
                 Cancelar
               </button>
-              <button
+              <Button
                 onClick={handleConfirmEdit}
-                className="bg-gradient-to-r from-pink-400 to-pink-600 text-white px-8 py-3 rounded-full font-semibold transition-colors hover:shadow-lg"
+                //className="bg-gradient-to-r from-pink-400 to-pink-600 text-white px-8 py-3 rounded-full font-semibold transition-colors hover:shadow-lg"
+                className="px-8"
               >
                 Confirmar
-              </button>
+              </Button>
             </div>
           </div>
         </div>
