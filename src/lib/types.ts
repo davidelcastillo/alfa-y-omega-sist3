@@ -13,3 +13,6 @@ export type UIProduct = {
   unidadId: number
   estadoBool: boolean
 }
+// exportación del SortOrder y SortKey para el ordenamiendo y agrupación 
+export type SortOrder = 'asc' | 'desc' | null ;
+export type SortKey = 'id' | 'nombre' | 'provincia' | 'ciudad' | 'ubicacion' | 'tipo' | 'capacidad' | 'itemsStock' | 'estado';
