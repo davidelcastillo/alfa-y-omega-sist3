@@ -46,6 +46,10 @@ export default function DepositosPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Deposito | null>(null);
 
+  // Estados para el modal de confirmación
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [depositoToEdit, setDepositoToEdit] = useState<Deposito | null>(null);
+
   // Estado para el ordenamiento
   const [sortState, setSortState] = useState<{ key: SortKey | null; order: SortOrder }>({ key: 'id', order: 'asc' });
 
@@ -56,17 +60,13 @@ export default function DepositosPage() {
   // Lógica para manejar el clic en el encabezado de la tabla
   const handleSort = useCallback((key: SortKey) => {
     setSortState(prev => {
-      // Si el usuario hace clic en la misma columna
       if (prev.key === key) {
-        // Si el orden actual es 'asc', cambia a 'desc'
         if (prev.order === 'asc') {
           return { key, order: 'desc' };
-        // Si el orden actual es 'desc', vuelve al estado por defecto (ID ascendente)
         } else {
           return { key: 'id', order: 'asc' };
         }
       } else {
-        // Si el usuario hace clic en una columna diferente, establece el orden ascendente
         return { key, order: 'asc' };
       }
     });
@@ -116,7 +116,6 @@ export default function DepositosPage() {
       const byEstado = !filters.estado || d.estado === filters.estado;
       return bySearch && byTipo && byEstado;
     });
-    // Aplica el ordenamiento después de filtrar
     return sortDeposits(filtered, sortState.key, sortState.order);
   }, [deposits, filters, sortState]);
 
@@ -131,13 +130,27 @@ export default function DepositosPage() {
   const end = Math.min(start + PAGE_SIZE, totalItems);
   const pageItems = filteredAndSorted.slice(start, end);
 
+  // Función para manejar el clic en "Editar" y mostrar la confirmación
   function onEdit(id: number) {
     const dep = deposits.find(d => d.id === id) ?? null;
-    setEditing(dep);
-    setOpen(true);
+    if (dep) {
+      setDepositoToEdit(dep);
+      setShowConfirm(true);
+    }
+  }
+
+  // Función que se ejecuta al confirmar la edición en el modal
+  function handleConfirmEdit() {
+    if (depositoToEdit) {
+      setEditing(depositoToEdit);
+      setOpen(true);
+      setShowConfirm(false);
+      setDepositoToEdit(null);
+    }
   }
 
   async function onDelete(id: number) {
+    if (!confirm('¿Eliminar depósito?')) return;
     try {
       await softDeleteDeposito(id);
       await loadDeposits();
@@ -147,20 +160,29 @@ export default function DepositosPage() {
     }
   }
 
-
   async function onSave(payload: Omit<Deposito, 'id'> & { id?: number }) {
     try {
+      // Mapea el string 'estado' del formulario a un valor booleano para la API
+      const estadoBoolean = payload.estado === 'Activo';
+
+      // Crea el objeto de datos a enviar a la API
+      const apiPayload = {
+        ...payload,
+        estado: estadoBoolean,
+        capacidad: Number(payload.capacidad)
+      };
+
       if (payload.id) {
         await fetch(`/api/deposito/${payload.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(apiPayload),
         });
       } else {
         const res = await fetch('/api/deposito/nuevo', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(apiPayload),
         });
 
         const json = await res.json();
@@ -265,6 +287,29 @@ export default function DepositosPage() {
           </button>
         </div>
       </div>
+
+      {showConfirm && depositoToEdit && (
+        <div className="fixed inset-0 bg-black/50 z-50 p-4 flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-10 text-center">
+            <h3 className="text-2xl font-bold text-gray-900 mb-4">Confirmar Edición</h3>
+            <p className="text-gray-700 mb-6">¿Estás seguro de que quieres modificar el depósito <span className="font-bold text-gray-900">{depositoToEdit.nombre}</span>?</p>
+            <div className="flex justify-center gap-4">
+              <button
+                onClick={() => { setShowConfirm(false); setDepositoToEdit(null); }}
+                className="btn-outline border border-gray-300 text-gray-700 px-8 py-3 rounded-full font-semibold transition-colors hover:bg-gray-100"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmEdit}
+                className="bg-gradient-to-r from-pink-400 to-pink-600 text-white px-8 py-3 rounded-full font-semibold transition-colors hover:shadow-lg"
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <DepositModal
         open={open}
