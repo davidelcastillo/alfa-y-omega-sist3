@@ -186,7 +186,7 @@ export default function DepositosPage() {
       // CREATE: el endpoint /nuevo espera estado como 'Activo' | 'Inactivo'
       const createPayload = {
         ...payload,
-        estado: payload.estado, // 👈 string, NO boolean
+        estado: payload.estado, // string, NO boolean
         capacidad:
           payload.capacidad === '' || payload.capacidad == null
             ? undefined
@@ -215,7 +215,8 @@ export default function DepositosPage() {
 
 
   return (
-    <main className="max-w-7xl mx-auto px-6 py-8 fade-in">
+    //<main className="max-w-7xl mx-auto px-6 py-8 fade-in">
+    <main className="w-full max-w-none mx-auto px-3 sm:px-4 lg:px-6 py-8 fade-in">
       <div className="flex items-center space-x-2 text-sm text-gray-600 mb-6">
         <span>Inicio</span>
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -60,8 +60,10 @@ export default function DepositsTable({
       <div className="bg-gradient-to-r from-primary-pink to-light-pink p-6">
         <h3 className="text-xl font-bold text-white">Lista de Depósitos</h3>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full">
+      {/*<div className="overflow-x-auto">*/}
+      <div className="w-full overflow-x-auto rounded-2xl">
+        {/*<table className="w-full">*/}
+          <table className="w-full table-auto">
           <thead className="bg-gray-50">
             <tr>
 

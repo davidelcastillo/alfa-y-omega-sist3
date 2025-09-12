@@ -3,20 +3,21 @@ import { cn } from '@/lib/utils'
 
 
 export default function Header({ onToggleSidebar, isSidebarOpen = false }: { onToggleSidebar: () => void; isSidebarOpen?: boolean }) {
-return (
-<header className="glass-effect shadow-lg sticky top-0 z-40">
-<div className="max-w-7xl mx-auto px-6 py-4">
-<div className="flex items-center justify-between">
-{/* El menu desplegable */}
-<div className="flex items-center">
-<button onClick={onToggleSidebar} className={cn('p-2 rounded-lg hover:bg-light-pink transition-colors', isSidebarOpen && 'hamburger-active')} aria-label="Abrir/Cerrar menú">
-<div className="w-6 h-6 flex flex-col justify-center items-center space-y-1">
-<div className="hamburger-line w-6 h-0.5 bg-dark-blue" />
-<div className="hamburger-line w-6 h-0.5 bg-dark-blue" />
-<div className="hamburger-line w-6 h-0.5 bg-dark-blue" />
-</div>
-</button>
-</div>
+    return (
+        <header className="glass-effect shadow-lg sticky top-0 z-40">
+            {/*<div className="max-w-7xl mx-auto px-6 py-4">*/}
+            <div className="w-full max-w-none px-3 sm:px-4 lg:px-6 py-4">
+                <div className="flex items-center justify-between">
+                    {/* El menu desplegable */}
+                    <div className="flex items-center">
+                        <button onClick={onToggleSidebar} className={cn('p-2 rounded-lg hover:bg-light-pink transition-colors', isSidebarOpen && 'hamburger-active')} aria-label="Abrir/Cerrar menú">
+                            <div className="w-6 h-6 flex flex-col justify-center items-center space-y-1">
+                                <div className="hamburger-line w-6 h-0.5 bg-dark-blue" />
+                                <div className="hamburger-line w-6 h-0.5 bg-dark-blue" />
+                                <div className="hamburger-line w-6 h-0.5 bg-dark-blue" />
+                            </div>
+                        </button>
+                    </div>
 
 
 {/* Marca */}

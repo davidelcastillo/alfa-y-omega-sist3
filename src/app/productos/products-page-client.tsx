@@ -195,7 +195,9 @@ export default function ProductsPageClient({
   }
 
   return (
-    <>
+    <main className="w-full max-w-none mx-auto px-3 sm:px-4 lg:px-6 py-8 fade-in">
+    {/*<>*/}
+
       {/* Breadcrumb */}
       <div className="flex items-center space-x-2 text-sm text-gray-600 mb-6">
         <span>Inicio</span>
@@ -339,6 +341,7 @@ export default function ProductsPageClient({
         onClose={() => { setModalOpen(false); setEditing(null) }}
         onSave={onSave}
       />
-    </>
+    {/*</>*/}
+    </main>
   )
 }
