@@ -74,7 +74,7 @@ export default function StockPage() {
   const [stock] = useState(() => toUI(deposits, products))
   const [filters, setFilters] = useState<StockFiltersState>({
     ...DEFAULT_FILTERS,
-    depositId: initialDepositId, // preselecciona depósito desde la URL
+    depositId: initialDepositId,
   })
 
   // ---- Filtro (reactivo) ----
@@ -86,7 +86,7 @@ export default function StockPage() {
     return stock.filter(s => byDeposit(s) && byProduct(s) && byStatus(s))
   }, [stock, filters])
 
-  // ---- Stats usan todos los filtrados (no solo la página) ----
+  // ---- Stats usan todos los filtrados ----
   const involvedDepositIds = useMemo(
     () => Array.from(new Set(filtered.map(r => r.depositId))),
     [filtered]
@@ -96,10 +96,9 @@ export default function StockPage() {
     [deposits, involvedDepositIds]
   )
 
-  // ---- Paginación (como en productos) ----
+  // ---- Paginación ----
   const [page, setPage] = useState(1)
-  useEffect(() => { setPage(1) }, [filters]) // reset al cambiar filtros
-
+  useEffect(() => { setPage(1) }, [filters])
   const totalItems = filtered.length
   const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE))
   useEffect(() => { if (page > totalPages) setPage(totalPages) }, [page, totalPages])
@@ -109,7 +108,8 @@ export default function StockPage() {
   const pageItems = filtered.slice(start, end)
 
   return (
-    <main className="max-w-7xl mx-auto px-6 py-8 screen-transition">
+  <main className="w-full max-w-none mx-auto px-3 sm:px-4 lg:px-6 py-8 fade-in">
+    <div className="screen-transition">
       {/* Breadcrumb */}
       <div className="flex items-center space-x-2 text-sm text-gray-600 mb-6">
         <span>Inicio</span>
@@ -145,54 +145,62 @@ export default function StockPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <StockStatsCards stock={filtered} deposits={involvedDeposits} />
+      {/* Stats (edge-to-edge) */}
+      <section className="-mx-3 sm:-mx-4 lg:-mx-6 mb-8">
+        <div className="px-3 sm:px-4 lg:px-6">
+          <StockStatsCards stock={filtered} deposits={involvedDeposits} />
+        </div>
+      </section>
 
-      {/* Filtros */}
+      {/* Filtros (ancho normal) */}
       <StockFilters
         deposits={deposits}
         products={products}
         value={filters}
         onChange={setFilters}
-        onApply={() => { /* ya filtra en vivo */ }}
+        onApply={() => {}}
       />
 
-      {/* Tabla (paginada) */}
-      <StockTable items={pageItems} />
+      {/* Tabla + footer (edge-to-edge) */}
+      <section className="-mx-3 sm:-mx-4 lg:-mx-6">
+        <div className="px-3 sm:px-4 lg:px-6">
+          <StockTable items={pageItems} />
 
-      {/* Footer / Paginación */}
-      <div className="flex flex-col md:flex-row justify-between items-center mt-8 gap-4">
-        <p className="text-gray-600 font-medium">
-          {totalItems === 0 ? (
-            <>Mostrando <span className="font-bold text-primary-pink">0</span> de <span className="font-bold text-primary-pink">0</span> items</>
-          ) : (
-            <>Mostrando <span className="font-bold text-primary-pink">{start + 1}-{end}</span> de <span className="font-bold text-primary-pink">{totalItems}</span> items</>
-          )}
-        </p>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={page <= 1}
-            className={`px-6 py-3 border-2 rounded-xl font-medium transition-colors
-              ${page <= 1 ? 'border-gray-200 text-gray-400 cursor-not-allowed' : 'border-gray-200 hover:bg-gray-50'}`}
-          >
-            Anterior
-          </button>
+          <div className="flex flex-col md:flex-row justify-between items-center mt-8 gap-4">
+            <p className="text-gray-600 font-medium">
+              {totalItems === 0 ? (
+                <>Mostrando <span className="font-bold text-primary-pink">0</span> de <span className="font-bold text-primary-pink">0</span> items</>
+              ) : (
+                <>Mostrando <span className="font-bold text-primary-pink">{start + 1}-{end}</span> de <span className="font-bold text-primary-pink">{totalItems}</span> items</>
+              )}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className={`px-6 py-3 border-2 rounded-xl font-medium transition-colors
+                  ${page <= 1 ? 'border-gray-200 text-gray-400 cursor-not-allowed' : 'border-gray-200 hover:bg-gray-50'}`}
+              >
+                Anterior
+              </button>
 
-          <span className="text-sm text-gray-700 px-2">
-            Página <span className="font-semibold">{Math.min(page, totalPages)}</span> de <span className="font-semibold">{totalPages}</span>
-          </span>
+              <span className="text-sm text-gray-700 px-2">
+                Página <span className="font-semibold">{Math.min(page, totalPages)}</span> de <span className="font-semibold">{totalPages}</span>
+              </span>
 
-          <button
-            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-            disabled={page >= totalPages}
-            className={`px-6 py-3 border-2 rounded-xl font-medium transition-colors
-              ${page >= totalPages ? 'border-gray-200 text-gray-400 cursor-not-allowed' : 'border-gray-200 hover:bg-gray-50'}`}
-          >
-            Siguiente
-          </button>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className={`px-6 py-3 border-2 rounded-xl font-medium transition-colors
+                  ${page >= totalPages ? 'border-gray-200 text-gray-400 cursor-not-allowed' : 'border-gray-200 hover:bg-gray-50'}`}
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-    </main>
+      </section>
+    </div>
+  </main>
   )
 }
