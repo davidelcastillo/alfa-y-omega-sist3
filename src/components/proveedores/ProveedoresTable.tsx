@@ -33,6 +33,13 @@ export default function ProveedoresTable({
     return data.slice(start, start + pageSize);
   }, [data, page, pageSize]);
 
+  // >>>>>> AGREGADO
+  const totalItems = data.length;
+  const totalPages = pages;
+  const start = totalItems === 0 ? 0 : (page - 1) * pageSize;
+  const end = totalItems === 0 ? 0 : Math.min(start + pageSize, totalItems);
+  // <<<<<< AGREGADO
+
   // Ventana corta de páginas (máx. 5 botones)
   const pageWindow = useMemo(() => {
     const windowSize = 5;
@@ -165,7 +172,7 @@ export default function ProveedoresTable({
                         }
                       >
                         {s.estado === "Activo" ? (
-                          <svg
+                          /*<svg
                             className="w-4 h-4"
                             fill="none"
                             stroke="currentColor"
@@ -176,9 +183,11 @@ export default function ProveedoresTable({
                               strokeLinejoin="round"
                               strokeWidth={2}
                               d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728"
-                            />
-                          </svg>
-                        ) : (
+                            /> 
+                          </svg>*/
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinecap="round" className="lucide lucide-trash-2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+
+                        ) : ( //esto es lo que hizo gaston del icono desactivado
                           <svg
                             className="w-4 h-4"
                             fill="none"
@@ -211,45 +220,46 @@ export default function ProveedoresTable({
         </table>
       </div>
 
-      {/* Paginación */}
-      <div className="flex flex-col md:flex-row justify-between items-center p-4 gap-3">
+      {/* Paginación (REEMPLAZADO) */}
+      <div className="flex flex-col md:flex-row justify-between items-center mt-8 gap-4">
         <p className="text-gray-600 font-medium">
-          Mostrando{" "}
-          <span className="font-bold text-primary-pink">{pageData.length}</span> de{" "}
-          <span className="font-bold text-primary-pink">{data.length}</span> proveedores
+          {totalItems === 0 ? (
+            <>
+              Mostrando <span className="font-bold text-primary-pink">0</span> de{" "}
+              <span className="font-bold text-primary-pink">0</span> proveedores
+            </>
+          ) : (
+            <>
+              Mostrando{" "}
+              <span className="font-bold text-primary-pink">{start + 1}-{end}</span> de{" "}
+              <span className="font-bold text-primary-pink">{totalItems}</span> proveedores
+            </>
+          )}
         </p>
 
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            className="rounded-xl"
+          <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
+            disabled={page <= 1}
+            className={`px-6 py-3 border-2 rounded-xl font-medium transition-colors
+              ${page <= 1 ? "border-gray-200 text-gray-400 cursor-not-allowed" : "border-gray-200 hover:bg-gray-50"}`}
           >
             Anterior
-          </Button>
+          </button>
 
-          {pageWindow.map((n) => (
-            <Button
-              key={n}
-              variant={n === page ? "primary" : "outline"}
-              className={`rounded-xl ${
-                n === page ? "bg-gradient-to-r from-primary-pink to-light-pink text-white" : ""
-              }`}
-              onClick={() => setPage(n)}
-            >
-              {n}
-            </Button>
-          ))}
+          <span className="text-sm text-gray-700 px-2">
+            Página <span className="font-semibold">{Math.min(page, totalPages)}</span> de{" "}
+            <span className="font-semibold">{totalPages}</span>
+          </span>
 
-          <Button
-            variant="outline"
-            className="rounded-xl"
-            onClick={() => setPage((p) => Math.min(pages, p + 1))}
-            disabled={page === pages}
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages}
+            className={`px-6 py-3 border-2 rounded-xl font-medium transition-colors
+              ${page >= totalPages ? "border-gray-200 text-gray-400 cursor-not-allowed" : "border-gray-200 hover:bg-gray-50"}`}
           >
             Siguiente
-          </Button>
+          </button>
         </div>
       </div>
     </div>

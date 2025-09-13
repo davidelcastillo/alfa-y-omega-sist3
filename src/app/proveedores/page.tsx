@@ -110,33 +110,33 @@ export default function ProveedoresPage() {
           </p>
         </div>
 
-        <div className="flex gap-4">
+        <div className="flex space-x-4">
             <Button
                 variant="primary"
                 size="lg"
                 onClick={handleCreate}
-                className="hover:shadow-lg"
+                className="px-8 py-8 rounded-xl space-x-3 text-lg hover:shadow-lg"
             >
-                <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/>
                 </svg>
                 <span>Nuevo Proveedor</span>
             </Button>
 
+            {/*Ver si hay que borrar esto o no
             <Button
                 variant="outline"
                 size="lg"
                 onClick={() => {
-                // refresco local: simplemente recalcular orden o re-fetch en futuro
                 setSuppliers((arr) => sortByFechaRegistroDesc([...arr]));
                 }}
                 className="bg-gradient-to-r from-primary-blue to-dark-blue text-white hover:shadow-lg border-0"
             >
 
                 <span>Actualizar</span>
-            </Button>
-            </div>
-         </div>
+            </Button> */}
+          </div>
+      </div>
 
       {/* Stats */}
       <StatsCards

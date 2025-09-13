@@ -575,9 +575,7 @@ export default function ProveedoresModal({
             <Button
               type="button"
               variant="outline"
-              className={`bg-gradient-to-r from-gray-400 to-gray-600 text-white hover:shadow-lg border-0 ${
-                step === 1 ? "invisible" : ""
-              }`}
+              className={` ${step === 1 ? "invisible" : ""}`}
               onClick={prev}
             >
               <svg className="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -590,7 +588,7 @@ export default function ProveedoresModal({
               <Button
                 type="button"
                 variant="outline"
-                className="bg-gradient-to-r from-gray-400 to-gray-600 text-white hover:shadow-lg border-0"
+                //className="bg-gradient-to-r from-gray-400 to-gray-600 text-white hover:shadow-lg border-0"
                 onClick={onClose}
               >
                 Cancelar
