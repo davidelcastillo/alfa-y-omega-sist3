@@ -21,8 +21,6 @@ export default function ProductsTable({
     { key: 'rubro', label: 'Rubro' },
     { key: 'marca', label: 'Marca' },
     { key: 'unidad', label: 'Unidad' },
-    { key: 'precioVenta', label: 'Precio Venta' },
-    { key: 'precioLista', label: 'Precio Lista' },
     { key: 'estado', label: 'Estado' },
     { key: null, label: 'Acciones' },
   ]
@@ -73,8 +71,6 @@ export default function ProductsTable({
                 <td className="px-6 py-4 text-sm text-gray-600">{p.rubro}</td>
                 <td className="px-6 py-4 text-sm text-gray-600">{p.marca}</td>
                 <td className="px-6 py-4 text-sm text-gray-600">{p.unidad}</td>
-                <td className="px-6 py-4 text-sm font-bold text-green-600">${p.precioVenta.toFixed(2)}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">${p.precioLista.toFixed(2)}</td>
                 <td className="px-6 py-4">
                   <span className={`px-4 py-2 text-xs font-bold rounded-full text-white ${p.estado === 'Activo' ? 'status-active' : 'status-inactive'}`}>
                     {p.estado}

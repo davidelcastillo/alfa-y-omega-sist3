@@ -15,9 +15,6 @@ export async function createProducto(data: CreateProductoDTO) {
   if (!marca)  throw new Error('Marca no existe');
   if (!unidad) throw new Error('Unidad no existe');
   
-  if (data.precioCompra < 0 || data.precioVenta < 0) {
-    throw new Error('Precios no pueden ser negativos');
-  }
   if (!data.nombre || !data.nombre.trim()) {
     throw new Error('Nombre es requerido');
   }
@@ -47,8 +44,6 @@ export async function createProducto(data: CreateProductoDTO) {
         rubroId: data.rubroId,
         marcaId: data.marcaId,
         unidadId: data.unidadId,
-        precioCompra: data.precioCompra,
-        precioVenta: data.precioVenta,
         estado: data.estado ?? true,
       },
     });

@@ -10,8 +10,6 @@ const productoSchema = z.object({
   rubroId: z.number().int().positive(),
   marcaId: z.number().int().positive(),
   unidadId: z.number().int().positive(),
-  precioCompra: z.number().positive(),
-  precioVenta: z.number().positive(),
   estado: z.boolean(),
 
 });

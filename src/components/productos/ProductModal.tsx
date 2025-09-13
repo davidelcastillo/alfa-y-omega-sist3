@@ -26,8 +26,6 @@ export default function ProductModal({
     rubro: '',
     marca: '',
     unidad: 'Unidad',
-    precioVenta: 0,
-    precioLista: 0,
     estado: 'Activo',
   })
   const [nombre, setNombre] = useState('')
@@ -55,8 +53,6 @@ export default function ProductModal({
         rubro: product.rubro,
         marca: product.marca,
         unidad: product.unidad,
-        precioVenta: product.precioVenta,
-        precioLista: product.precioLista,
         estado: product.estado,
       });
       setNombre((product as any).nombre);
@@ -72,8 +68,6 @@ export default function ProductModal({
         rubro: '',
         marca: '',
         unidad: 'Unidad',
-        precioVenta: 0,
-        precioLista: 0,
         estado: 'Activo',
       });
       setNombre('');
@@ -121,8 +115,6 @@ export default function ProductModal({
       rubroId: sel.rubroId || 0,
       marcaId: sel.marcaId || 0,
       unidadId: sel.unidadId || 0,
-      precioCompra: Number(form.precioLista) || 0,
-      precioVenta: Number(form.precioVenta) || 0,
       estado: form.estado === 'Activo',
     };
 
@@ -208,27 +200,6 @@ export default function ProductModal({
                   </option>
                 ))}
             </Select>
-
-            <Input
-              label="Precio Venta *"
-              type="number"
-              step="0.1"
-              min={0} //ya no baja del 0
-              required
-              value={form.precioVenta}
-              onChange={(e) => setForm({ ...form, precioVenta: Number(e.target.value || 0) })}
-              
-            />
-            <Input
-              label="Precio Lista *"
-              type="number"
-              step="0.1"
-              min={0}
-              required
-              value={form.precioLista}
-              onChange={(e) => setForm({ ...form, precioLista: Number(e.target.value || 0) })}
-              
-            />
 
             <Select
               label="Estado"

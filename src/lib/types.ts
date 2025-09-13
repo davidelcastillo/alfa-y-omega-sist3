@@ -4,9 +4,7 @@ export type UIProduct = {
   descripcion?: string
   rubro: string
   marca: string
-  unidad: string
-  precioVenta: number
-  precioLista: number        // mapeamos precioCompra -> precioLista para la tabla
+  unidad: string       
   estado: 'Activo' | 'Inactivo'
     // IDs para filtrar client-side sin otra llamada
   rubroId: number

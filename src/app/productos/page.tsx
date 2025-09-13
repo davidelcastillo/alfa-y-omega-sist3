@@ -20,9 +20,7 @@ export default async function Page() {
     descripcion: p.descripcion ?? '',       // ahora viene real desde DB
     rubro: p.rubroNombre,
     marca: p.marcaNombre,
-    unidad: p.unidadNombre,
-    precioVenta: p.precioVenta,
-    precioLista: p.precioCompra,      // mostramos compra como “lista”
+    unidad: p.unidadNombre,    // mostramos compra como “lista”
     estado: boolToEstado(p.estado),   // <- union exacta
     rubroId: p.rubroId,
     unidadId: p.unidadId,

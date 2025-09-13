@@ -3,7 +3,7 @@ import type { Deposito, ProductoLite, StockItem } from './types'
 
 export const depositsMock: Deposito[] = [
   {
-    id: 1,
+    id: 3,
     nombre: 'Depósito Central',
     provincia: 'Salta',
     ciudad: 'Rosario de Lerma',
@@ -15,7 +15,7 @@ export const depositsMock: Deposito[] = [
     descripcion: 'Depósito principal para almacenamiento general',
   },
   {
-    id: 2,
+    id: 4,
     nombre: 'Sucursal Norte',
     provincia: 'Córdoba',
     ciudad: 'Córdoba Capital',
@@ -27,7 +27,7 @@ export const depositsMock: Deposito[] = [
     descripcion: 'Depósito de la sucursal norte',
   },
   {
-    id: 3,
+    id: 5,
     nombre: 'Almacén Temporal',
     provincia: 'Santa Fe',
     ciudad: 'Rosario',
@@ -39,7 +39,7 @@ export const depositsMock: Deposito[] = [
     descripcion: 'Almacén temporal para productos estacionales',
   },
   {
-    id: 4,
+    id: 6,
     nombre: 'Centro de Tránsito',
     provincia: 'Mendoza',
     ciudad: 'Mendoza Capital',
@@ -53,11 +53,11 @@ export const depositsMock: Deposito[] = [
 ]
 
 export const productsLiteMock: ProductoLite[] = [
-  { id: 1, descripcion: 'Smartphone Samsung Galaxy A54', precioVenta: 299.99 },
-  { id: 2, descripcion: 'Cafetera Automática Deluxe', precioVenta: 189.5 },
-  { id: 3, descripcion: 'Zapatillas Running Pro', precioVenta: 129.99 },
-  { id: 4, descripcion: 'Camisa Casual Algodón', precioVenta: 45.0 },
-  { id: 5, descripcion: 'Auriculares Bluetooth Premium', precioVenta: 199.99 },
+  { id: 3, descripcion: 'Smartphone Samsung Galaxy A54', precioVenta: 299.99 },
+  { id: 4, descripcion: 'Cafetera Automática Deluxe', precioVenta: 189.5 },
+  { id: 5, descripcion: 'Zapatillas Running Pro', precioVenta: 129.99 },
+  { id: 6, descripcion: 'Camisa Casual Algodón', precioVenta: 45.0 },
+  { id: 7, descripcion: 'Auriculares Bluetooth Premium', precioVenta: 199.99 },
 ]
 
 export const stockItemsMock: StockItem[] = [

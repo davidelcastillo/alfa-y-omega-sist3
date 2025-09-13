@@ -16,8 +16,6 @@ export type DBProductoRow = {
   id: number
   nombre: string
   descripcion: string | null
-  precioCompra: number
-  precioVenta: number
   estado: boolean
   rubroId: number
   marcaId: number
@@ -41,8 +39,6 @@ export async function fetchProductos(): Promise<DBProductoRow[]> {
     id: p.id,
     nombre: p.nombre,
     descripcion: p.descripcion ?? '',
-    precioCompra: p.precioCompra,
-    precioVenta: p.precioVenta,
     estado: p.estado,
     rubroId: p.rubroId,
     marcaId: p.marcaId,
