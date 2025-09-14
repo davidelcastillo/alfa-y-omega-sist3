@@ -62,7 +62,7 @@ export type BuscarProductosParams = {
   rubroId?: number;
   unidadId?: number;
   estado?: boolean;
-  sort?: 'nombre' | 'precioVenta' | 'id' | 'rubroId' | 'marcaId' | 'unidadId' | 'estado';
+  sort?: 'nombre' | 'id' | 'rubroId' | 'marcaId' | 'unidadId' | 'estado';
   order?: 'asc' | 'desc';
   take?: number;
   cursor?: number; // ID del último ítem de la página anterior es de tipo number

@@ -24,10 +24,18 @@ export default function SearchableSelect({
     [options, valueId]
   )
 
-  // Sincroniza el texto con la opción seleccionada
+  // Sincroniza el texto con la opción seleccionada o limpia si no hay
   useEffect(() => {
-    if (selected) setText(selected.nombre)
-  }, [selected?.id])
+    if (valueId && valueId > 0) {
+      const opt = options.find(o => o.id === valueId);
+      setText(opt ? opt.nombre : "");
+    } else {
+      // Nuevo producto → marcaId = 0 → mostrar placeholder
+      setText("");
+    }
+  }, [valueId, options]);
+
+
 
   const filtered = useMemo(() => {
     const q = text.trim().toLowerCase()

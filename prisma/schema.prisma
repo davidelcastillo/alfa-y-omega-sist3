@@ -95,8 +95,9 @@ model MovimientoStock {
 }
 
 model DetalleMovimiento {
-  id           Int              @id @default(autoincrement())
+  id           Int             @id @default(autoincrement())
   movimientoId Int
+  productoId   Int
   productoId   Int
   stockId      Int
   cantidad     Int
@@ -109,6 +110,13 @@ model DetalleMovimiento {
 
 
 model TipoComprobante {
+  id                   Int                    @id @default(autoincrement())
+  nombre               String
+  ComprobanteProveedor ComprobanteProveedor[]
+  movimientos          MovimientoStock[]
+}
+
+model TipoMovimiento {
   id          Int               @id @default(autoincrement())
   nombre      String
 

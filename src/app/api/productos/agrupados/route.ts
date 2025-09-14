@@ -43,7 +43,6 @@ type GroupRow = {
   key: number | boolean | null;
   name: string;
   count: number;
-  totalPrecioVenta: number;
 };
 
 export async function GET(req: Request) {
@@ -61,7 +60,6 @@ export async function GET(req: Request) {
     by: [fieldEnum],        // el campo por el que se agrupa   
     where,
     _count: { _all: true },
-    _sum: { precioVenta: true },
   });
 
   // Diccionario de nombres (solo para rubro/marca/unidad)
@@ -81,7 +79,6 @@ export async function GET(req: Request) {
         ? (key ? 'Activo' : 'Inactivo')
         : nameMap[(key as number)] ?? '(sin nombre)',
       count: g._count._all,
-      totalPrecioVenta: g._sum.precioVenta ?? 0,
     };
   });
 
