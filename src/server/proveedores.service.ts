@@ -1,5 +1,52 @@
 import { prisma } from "@/lib/prisma";
+import type { CreateProveedorDTO } from '@/app/api/proveedores/schema';
 
+// Crear un nuevo proveedor
+export async function crearProveedor(dto: CreateProveedorDTO) {
+  const cuil = dto.cuil ?? null; // ya viene normalizado (11 dígitos) desde Zod
+
+  // Validar duplicado por CUIT/CUIL si vino
+  if (cuil) {
+    const existe = await prisma.proveedores.findFirst({
+      where: { cuil },
+      select: { id: true },
+    });
+    if (existe) throw new Error('CUIT ya registrado');
+  }
+
+  const creado = await prisma.proveedores.create({
+    data: {
+      nombre: dto.nombre,
+      razonSocial: dto.razonSocial ?? null,
+      nombreComercial: dto.nombreComercial ?? null,
+      codigo: dto.codigo ?? null,
+      genero: dto.genero ?? null,
+      categoriaFiscalId: dto.categoriaFiscalId ?? null,
+      cuil, // <— mapeo de la API al campo de BD
+      pais: dto.pais ?? null,
+      provincia: dto.provincia ?? null,
+      localidad: dto.localidad ?? null,
+      barrio: dto.barrio ?? null,
+      codigoPostal: dto.codigoPostal ?? null,
+      telefono: dto.telefono ?? null,
+      paginaWeb: dto.paginaWeb ?? null,
+      correoElectronico: dto.correoElectronico ?? null,
+    },
+    select: {
+      id: true,
+      nombre: true,
+      nombreComercial: true,
+      cuil: true,
+      provincia: true,
+      localidad: true,
+      correoElectronico: true,
+    },
+  });
+
+  return creado;
+}
+
+// Funcion para listar proveedores con filtros, paginación y orden
 export type ProveedoresQuery = {
   page?: number | string;
   limit?: number | string;
