@@ -14,6 +14,7 @@ export async function crearProveedor(dto: CreateProveedorDTO) {
     if (existe) throw new Error('CUIT ya registrado');
   }
 
+  
   const creado = await prisma.proveedores.create({
     data: {
       nombre: dto.nombre,
