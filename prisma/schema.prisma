@@ -98,7 +98,6 @@ model DetalleMovimiento {
   id           Int             @id @default(autoincrement())
   movimientoId Int
   productoId   Int
-  stockId      Int
   cantidad     Int
 
 
