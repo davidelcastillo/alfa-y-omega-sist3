@@ -209,27 +209,6 @@ export default function ProductModal({
                 ))}
             </Select>
 
-            <Input
-              label="Precio Venta *"
-              type="number"
-              step="0.1"
-              min={0} //ya no baja del 0
-              required
-              value={form.precioVenta}
-              onChange={(e) => setForm({ ...form, precioVenta: Number(e.target.value || 0) })}
-              
-            />
-            <Input
-              label="Precio Lista *"
-              type="number"
-              step="0.1"
-              min={0}
-              required
-              value={form.precioLista}
-              onChange={(e) => setForm({ ...form, precioLista: Number(e.target.value || 0) })}
-              
-            />
-
             <Select
               label="Estado"
               value={form.estado}

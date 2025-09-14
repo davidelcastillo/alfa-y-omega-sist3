@@ -5,7 +5,7 @@ type Card = {
     value: string | number
     iconBg: string
     valueClass: string
-    icon: 'box' | 'check' | 'x' | 'money'
+    icon: 'box' | 'check' | 'x' 
 }
 
 function Icon({ name }: { name: Card['icon'] }) {
@@ -50,17 +50,15 @@ export default function StatsCards({ products }: { products: Product[] }) {
 const total = products.length
 const activos = products.filter(p => p.estado === 'Activo').length
 const inactivos = total - activos
-const valorTotal = products.reduce((acc, p) => acc + (p.precioVenta || 0), 0)
 
 const cards: Card[] = [
     { label: 'Total Productos',     value: total,                     iconBg: 'from-primary-pink to-light-pink', valueClass: 'text-dark-blue',   icon: 'box'   },
     { label: 'Productos Activos',   value: activos,                   iconBg: 'from-green-400 to-green-600',     valueClass: 'text-green-600',   icon: 'check' },
     { label: 'Productos Inactivos', value: inactivos,                 iconBg: 'from-red-400 to-red-600',         valueClass: 'text-red-500',     icon: 'x'     },
-    { label: 'Valor Total',         value: `$${valorTotal.toFixed(2)}`, iconBg: 'from-primary-blue to-dark-blue', valueClass: 'text-primary-blue', icon: 'money' },
 ]
 
 return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {cards.map((c) => (
             <div key={c.label} className="glass-effect rounded-2xl p-6 card-hover">
             <div className="flex items-center justify-between">
