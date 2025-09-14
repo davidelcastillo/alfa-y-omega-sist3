@@ -98,7 +98,6 @@ model DetalleMovimiento {
   id           Int             @id @default(autoincrement())
   movimientoId Int
   productoId   Int
-  productoId   Int
   stockId      Int
   cantidad     Int
 
@@ -116,13 +115,6 @@ model TipoComprobante {
   movimientos          MovimientoStock[]
 }
 
-model TipoMovimiento {
-  id          Int               @id @default(autoincrement())
-  nombre      String
-
-  movimientos MovimientoStock[]
-  comprobantes ComprobanteProveedor[]
-}
 
 model TipoMovimiento {
   id            Int               @id @default(autoincrement())
@@ -219,6 +211,8 @@ model Proveedores {
   paginaWeb         String?
   correoElectronico String?
 
+  categoriaFiscal  CategoriaFiscal? @relation(fields: [categoriaFiscalId], references: [id])
+
   ordenesCompra   OrdenCompra[]
   comprobantes    ComprobanteProveedor[]
 }
@@ -228,4 +222,11 @@ model MetodoPago {
   nombre String
 
   comprobantes ComprobanteProveedor[]
+}
+
+model CategoriaFiscal {
+  id     Int    @id @default(autoincrement())
+  nombre String
+
+  proveedores Proveedores[]
 }
