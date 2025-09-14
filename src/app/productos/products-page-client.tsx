@@ -160,23 +160,39 @@ export default function ProductsPageClient({
 
   const onSave = async (payload: { id?: number; [key: string]: any }) => {
     try {
-      const url = payload.id ? `/api/productos/${payload.id}` : '/api/productos'
-      const method = payload.id ? 'PUT' : 'POST'
+      const url = payload.id ? `/api/productos/${payload.id}` : '/api/productos';
+      const method = payload.id ? 'PUT' : 'POST';
+
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-      })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json?.error ?? 'Error al guardar el producto')
-      setModalOpen(false)
-      setEditing(null)
-      router.refresh()
+      });
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        // 👇 Mostramos detalles del error si vienen de Zod (array de issues)
+        if (Array.isArray(json.error)) {
+          console.error('Errores de validación:', json.error);
+          const mensajes = json.error.map((e: any) => e.message).join('\n');
+          throw new Error(mensajes); // más legible para el usuario
+        }
+
+        // 👇 Cualquier otro tipo de error
+        throw new Error(json?.error ?? 'Error al guardar el producto');
+      }
+
+      setModalOpen(false);
+      setEditing(null);
+      router.refresh();
+
     } catch (e: any) {
-      console.error('Error al guardar el producto:', e)
-      alert(e?.message ?? 'Hubo un error al guardar el producto.')
+      console.error('Error al guardar el producto:', e);
+      alert(e?.message ?? 'Hubo un error al guardar el producto.');
     }
-  }
+  };
+
 
   const confirmarEliminacion = async () => {
     if (modalId === null) return

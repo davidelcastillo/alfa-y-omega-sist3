@@ -26,8 +26,6 @@ export default function ProductModal({
     rubro: '',
     marca: '',
     unidad: 'Unidad',
-    precioVenta: 0,
-    precioLista: 0,
     estado: 'Activo',
   })
   const [nombre, setNombre] = useState('')
@@ -49,14 +47,13 @@ export default function ProductModal({
 
 
   useEffect(() => {
+    console.log("DEBUG ProductModal -> product:", product);
     if (product) {
       setForm({
         descripcion: product.descripcion,
         rubro: product.rubro,
         marca: product.marca,
         unidad: product.unidad,
-        precioVenta: product.precioVenta,
-        precioLista: product.precioLista,
         estado: product.estado,
       });
       setNombre((product as any).nombre);
@@ -72,8 +69,6 @@ export default function ProductModal({
         rubro: '',
         marca: '',
         unidad: 'Unidad',
-        precioVenta: 0,
-        precioLista: 0,
         estado: 'Activo',
       });
       setNombre('');
@@ -98,6 +93,11 @@ export default function ProductModal({
 
         if (!alive) return
         setCatalogs({ rubros, marcas, unidades })
+        setSel((prev) => ({
+        rubroId: prev.rubroId || (rubros[0]?.id ?? 0),
+        marcaId: prev.marcaId || (marcas[0]?.id ?? 0),
+        unidadId: prev.unidadId || (unidades[0]?.id ?? 0),
+      }))
       } catch (e) {
         if (!alive) return
         setCatsError((e as Error).message)
@@ -114,15 +114,24 @@ export default function ProductModal({
     e.preventDefault();
     setIsSaving(true);
 
+    console.log("Valores de selección antes de guardar:", sel);
+
+    // 👇 Validación para evitar enviar IDs inválidos (Zod espera números positivos)
+    if (sel.rubroId <= 0 || sel.marcaId <= 0 || sel.unidadId <= 0) {
+      alert("Debes seleccionar un Rubro, Marca y Unidad válidos antes de guardar.");
+      setIsSaving(false);
+      return;
+    }
+
     const payload = {
       ...(product && { id: product.id }),
       nombre: nombre.trim() || 'Producto sin nombre',
-      descripcion: form.descripcion || '',
-      rubroId: sel.rubroId || 0,
-      marcaId: sel.marcaId || 0,
-      unidadId: sel.unidadId || 0,
-      precioCompra: Number(form.precioLista) || 0,
+      descripcion: form.descripcion.trim() || '',
+      rubroId: sel.rubroId,
+      marcaId: sel.marcaId,
+      unidadId: sel.unidadId,
       precioVenta: Number(form.precioVenta) || 0,
+      precioLista: Number(form.precioLista) || 0,
       estado: form.estado === 'Activo',
     };
 
@@ -131,11 +140,11 @@ export default function ProductModal({
       onClose();
     } catch (error) {
       console.error("Error al guardar el producto:", error);
-      // Podrías mostrar un mensaje de error aquí si lo deseas
     } finally {
       setIsSaving(false);
     }
   };
+
 
   if (!open) return null
 
@@ -182,6 +191,7 @@ export default function ProductModal({
 
             {/* Marcas con autocompletado*/}
             <SearchableSelect
+              key={product ? `edit-${(product as any).id}` : `new-${open ? 1 : 0}`}
               label="Marca *"
               options={catalogs.marcas}
               valueId={sel.marcaId || 0}
