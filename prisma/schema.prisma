@@ -98,7 +98,6 @@ model DetalleMovimiento {
   id           Int             @id @default(autoincrement())
   movimientoId Int
   productoId   Int
-  stockId      Int
   cantidad     Int
 
 
@@ -210,6 +209,7 @@ model Proveedores {
   telefono          String?
   paginaWeb         String?
   correoElectronico String?
+  estado           Boolean   @default(true)
 
   categoriaFiscal  CategoriaFiscal? @relation(fields: [categoriaFiscalId], references: [id])
 
