@@ -71,11 +71,63 @@ export default function StockPage() {
 
   const [deposits] = useState(depositsMock)
   const [products] = useState(productsLiteMock)
-  const [stock] = useState(() => toUI(deposits, products))
+  const [stock, setStock] = useState<UIStock[]>([]) // CAMBIO -------------------------------------------
   const [filters, setFilters] = useState<StockFiltersState>({
     ...DEFAULT_FILTERS,
     depositId: initialDepositId,
   })
+
+  // En tu componente StockPage
+  useEffect(() => {
+    async function loadData() {
+      try {
+        console.log("1. Iniciando carga de datos..."); // LOG 1
+        const res = await fetch("/api/depositos/stock?page=1&pageSize=20&sort=nombre&dir=asc&status=all");
+        if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
+        const json = await res.json();
+        
+        console.log("2. Respuesta de la API recibida:", JSON.stringify(json, null, 2)); // LOG 2
+
+        if (json.ok) {
+          // MUY IMPORTANTE: Revisa bien que esta línea diga .items (en plural)
+          const rows = json.data || json.items || [];
+          
+          console.log("3. Filas extraídas para la tabla:", rows); // LOG 3
+
+
+          const ui = rows.map((row: any) => ({
+            id: row.id,
+            depositId: row.depositoId,
+            productId: row.productoId,
+            depositNombre: row.depositNombre ?? 'N/D',
+            depositUbicacion: row.depositoUbicacion ?? '',
+            productDescripcion: row.productDescripcion ?? 'N/D', // 👈 este campo
+            stockActual: row.stockActual,
+            stockMinimo: row.stockMinimo,
+            stockMaximo: row.stockMaximo ?? 0,
+            status:
+              row.stockActual <= 0
+                ? 'agotado'
+                : row.stockActual < row.stockMinimo
+                ? 'bajo'
+                : row.stockMaximo > 0 && row.stockActual > row.stockMaximo
+                ? 'alto'
+                : 'normal',
+            progress: row.stockMaximo
+              ? Math.min((row.stockActual / row.stockMaximo) * 100, 100)
+              : 0,
+          }));
+          
+          setStock(ui);
+        }
+      } catch (err) {
+        console.error("4. ¡ERROR! La carga de datos falló:", err); // LOG 4
+      }
+    }
+
+    loadData();
+  }, []);
+
 
   // ---- Filtro (reactivo) ----
   const filtered = useMemo(() => {
