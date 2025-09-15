@@ -5,10 +5,11 @@ import Input from '@/components/ui/Input'
 import Select from '@/components/ui/Select'
 import type { Deposito, ProductoLite } from '@/lib/deposito/types'
 
+// Actualizado para incluir 'agotado'
 export type StockFiltersState = {
   depositId: number | ''
   productQuery: string
-  status: '' | 'bajo' | 'normal' | 'alto'
+  status: '' | 'agotado' | 'bajo' | 'normal' | 'alto'
 }
 
 const DEFAULTS: StockFiltersState = { depositId: '', productQuery: '', status: '' }
@@ -74,7 +75,7 @@ export default function StockFilters({
             onBlur={() => setTimeout(() => setOpenSug(false), 150)}
           />
           {openSug && suggestions.length > 0 && (
-            <div className="absolute top-full left-0 right-0 bg-white border-2 border-gray-200 rounded-xl shadow-lg z-10 max-h-60 overflow-y-auto">
+            <div className="absolute top-full left-0 right-0 bg-white border-2 border-gray-200 rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto">
               {suggestions.map(s => (
                 <button
                   key={s.id}
@@ -83,20 +84,24 @@ export default function StockFilters({
                   onClick={() => set('productQuery', s.descripcion)}
                 >
                   <div className="text-sm font-semibold text-gray-900">{s.descripcion}</div>
-                  <div className="text-xs text-gray-500">Precio: ${s.precioVenta}</div>
+                  {/* Solo mostrar precio si existe */}
+                  {s.precioVenta > 0 && (
+                    <div className="text-xs text-gray-500">Precio: ${s.precioVenta}</div>
+                  )}
                 </button>
               ))}
             </div>
           )}
         </div>
 
-        {/* Estado Stock */}
+        {/* Estado Stock - Actualizado con estado agotado */}
         <Select
           label="Estado Stock"
           value={local.status}
           onChange={(e) => set('status', e.target.value as StockFiltersState['status'])}
         >
           <option value="">Todos</option>
+          <option value="agotado">Agotado</option>
           <option value="bajo">Stock Bajo</option>
           <option value="normal">Stock Normal</option>
           <option value="alto">Stock Alto</option>
