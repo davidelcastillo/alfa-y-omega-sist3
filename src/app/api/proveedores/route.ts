@@ -4,11 +4,11 @@ import { listarProveedores } from '@/server/proveedores.service';
 import { createProveedorSchema } from './schema';
 import { crearProveedor } from '@/server/proveedores.service';
 
-// Crear un nuevo proveedor
+// Crear un nuevo proveedor (queda activo por defecto)
 export async function POST(req: Request) {
   try {
     const json = await req.json();
-    const dto = createProveedorSchema.parse(json);  // valida y normaliza
+    const dto = createProveedorSchema.parse(json);
     const nuevo = await crearProveedor(dto);
 
     return NextResponse.json({ ok: true, data: nuevo }, { status: 201 });
@@ -23,18 +23,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'Error interno' }, { status: 500 });
   }
 }
+
 // Listar proveedores con filtros, paginación y orden
 const querySchema = z.object({
   page: z.string().optional(),
   limit: z.string().optional(),
   search: z.string().optional(),
-  cuit: z.string().optional(),
   cuil: z.string().optional(),
   razon_social: z.string().optional(),
   categoria_fiscal: z.string().optional(), // llega string, se castea a número en el servicio
   provincia: z.string().optional(),
   localidad: z.string().optional(),
   sort: z.string().optional(), // ej: "nombre:desc"
+  status: z.enum(['active','inactive','all']).optional(), // filtro por estado del proveedor
 });
 
 export async function GET(req: Request) {

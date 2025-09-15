@@ -33,3 +33,13 @@ export const createProveedorSchema = z.object({
 });
 
 export type CreateProveedorDTO = z.infer<typeof createProveedorSchema>;
+
+//modificar proveedor
+export const updateProveedorSchema = createProveedorSchema
+  .partial() // todo opcional
+  .extend({
+    estado: z.boolean().optional(), 
+  });
+
+export type UpdateProveedorDTO = z.infer<typeof updateProveedorSchema>;
+
