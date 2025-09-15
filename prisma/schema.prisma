@@ -209,6 +209,7 @@ model Proveedores {
   telefono          String?
   paginaWeb         String?
   correoElectronico String?
+  estado           Boolean   @default(true)
 
   categoriaFiscal  CategoriaFiscal? @relation(fields: [categoriaFiscalId], references: [id])
 
