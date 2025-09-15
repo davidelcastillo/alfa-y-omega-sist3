@@ -40,7 +40,12 @@ export default function MovimientosDetailModal({ isOpen, onClose, movimiento }: 
     : 'status-inactive text-white';
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <AlertDialog
+      open={isOpen}
+      onOpenChange={(open: boolean) => {
+        if (!open) onClose();
+      }}
+      >
       <AlertDialogContent className="p-0 overflow-hidden glass-effect max-w-3xl md:max-w-4xl">
         {/* Header con gradiente */}
         <div className="bg-gradient-to-r from-primary-pink to-light-pink p-6">

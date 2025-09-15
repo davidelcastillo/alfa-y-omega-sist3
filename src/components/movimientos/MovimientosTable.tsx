@@ -12,12 +12,30 @@ type Props = {
   onNew?: () => void;
 };
 
-const Th: FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
-  <th className={`px-6 py-4 text-left text-sm font-bold text-dark-blue ${className ?? ''}`}>{children}</th>
+const Th: FC<React.ThHTMLAttributes<HTMLTableHeaderCellElement>> = ({
+  className,
+  children,
+  ...rest
+}) => (
+  <th
+    className={`px-6 py-4 text-left text-sm font-bold text-dark-blue ${className ?? ''}`}
+    {...rest}
+  >
+    {children}
+  </th>
 );
 
-const Td: FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
-  <td className={`px-6 py-4 text-sm text-gray-700 ${className ?? ''}`}>{children}</td>
+const Td: FC<React.TdHTMLAttributes<HTMLTableCellElement>> = ({
+  className,
+  children,
+  ...rest
+}) => (
+  <td
+    className={`px-6 py-4 text-sm text-gray-700 ${className ?? ''}`}
+    {...rest}
+  >
+    {children}
+  </td>
 );
 
 const MovimientosTable: FC<Props> = ({ data, onViewDetail, onNew }) => {
@@ -26,6 +44,11 @@ const MovimientosTable: FC<Props> = ({ data, onViewDetail, onNew }) => {
       {/* Header / CTA */}
       <div className="bg-gradient-to-r from-primary-pink to-light-pink p-6 flex items-center justify-between">
         <h3 className="text-xl font-bold text-white">Historial de Movimientos</h3>
+        {onNew && (
+          <Button variant="primary" size="lg" onClick={onNew} className="btn-primary">
+            Registrar Nuevo Movimiento
+          </Button>
+        )}
       </div>
 
       {/* Tabla */}
@@ -80,6 +103,21 @@ const MovimientosTable: FC<Props> = ({ data, onViewDetail, onNew }) => {
                 </tr>
               );
             })}
+
+            {data.length === 0 && (
+              <tr>
+                <td colSpan={8} className="px-6 py-12 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <p className="text-gray-500">No hay movimientos para los filtros seleccionados.</p>
+                    {onNew && (
+                      <Button variant="primary" onClick={onNew} className="btn-primary">
+                        Registrar Nuevo Movimiento
+                      </Button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

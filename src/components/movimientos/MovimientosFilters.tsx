@@ -83,18 +83,6 @@ const MovimientosFilters: FC<Props> = ({ state, onChange, depositos, onSearch, o
           }}
         />
 
-        {/* Movimiento */}
-        <Select
-          label="Movimiento"
-          value={state.movimiento ?? ''}
-          onChange={e => onChange({ movimiento: e.target.value as '' | 'Ingreso' | 'Egreso' })}
-          className="input-focus"
-        >
-          <option value="">Todos</option>
-          <option value="Ingreso">Ingreso</option>
-          <option value="Egreso">Egreso</option>
-        </Select>
-
         {/* Depósito */}
         <SearchableSelect
           label="Depósito"
@@ -129,7 +117,7 @@ const MovimientosFilters: FC<Props> = ({ state, onChange, depositos, onSearch, o
 
       <div className="flex justify-between items-center mt-6">
         <Button variant="outline" onClick={onClear}>Limpiar Filtros</Button>
-        <Button variant="primary" onClick={onSearch}>Buscar Movimientos</Button>
+        <Button variant="ghost" className="px-8 py-3 rounded-xl font-semibold bg-gradient-to-r from-primary-blue to-dark-blue text-white hover:shadow-lg" onClick={onSearch}>Buscar Movimientos</Button>
       </div>
     </div>
   );
