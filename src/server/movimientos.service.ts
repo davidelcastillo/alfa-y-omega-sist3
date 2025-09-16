@@ -1,112 +1,118 @@
 // src/server/movimientos.service.ts
-import { prisma } from "@/lib/prisma";
+import { prisma } from '@/lib/prisma';
 
-type MovimientoDetalle = { productoId: number; cantidad: number };
-type CreateMovimientoDTO = {
-  depositoId: number;
-  tipoMovimientoId: number;  // 1=Ingreso, 2=Egreso (según tu seed)
-  tipoComprobanteId: number;
-  detalles: MovimientoDetalle[];
+type DetalleDTO = {
+  productoId: number;
+  cantidad: number;
 };
 
-export async function crearMovimiento(data: CreateMovimientoDTO) {
-  return prisma.$transaction(async (tx) => {
-    // Validaciones base (existencia)
-    const [deposito, tipoMov, tipoComprobante] = await Promise.all([
-      tx.deposito.findUnique({ where: { id: data.depositoId } }),
-      tx.tipoMovimiento.findUnique({ where: { id: data.tipoMovimientoId } }),
-      tx.tipoComprobante.findUnique({ where: { id: data.tipoComprobanteId } }),
+type CreateMovimientoDTO = {
+  depositoId: number;
+  tipoMovimientoId: number;
+  tipoComprobanteId: number;
+  numeroComprobante?: string | null;
+  detalles: DetalleDTO[];
+};
+
+export async function createMovimiento(data: CreateMovimientoDTO) {
+  return await prisma.$transaction(async (tx) => {
+    // 1) Cargar TipoMovimiento para conocer el signo (saldo = true → suma stock)
+    const tipo = await tx.tipoMovimiento.findUnique({
+      where: { id: data.tipoMovimientoId },
+      select: { id: true, saldo: true, nombre: true },
+    });
+    if (!tipo) throw new Error('Tipo de movimiento inexistente');
+
+    const signo = tipo.saldo ? +1 : -1;
+
+    // 2) Validaciones de existencia básicas
+    const [deposito, tipoComp] = await Promise.all([
+      tx.deposito.findUnique({ where: { id: data.depositoId }, select: { id: true, estado: true } }),
+      tx.tipoComprobante.findUnique({ where: { id: data.tipoComprobanteId }, select: { id: true } }),
     ]);
-    if (!deposito) throw new Error("Depósito no existe");
-    if (!tipoMov) throw new Error("Tipo de movimiento no existe");
-    if (!tipoComprobante) throw new Error("Tipo de comprobante no existe");
-    if (!data.detalles?.length) throw new Error("Detalles vacíos");
 
-    const esIngreso = tipoMov.ingresoEgreso === true;
+    if (!deposito) throw new Error('Depósito inexistente');
+    if (!deposito.estado) throw new Error('El depósito está inactivo');
+    if (!tipoComp) throw new Error('Tipo de comprobante inexistente');
 
-    // Deduplicar por producto para validar/actualizar stock eficientemente
-    const agregados = new Map<number, number>();
-    for (const d of data.detalles) {
-        if (d.cantidad <= 0) throw new Error(`Cantidad inválida para producto ${d.productoId}`);
-        agregados.set(d.productoId, (agregados.get(d.productoId) ?? 0) + d.cantidad);
-    }
-    const productIds = [...agregados.keys()];
-
-    // Validar productos activos
-    const activos = await tx.producto.findMany({
-      where: { id: { in: productIds }, estado: true },
-      select: { id: true },
-    });
-    if (activos.length !== productIds.length) {
-      const ok = new Set(activos.map(a => a.id));
-      const faltan = productIds.filter(id => !ok.has(id));
-      throw new Error(`Producto no existe o inactivo: ${faltan.join(", ")}`);
-    }
-
-    // Stocks existentes en el depósito
-    const stocks = await tx.stockPorDeposito.findMany({
-      where: { depositoId: data.depositoId, productoId: { in: productIds } },
-      select: { id: true, productoId: true, stockActual: true },
-    });
-    const stockMap = new Map(stocks.map(s => [s.productoId, s]));
-
-    // Crear stocks faltantes SOLO si es ingreso
-    if (esIngreso) {
-      const faltantes = productIds.filter(pid => !stockMap.has(pid));
-      if (faltantes.length) {
-        const creados = await Promise.all(
-          faltantes.map(pid =>
-            tx.stockPorDeposito.create({
-              data: { depositoId: data.depositoId, productoId: pid, stockActual: 0 },
-              select: { id: true, productoId: true, stockActual: true },
-            })
-          )
-        );
-        for (const s of creados) stockMap.set(s.productoId, s);
-      }
-    } else {
-      const faltantes = productIds.filter(pid => !stockMap.has(pid));
-      if (faltantes.length) throw new Error(`Stock inexistente para producto(s): ${faltantes.join(", ")}`);
-    }
-
-    // Actualizaciones atómicas de stock (anti-carrera)
-    for (const [productoId, cantidad] of agregados) {
-      const s = stockMap.get(productoId)!;
-      if (esIngreso) {
-        await tx.stockPorDeposito.update({
-          where: { id: s.id },
-          data: { stockActual: { increment: cantidad } },
-        });
-      } else {
-        const { count } = await tx.stockPorDeposito.updateMany({
-          where: { id: s.id, stockActual: { gte: cantidad } },
-          data: { stockActual: { decrement: cantidad } },
-        });
-        if (count === 0) throw new Error(`Stock insuficiente para producto ${productoId}`);
-      }
-    }
-
-    // Armar detalles (tu DetalleMovimiento requiere conectar 'stock', no pasar FK directo)
-    const detallesCreate = data.detalles.map(d => {
-      const s = stockMap.get(d.productoId);
-      if (!s) throw new Error(`Stock inexistente para producto ${d.productoId}`);
-      return { stock: { connect: { id: s.id } }, cantidad: d.cantidad };
-    });
-
-    // Crear movimiento + detalles
+    // 3) Crear cabecera de Movimiento
     const movimiento = await tx.movimientoStock.create({
       data: {
         depositoId: data.depositoId,
         tipoMovimientoId: data.tipoMovimientoId,
         tipoComprobanteId: data.tipoComprobanteId,
-        detalles: { create: detallesCreate },
+        numeroComprobante: data.numeroComprobante ?? null,
+        // fecha/hora usan default(now())
       },
-      include: { detalles: true },
+      select: { id: true, depositoId: true, fecha: true },
     });
 
-    return movimiento;
-  }, { isolationLevel: "Serializable" });
+    // 4) Procesar cada detalle
+    for (const det of data.detalles) {
+      // 4.1) Validar producto y estado
+      const producto = await tx.producto.findUnique({
+        where: { id: det.productoId },
+        select: { id: true, estado: true },
+      });
+      if (!producto) throw new Error('Producto inexistente');
+      if (!producto.estado) throw new Error('Producto inactivo');
+
+      // 4.2) Asegurar fila de stock (upsert por compuesto productoId+depositoId)
+      const spd = await tx.stockPorDeposito.upsert({
+        where: {
+          productoId_depositoId: {
+            productoId: det.productoId,
+            depositoId: movimiento.depositoId,
+          },
+        },
+        create: {
+          productoId: det.productoId,
+          depositoId: movimiento.depositoId,
+          stockActual: 0,
+        },
+        update: {},
+        select: { id: true, stockActual: true },
+      });
+
+      // 4.3) Calcular nuevo stock según signo
+      const nuevoStock = spd.stockActual + signo * det.cantidad;
+
+      // Regla de negocio: no permitir stock negativo en egresos
+      if (nuevoStock < 0) {
+        throw new Error('Stock insuficiente');
+      }
+
+      // 4.4) Actualizar stock
+      await tx.stockPorDeposito.update({
+        where: { id: spd.id },
+        data: { stockActual: nuevoStock },
+      });
+
+      // 4.5) Crear detalle del movimiento
+      await tx.detalleMovimiento.create({
+        data: {
+          movimientoId: movimiento.id,
+          productoId: det.productoId,
+          cantidad: det.cantidad,
+        },
+      });
+    }
+
+    // 5) Devolver cabecera con un resumen simple
+    return tx.movimientoStock.findUnique({
+      where: { id: movimiento.id },
+      include: {
+        deposito: { select: { id: true, nombre: true } },
+        tipoMovimiento: { select: { id: true, nombre: true, saldo: true } },
+        tipoComprobante: { select: { id: true, nombre: true } },
+        detalles: {
+          select: {
+            id: true,
+            producto: { select: { id: true, nombre: true } },
+            cantidad: true,
+          },
+        },
+      },
+    });
+  });
 }
-
-
-export { crearMovimiento as createMovimiento };
