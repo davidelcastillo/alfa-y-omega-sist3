@@ -55,100 +55,74 @@ export default function StockPage() {
     depositId: initialDepositId,
   })
 
+  // --- sincronizar el filtro con el depositId de la URL ---
+  useEffect(() => {
+    if (initialDepositId !== '') {
+      setFilters(prev => ({
+        ...prev,
+        depositId: initialDepositId
+      }))
+    }
+  }, [initialDepositId])
+
   // Cargar datos desde la API
   useEffect(() => {
     async function loadData() {
       try {
         setLoading(true)
         console.log("1. Iniciando carga de datos...")
-        
-        // Determinar qué endpoint usar
-        const isSpecificDeposit = initialDepositId !== ''
-        let res: Response
-        
-        if (isSpecificDeposit) {
-          // Vista específica de un depósito usando el endpoint [id]/stock
-          res = await fetch(`/api/depositos/${initialDepositId}/stock?page=1&pageSize=1000&sort=nombre&dir=asc&status=all`)
-        } else {
-          // Vista general usando el endpoint /stock
-          res = await fetch("/api/depositos/stock")
-        }
+
+        // Usamos SIEMPRE la nueva API unificada
+        const url = initialDepositId !== ''
+          ? `/api/gestion-stock?depositId=${initialDepositId}&page=1&pageSize=100&sort=nombre&dir=asc&status=all`
+          : `/api/gestion-stock?page=1&pageSize=100&sort=nombre&dir=asc&status=all`
+
+        const res = await fetch(url)
 
         if (!res.ok) throw new Error(`Error HTTP ${res.status}`)
         const json = await res.json()
-        
+
         console.log("2. Respuesta de la API recibida:", JSON.stringify(json, null, 2))
 
         if (json.ok) {
-          let rows: any[] = []
-          
-          if (isSpecificDeposit) {
-            // Datos del endpoint específico
-            rows = json.data?.items || []
-          } else {
-            // Datos del endpoint general
-            rows = json.data || []
-          }
-          
+          const rows: any[] = json.data?.items || []
+
           console.log("3. Filas extraídas para la tabla:", rows)
 
-          const ui = rows.map((row: any) => {
-            if (isSpecificDeposit) {
-              // Mapeo para endpoint específico
-              return {
-                id: row.stockId,
-                depositId: row.depositoId,
-                productId: row.productoId,
-                depositNombre: row.depositoNombre ?? 'N/D',
-                depositUbicacion: row.depositoUbicacion ?? '',
-                productDescripcion: row.producto ?? 'N/D',
-                stockActual: row.stockActual,
-                stockMinimo: row.stockMinimo,
-                stockMaximo: row.stockMaximo ?? 0,
-                status: statusOf({
-                  stockActual: row.stockActual,
-                  stockMinimo: row.stockMinimo,
-                  stockMaximo: row.stockMaximo ?? 0
-                }),
-                progress: row.stockMaximo
-                  ? Math.min((row.stockActual / row.stockMaximo) * 100, 100)
-                  : 0,
-              }
-            } else {
-              // Mapeo para endpoint general
-              return {
-                id: row.id,
-                depositId: row.depositId,
-                productId: row.productId,
-                depositNombre: row.depositNombre ?? 'N/D',
-                depositUbicacion: row.depositUbicacion ?? '',
-                productDescripcion: row.productDescripcion ?? 'N/D',
-                stockActual: row.stockActual,
-                stockMinimo: row.stockMinimo,
-                stockMaximo: row.stockMaximo ?? 0,
-                status: statusOf({
-                  stockActual: row.stockActual,
-                  stockMinimo: row.stockMinimo,
-                  stockMaximo: row.stockMaximo ?? 0
-                }),
-                progress: row.stockMaximo
-                  ? Math.min((row.stockActual / row.stockMaximo) * 100, 100)
-                  : 0,
-              }
-            }
-          })
-          
+          // El mapeo es único porque la API ya devuelve un formato consistente
+          const ui = rows.map((row: any) => ({
+            id: row.stockId,
+            depositId: row.depositoId,
+            productId: row.productoId,
+            depositNombre: row.depositoNombre ?? 'N/D',
+            depositUbicacion: row.depositoUbicacion ?? '',
+            productDescripcion: row.producto ?? 'N/D',
+            stockActual: row.stockActual,
+            stockMinimo: row.stockMinimo,
+            stockMaximo: row.stockMaximo ?? 0,
+            status: statusOf({
+              stockActual: row.stockActual,
+              stockMinimo: row.stockMinimo,
+              stockMaximo: row.stockMaximo ?? 0,
+            }),
+            progress: row.stockMaximo
+              ? Math.min((row.stockActual / row.stockMaximo) * 100, 100)
+              : 0,
+          }))
+
           setStock(ui)
 
           // Extraer depósitos únicos
           const uniqueDeposits = Array.from(
             new Map(
-              rows.map((row: any) => {
-                const id = isSpecificDeposit ? row.depositoId : row.depositId
-                const nombre = isSpecificDeposit ? row.depositoNombre : row.depositNombre
-                const ubicacion = isSpecificDeposit ? row.depositoUbicacion : row.depositUbicacion
-                return [id, { id, nombre, ubicacion: ubicacion || '' }]
-              })
+              rows.map((row: any) => [
+                row.depositoId,
+                {
+                  id: row.depositoId,
+                  nombre: row.depositoNombre,
+                  ubicacion: row.depositoUbicacion || '',
+                },
+              ])
             ).values()
           ) as Deposito[]
           setDeposits(uniqueDeposits)
@@ -156,15 +130,15 @@ export default function StockPage() {
           // Extraer productos únicos
           const uniqueProducts = Array.from(
             new Map(
-              rows.map((row: any) => {
-                const id = isSpecificDeposit ? row.productoId : row.productId
-                const descripcion = isSpecificDeposit ? row.producto : row.productDescripcion
-                return [id, { id, descripcion, precioVenta: 0 }]
-              })
+              rows.map((row: any) => [
+                row.productoId,
+                { id: row.productoId, descripcion: row.producto, precioVenta: 0 },
+              ])
             ).values()
           ) as ProductoLite[]
           setProducts(uniqueProducts)
         }
+
       } catch (err) {
         console.error("4. ¡ERROR! La carga de datos falló:", err)
         // Fallback a datos mock
@@ -182,7 +156,10 @@ export default function StockPage() {
   const filtered = useMemo(() => {
     if (loading) return []
     
-    const byDeposit = (s: UIStock) => !filters.depositId || s.depositId === filters.depositId
+    // Reemplazá el byDeposit dentro de `filtered` por esto: ----------------------------------------------------
+    const depositIdFilter = filters.depositId === '' ? null : Number(filters.depositId)
+    const byDeposit = (s: UIStock) => !depositIdFilter || s.depositId === depositIdFilter
+    //-----------------------------------------------------------------------------------------------------------
     const q = filters.productQuery.trim().toLowerCase()
     const byProduct = (s: UIStock) => !q || s.productDescripcion.toLowerCase().includes(q)
     const byStatus = (s: UIStock) => !filters.status || s.status === filters.status

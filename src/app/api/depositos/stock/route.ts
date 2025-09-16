@@ -16,7 +16,7 @@ export async function GET(req: Request) {
         producto: true,
       },
         orderBy: [
-            // ORDENA LOS PRODUCTOS POR DEPOSITO, NO ES EL FILTRO, ES LO QUE SE MUESTRA POR DEFECTO CUANDO SE INGRESA A LA PAGINA
+            // ORDENA LOS PRODUCTOS POR DEPOSITO, NO ES EL FILTRO, ES LO QUE SE MUESTRA POR DEFECTO CUANDO SE INGRESA A LA
             { deposito: { nombre: "asc" } }, // primero ordena por nombre de depósito
             { producto: { nombre: "asc" } }, // luego por nombre de producto
         ],
