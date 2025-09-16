@@ -34,6 +34,7 @@ type StockRowDTO = {
 };
 
 type StockIndex = Record<number, Record<number, number>>;  //Para mostrar el stockxdeposito
+type TipoMovimientoDTO = { id: number; nombre: string; saldo: boolean };  //Para traer los movimientos
 
 async function fetchStockTodos(q?: string): Promise<StockRowDTO[]> {
   const qs = q ? `?q=${encodeURIComponent(q)}` : "";
@@ -43,9 +44,21 @@ async function fetchStockTodos(q?: string): Promise<StockRowDTO[]> {
   return json.data as StockRowDTO[];
 }
 
+async function fetchTiposMovimientos(): Promise<TipoMovimientoDTO[]> {
+  const res = await fetch('/api/tipos-movimientos', { cache: 'no-store' });
+  if (!res.ok) throw new Error('No se pudieron obtener los tipos de movimiento');
+  const json = await res.json();
+  return json.data as TipoMovimientoDTO[];
+}
+
 export default function MovimientosPage() {
   // ---- movimientos (mock hasta que conectes GET /api/movimientos)
   const [movimientos, setMovimientos] = useState<Movimiento[]>(movimientosMock);
+  //Para los tipos de movimientos
+  const [tiposMov, setTiposMov] = useState<TipoMovimientoDTO[]>([]);
+  const [loadingTipos, setLoadingTipos] = useState(false);
+  const [errorTipos, setErrorTipos] = useState<string | null>(null);
+
 
   // ---- modales
   const [isModalOpen, setModalOpen] = useState(false);
@@ -79,6 +92,23 @@ export default function MovimientosPage() {
     return () => {
       mounted = false;
     };
+  }, []);
+
+  // Cargar tipos de movimiento
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setLoadingTipos(true);
+        const data = await fetchTiposMovimientos();
+        if (mounted) setTiposMov(data);
+      } catch (e: any) {
+        if (mounted) setErrorTipos(e?.message ?? 'Error cargando tipos de movimiento');
+      } finally {
+        if (mounted) setLoadingTipos(false);
+      }
+    })();
+    return () => { mounted = false; };
   }, []);
 
   // Cargar stock (de todos los depósitos; filtramos en cliente)
@@ -246,10 +276,14 @@ export default function MovimientosPage() {
             Movimiento de Stock
           </h2>
           <p className="text-gray-600 text-lg">
-            {loadingDep || loadingStock ? "Cargando datos…" : "Historial completo de ingresos y egresos de inventario"}
+            {loadingDep || loadingStock || loadingTipos
+            ? "Cargando datos…" 
+            : "Historial completo de ingresos y egresos de inventario"}
           </p>
-          {(errorDep || errorStock) && (
-            <p className="text-sm text-red-600 mt-2">{errorDep ?? errorStock}</p>
+          {(errorDep || errorStock || errorTipos) && (
+            <p className="text-sm text-red-600 mt-2">
+              {errorDep ?? errorStock ?? errorTipos}
+            </p>
           )}
         </div>
 
@@ -259,7 +293,7 @@ export default function MovimientosPage() {
             size="lg"
             onClick={handleCreate}
             className="px-8 py-8 rounded-xl gap-3 text-lg hover:shadow-lg"
-            disabled={loadingDep || loadingStock || !depositos.length}
+            disabled={loadingDep || loadingStock || !depositos.length || !tiposMov.length}
           >
             <Plus className="w-10 h-5 mr-2" aria-hidden />
             Registrar Nuevo Movimiento
@@ -299,6 +333,7 @@ export default function MovimientosPage() {
         onSubmit={onSubmitModal}
         initial={{ depositoId: modalDepositoId }}
         stockIndex={stockIndex}
+        tiposMovimiento={tiposMov} 
       />
 
       {/* Detalle */}

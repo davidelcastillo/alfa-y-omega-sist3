@@ -16,20 +16,23 @@ import type {
   Deposito,
   ProductoLite,
   MovimientoBasico,
-  TipoMovimiento,
+  TipoMovimiento, // string union que ya tenías
 } from '@/lib/movimientos/productsData';
 
 type ProductRow = { productoId: number; cantidad: number };
 type StockIndex = Record<number, Record<number, number>>;
 
+// Tipo para los tipos de movimiento que vienen de la API
+type TipoMovimientoDTO = { id: number; nombre: string; saldo: boolean };
+
 export type MovimientoPayload = {
-  movimiento: MovimientoBasico; // (ingreso/egreso) hoy se muestra pero el valor real vendrá del tipo
-  tipoMovimiento: TipoMovimiento;
+  movimiento: MovimientoBasico; // hoy se muestra, el valor real podría venir del tipo (saldo)
+  tipoMovimiento: TipoMovimiento; // seguimos guardando el nombre para tu UI actual
   depositoId?: number;
-  depositoOrigenId?: number;     // aún presente por compatibilidad visual
-  depositoDestinoId?: number;    // aún presente por compatibilidad visual
-  comprobanteId?: string;        // nombre temporal
-  comentario?: string;           // no está en DB (placeholder UI)
+  depositoOrigenId?: number;   // compatibilidad visual si lo necesitás
+  depositoDestinoId?: number;  // compatibilidad visual si lo necesitás
+  comprobanteId?: string;
+  comentario?: string;         // UI-only por ahora
   productos: Array<{ productoId: number; cantidad: number }>;
   ajusteSigno?: 'positivo' | 'negativo';
 };
@@ -39,32 +42,27 @@ type Props = {
   onClose: () => void;
   depositos: Deposito[];
   productosPorDeposito: Record<number, ProductoLite[]>;
-  //productos: ProductoLite[];
   onSubmit: (payload: MovimientoPayload) => void;
   initial?: Partial<MovimientoPayload>;
   stockIndex: StockIndex;
+
+  // 👉 NUEVO: los tipos traídos de /api/tipos-movimientos
+  tiposMovimiento: TipoMovimientoDTO[];
 };
 
-const TM_OPTS: TipoMovimiento[] = [
-  'Transferencia entre depósitos',
-  'Compra de inventario',
-  'Venta de inventario',
-  'Ajuste de stock',
-];
+// (opcional) constante legacy que usabas antes, ya no se renderiza en el <Select>
+// pero dejo el valor inicial por compat.
+const DEFAULT_TIPO_MOVIMIENTO: TipoMovimiento = 'Compra de inventario';
 
-// TEMP: mock de stock disponible hasta conectar DB.
-{/*function getStockDisponible(productoId: number, depositoId: number): number {
-  if (!productoId || !depositoId) return 0;
-  return 120;
-}*/}
+// Stock desde índice
 function getStockDisponible(
-    productoId: number,
-    depositoId: number,
-    stockIndex: StockIndex
-  ): number {
-    if (!productoId || !depositoId) return 0;
-    return stockIndex[depositoId]?.[productoId] ?? 0;
-  }
+  productoId: number,
+  depositoId: number,
+  stockIndex: StockIndex
+): number {
+  if (!productoId || !depositoId) return 0;
+  return stockIndex[depositoId]?.[productoId] ?? 0;
+}
 
 export default function MovimientosModal({
   isOpen,
@@ -74,10 +72,16 @@ export default function MovimientosModal({
   onSubmit,
   initial,
   stockIndex,
+  tiposMovimiento, // 👈 lo recibimos de la página
 }: Props) {
   // ---- state base
   const [movimiento, setMovimiento] = useState<MovimientoBasico>('Ingreso');
-  const [tipoMovimiento, setTipoMovimiento] = useState<TipoMovimiento>('Compra de inventario');
+
+  // mantenés un string (para tu UI/tabla) + el id seleccionado
+  const [tipoMovimiento, setTipoMovimiento] =
+    useState<TipoMovimiento>(DEFAULT_TIPO_MOVIMIENTO);
+  const [tipoMovimientoId, setTipoMovimientoId] = useState<number>(0);
+
   const [numero, setNumero] = useState('');
 
   // depósitos (0 = ninguno)
@@ -85,7 +89,7 @@ export default function MovimientosModal({
   const [depositoOrigen, setDepositoOrigen] = useState<number>(0);
   const [depositoDestino, setDepositoDestino] = useState<number>(0);
 
-  // comprobante/comentario
+  // comentario / comprobante
   const [comprobanteId, setComprobanteId] = useState('');
   const [comentario, setComentario] = useState('');
 
@@ -95,13 +99,13 @@ export default function MovimientosModal({
   // ajuste
   const [ajusteSigno, setAjusteSigno] = useState<'positivo' | 'negativo'>('positivo');
 
-  // ---- options para SearchableSelect (espera {id, nombre})
+  // opciones depósito
   const depOptions = useMemo(
     () => depositos.map((d) => ({ id: d.id, nombre: d.nombre })),
     [depositos]
   );
 
-  // ⬇️ Productos disponibles según el depósito elegido
+  // productos según depósito elegido
   const productosDisponibles: ProductoLite[] = useMemo(() => {
     const depId = Number(deposito);
     return depId ? (productosPorDeposito[depId] ?? []) : [];
@@ -111,23 +115,22 @@ export default function MovimientosModal({
     () =>
       productosDisponibles.map((p) => ({
         id: p.id,
-        nombre: `${p.descripcion} (${p.codigo})`,
+        nombre: `${p.descripcion}${p.codigo ? ` (${p.codigo})` : ''}`,
       })),
     [productosDisponibles]
   );
 
-  const tipoMovOptions = useMemo(
-    () => TM_OPTS.map((t, i) => ({ id: i + 1, nombre: t })), // id sintético (UI)
-    []
-  );
-
+  // creo que hay que borrar esto
   const isTransfer = tipoMovimiento === 'Transferencia entre depósitos';
-  const isAjuste = tipoMovimiento === 'Ajuste de stock';
+  const isAjuste = tipoMovimiento === 'Ajuste de stock';            
 
   // ---- helpers
   const resetForm = () => {
     setMovimiento(initial?.movimiento ?? 'Ingreso');
-    setTipoMovimiento(initial?.tipoMovimiento ?? 'Compra de inventario');
+
+    // si te pasan un tipo por initial en el futuro, sincronizá acá
+    setTipoMovimiento(initial?.tipoMovimiento ?? DEFAULT_TIPO_MOVIMIENTO);
+    setTipoMovimientoId(0); // sin selección por defecto
 
     setDeposito(initial?.depositoId ?? 0);
     setDepositoOrigen(initial?.depositoOrigenId ?? 0);
@@ -157,7 +160,7 @@ export default function MovimientosModal({
     if (isTransfer) {
       return depositoOrigen > 0 && depositoDestino > 0 && depositoOrigen !== depositoDestino;
     }
-    return deposito > 0;
+    return deposito > 0 && tipoMovimientoId > 0; // aseguramos que eligieron un tipo
   };
 
   const patchRow = (idx: number, patch: Partial<ProductRow>) => {
@@ -172,6 +175,8 @@ export default function MovimientosModal({
 
     const payload: MovimientoPayload = {
       movimiento,
+      // seguimos enviando el nombre (tu tipo actual); si preferís enviar el id,
+      // cambiá este campo a number y adaptá el resto del flujo
       tipoMovimiento,
       depositoId: isTransfer ? undefined : Number(deposito),
       depositoOrigenId: isTransfer ? Number(depositoOrigen) : undefined,
@@ -198,12 +203,25 @@ export default function MovimientosModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
-  // cierre con ESC además del propio AlertDialog
+  // Cerrar con ESC
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     if (isOpen) window.addEventListener('keydown', onEsc);
     return () => window.removeEventListener('keydown', onEsc);
   }, [isOpen, onClose]);
+
+  // 🔁 Sincronizar el nombre del tipo cuando cambia el ID seleccionado
+  useEffect(() => {
+    if (!tipoMovimientoId) return;
+    const tm = tiposMovimiento.find((t) => t.id === tipoMovimientoId);
+    if (tm) {
+      // nombre -> tu union TipoMovimiento; si hay tipos no contemplados en la union,
+      // casteamos por compatibilidad (o ampliá la union en productsData).
+      setTipoMovimiento(tm.nombre as TipoMovimiento);
+      // si querés, acá podrías setear movimiento (Ingreso/Egreso) segun tm.saldo
+      // setMovimiento(tm.saldo ? 'Ingreso' : 'Egreso');
+    }
+  }, [tipoMovimientoId, tiposMovimiento]);
 
   // ---- render
   return (
@@ -247,13 +265,14 @@ export default function MovimientosModal({
             <div className="md:col-span-2">
               <Select
                 label="Tipo de Movimiento *"
-                value={tipoMovimiento}
-                onChange={(e) => setTipoMovimiento(e.target.value as TipoMovimiento)}
+                value={String(tipoMovimientoId || 0)}
+                onChange={(e) => setTipoMovimientoId(Number(e.target.value) || 0)}
                 className="input-focus"
               >
-                {TM_OPTS.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
+                <option value="0" disabled>Seleccionar tipo</option>
+                {tiposMovimiento.map((tm) => (
+                  <option key={tm.id} value={tm.id}>
+                    {tm.nombre}
                   </option>
                 ))}
               </Select>
@@ -275,8 +294,7 @@ export default function MovimientosModal({
             ))}
           </Select>
 
-
-          {/* Comprobante + Comentario */}
+          {/* Comentario */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="md:col-span-2">
               <Input
@@ -298,9 +316,19 @@ export default function MovimientosModal({
 
                 const stockActual =
                   row.productoId && depositoEfectivo
-                    ? getStockDisponible(row.productoId, depositoEfectivo, stockIndex) // revisar
+                    ? getStockDisponible(row.productoId, depositoEfectivo, stockIndex)
                     : 0;
-                const resultante = stockActual + (Number(row.cantidad) || 0);
+
+                  // signo según tipo movimiento (saldo) o ajuste
+                  const tm = tiposMovimiento.find(t => t.id === tipoMovimientoId);
+                  const esIngreso = tm?.saldo ?? true; // por defecto ingreso si no hay selección
+                  const cantidadNum = Number(row.cantidad) || 0;
+
+                  const signedQty = isAjuste
+                    ? (ajusteSigno === 'negativo' ? -Math.abs(cantidadNum) : Math.abs(cantidadNum))
+                    : (esIngreso ? +Math.abs(cantidadNum) : -Math.abs(cantidadNum));
+
+                  const resultante = stockActual + signedQty;  //me permite numeros negativos, cambiar eso
 
                 return (
                   <div key={idx} className="product-row p-4 grid grid-cols-1 md:grid-cols-12 gap-3">
