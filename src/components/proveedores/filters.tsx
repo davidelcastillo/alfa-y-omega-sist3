@@ -52,9 +52,9 @@ option>
 </div>
 </div>
 <div className="flex justify-between items-center mt-6">
-<Button variant="muted" onClick={() => onChange({ name: '', code:
+<Button variant="outline" onClick={() => onChange({ name: '', code:
 '', status: '', category: '' })}>Limpiar Filtros</Button>
-<Button variant="primaryBlue">Buscar Proveedores</Button>
+<Button variant="ghost">Buscar Proveedores</Button>
 </div>
 </div>
 )

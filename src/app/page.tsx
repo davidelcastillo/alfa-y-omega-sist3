@@ -4,8 +4,7 @@ import AppShell from '@/components/layout/AppShell'
 export default function HomePage() {
   return (
     <AppShell>
-      <main className="w-full max-w-none mx-auto px-3 sm:px-4 lg:px-6 py-8 fade-in">
-
+    <main className="w-full max-w-none mx-auto px-3 sm:px-4 lg:px-6 py-8 fade-in">
       {/* Breadcrumb */}
       <div className="flex items-center space-x-2 text-sm text-gray-600 mb-6">
         <span>Inicio</span>
@@ -22,8 +21,8 @@ export default function HomePage() {
           <p className="text-gray-600 text-lg">Elegí un módulo para comenzar:</p>
         </div> 
       </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+      <div className="space-y-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6" >
           <Link href="/productos" className="glass-effect rounded-2xl p-6 card-hover">
             <h2 className="text-2xl font-semibold mb-2">Productos</h2>
             <p className="text-gray-600">Gestión de catálogo, precios y estado.</p>
@@ -33,7 +32,18 @@ export default function HomePage() {
             <p className="text-gray-600">Administración de depósitos y capacidades.</p>
           </Link>
         </div>
-      </main>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <Link href="/movimientos" className="glass-effect rounded-2xl p-6 card-hover">
+            <h2 className="text-2xl font-semibold mb-2">Movimientos de stock</h2>
+            <p className="text-gray-600">nose</p>
+          </Link>
+          <Link href="/proveedores" className="glass-effect rounded-2xl p-6 card-hover">
+            <h2 className="text-2xl font-semibold mb-2">Proveedores</h2>
+            <p className="text-gray-600">Nose.</p>
+          </Link>
+        </div>
+      </div>
+    </main>
     </AppShell>
   )
 }
