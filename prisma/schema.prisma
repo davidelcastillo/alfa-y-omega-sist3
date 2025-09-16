@@ -27,22 +27,20 @@ model Marca {
 }
 
 model Producto {
-  id             Int                @id @default(autoincrement())
-  nombre         String
-  descripcion    String?
-  rubroId        Int
-  marcaId        Int
-  unidadId       Int
-  estado         Boolean            @default(true)
-
-  marca          Marca              @relation(fields: [marcaId], references: [id])
-  rubro          Rubro              @relation(fields: [rubroId], references: [id])
-  unidad         Unidad             @relation(fields: [unidadId], references: [id])
-  
-  stockProductos StockPorDeposito[]
-  detalleMovimiento       DetalleMovimiento[]
-  detalleComprobanteProv  DetalleComprobanteProveedor[]
-  detalleOrdenCompra      DetalleOrdenCompra[]
+  id                     Int                           @id @default(autoincrement())
+  nombre                 String
+  descripcion            String?
+  rubroId                Int
+  marcaId                Int
+  unidadId               Int
+  estado                 Boolean                       @default(true)
+  detalleComprobanteProv DetalleComprobanteProveedor[]
+  detalleMovimiento      DetalleMovimiento[]
+  detalleOrdenCompra     DetalleOrdenCompra[]
+  marca                  Marca                         @relation(fields: [marcaId], references: [id])
+  rubro                  Rubro                         @relation(fields: [rubroId], references: [id])
+  unidad                 Unidad                        @relation(fields: [unidadId], references: [id])
+  stockProductos         StockPorDeposito[]
 
   @@index([estado], map: "idx_producto_estado")
   @@index([nombre, rubroId], map: "idx_producto_nombre_rubro")
@@ -57,22 +55,20 @@ model Deposito {
   estado      Boolean            @default(true)
   ciudad      String?
   provincia   String?
-
   movimientos MovimientoStock[]
   stock       StockPorDeposito[]
 }
 
 model StockPorDeposito {
-  id                 Int                 @id @default(autoincrement())
-  productoId         Int
-  depositoId         Int
-  stockActual        Int                 @default(0)
-  stockMinimo        Int                 @default(0)
-  stockMaximo        Int?
-  capacidadMaxima    Int?
-  
-  deposito           Deposito            @relation(fields: [depositoId], references: [id])
-  producto           Producto            @relation(fields: [productoId], references: [id])
+  id              Int      @id @default(autoincrement())
+  productoId      Int
+  depositoId      Int
+  stockActual     Int      @default(0)
+  stockMinimo     Int      @default(0)
+  stockMaximo     Int?
+  capacidadMaxima Int?
+  deposito        Deposito @relation(fields: [depositoId], references: [id])
+  producto        Producto @relation(fields: [productoId], references: [id])
 
   @@unique([productoId, depositoId])
 }
@@ -82,13 +78,10 @@ model MovimientoStock {
   depositoId        Int
   tipoMovimientoId  Int
   tipoComprobanteId Int
-  numeroComprobante  String?
+  numeroComprobante String?
   fecha             DateTime            @default(now())
   hora              DateTime            @default(now())
-
-
   detalles          DetalleMovimiento[]
-
   deposito          Deposito            @relation(fields: [depositoId], references: [id])
   tipoComprobante   TipoComprobante     @relation(fields: [tipoComprobanteId], references: [id])
   tipoMovimiento    TipoMovimiento      @relation(fields: [tipoMovimientoId], references: [id])
@@ -99,13 +92,9 @@ model DetalleMovimiento {
   movimientoId Int
   productoId   Int
   cantidad     Int
-
-
-  movimiento   MovimientoStock  @relation(fields: [movimientoId], references: [id])
-  producto   Producto       @relation(fields: [productoId], references: [id])
-
+  movimiento   MovimientoStock @relation(fields: [movimientoId], references: [id])
+  producto     Producto        @relation(fields: [productoId], references: [id])
 }
-
 
 model TipoComprobante {
   id                   Int                    @id @default(autoincrement())
@@ -114,90 +103,83 @@ model TipoComprobante {
   movimientos          MovimientoStock[]
 }
 
-
 model TipoMovimiento {
-  id            Int               @id @default(autoincrement())
-  nombre        String
-  saldo         Boolean
-
-  movimientos   MovimientoStock[]
+  id          Int               @id @default(autoincrement())
+  nombre      String
+  saldo       Boolean
+  movimientos MovimientoStock[]
 }
 
 model ComprobanteProveedor {
-  id              Int       @id @default(autoincrement())
-  ordenCompraId   Int
-  proveedorId     Int
-  letra           String?
-  numeroSucursal  String?
-  numero          String?
-  tipoComprobanteId Int
-  fecha           DateTime
-  hora            String?
-  total           Float?
-  saldo           Float?
-  metodoPagoId    Int?
-  estado          Boolean   @default(true)
-  observaciones   String?
-  tipoMovimientoId Int?
-
-  ordenCompra      OrdenCompra @relation(fields: [ordenCompraId], references: [id])
-  proveedor        Proveedores @relation(fields: [proveedorId], references: [id])
-  tipoComprobante  TipoComprobante @relation(fields: [tipoComprobanteId], references: [id])
-  metodoPago       MetodoPago? @relation(fields: [metodoPagoId], references: [id])
-  
+  id                 Int                           @id @default(autoincrement())
+  ordenCompraId      Int
+  proveedorId        Int
+  letra              String?
+  numeroSucursal     String?
+  numero             String?
+  tipoComprobanteId  Int
+  fecha              DateTime
+  hora               String?
+  total              Float?
+  saldo              Float?
+  metodoPagoId       Int?
+  estado             Boolean                       @default(true)
+  observaciones      String?
+  tipoMovimientoId   Int?
+  metodoPago         MetodoPago?                   @relation(fields: [metodoPagoId], references: [id])
+  ordenCompra        OrdenCompra                   @relation(fields: [ordenCompraId], references: [id])
+  proveedor          Proveedores                   @relation(fields: [proveedorId], references: [id])
+  tipoComprobante    TipoComprobante               @relation(fields: [tipoComprobanteId], references: [id])
   detalleComprobante DetalleComprobanteProveedor[]
 }
 
 model DetalleComprobanteProveedor {
-  id                      Int       @id @default(autoincrement())
-  comprobanteProveedorId  Int
-  productoId              Int
-  precioUnitario          Float
-  cantidad                Int
-  descuento               Float?
-  precioXCantidad         Float?
-  observaciones           String?
-
-  comprobanteProveedor  ComprobanteProveedor @relation(fields: [comprobanteProveedorId], references: [id])
-  producto              Producto   @relation(fields: [productoId], references: [id])
+  id                     Int                  @id @default(autoincrement())
+  comprobanteProveedorId Int
+  productoId             Int
+  precioUnitario         Float
+  cantidad               Int
+  descuento              Float?
+  precioXCantidad        Float?
+  observaciones          String?
+  comprobanteProveedor   ComprobanteProveedor @relation(fields: [comprobanteProveedorId], references: [id])
+  producto               Producto             @relation(fields: [productoId], references: [id])
 }
 
 model OrdenCompra {
-  id           Int       @id @default(autoincrement())
-  fecha        DateTime
-  hora         String?
-  nroOC        String?
-  proveedorId  Int
-  subTotal     Float?
-  otrosGastos  Float?
-  total        Float?
-  fechaEntrega DateTime?
-  depositoId   Int?
-  estado       Boolean   @default(true)
-  observaciones String?
-
-  proveedor    Proveedores @relation(fields: [proveedorId], references: [id])
+  id                 Int                    @id @default(autoincrement())
+  fecha              DateTime
+  hora               String?
+  nroOC              String?
+  proveedorId        Int
+  subTotal           Float?
+  otrosGastos        Float?
+  total              Float?
+  fechaEntrega       DateTime?
+  depositoId         Int?
+  estado             Boolean                @default(true)
+  observaciones      String?
+  comprobantes       ComprobanteProveedor[]
   detalleOrdenCompra DetalleOrdenCompra[]
-  comprobantes ComprobanteProveedor[]
+  proveedor          Proveedores            @relation(fields: [proveedorId], references: [id])
 }
 
 model DetalleOrdenCompra {
-  id            Int       @id @default(autoincrement())
-  ordenCompraId Int
-  productoId    Int
+  id             Int         @id @default(autoincrement())
+  ordenCompraId  Int
+  productoId     Int
   precioUnitario Float
-  cantidad      Int
-
-  ordenCompra OrdenCompra @relation(fields: [ordenCompraId], references: [id])
-  producto    Producto   @relation(fields: [productoId], references: [id])
+  cantidad       Int
+  ordenCompra    OrdenCompra @relation(fields: [ordenCompraId], references: [id])
+  producto       Producto    @relation(fields: [productoId], references: [id])
 }
 
 model Proveedores {
-  id               Int       @id @default(autoincrement())
+  id                Int                    @id @default(autoincrement())
   razonSocial       String?
   nombre            String
   nombreComercial   String?
-  codigo             String?
+  codigo            String?
   genero            String?
   categoriaFiscalId Int?
   cuil              String?
@@ -218,15 +200,13 @@ model Proveedores {
 }
 
 model MetodoPago {
-  id     Int    @id @default(autoincrement())
-  nombre String
-
+  id           Int                    @id @default(autoincrement())
+  nombre       String
   comprobantes ComprobanteProveedor[]
 }
 
 model CategoriaFiscal {
-  id     Int    @id @default(autoincrement())
-  nombre String
-
+  id          Int           @id @default(autoincrement())
+  nombre      String
   proveedores Proveedores[]
 }

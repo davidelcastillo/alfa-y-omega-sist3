@@ -1,8 +1,10 @@
 import type { UIStock } from '@/app/depositos/stock/page'
 
+// Actualizada para manejar el estado 'agotado'
 function statusClasses(status: UIStock['status']) {
-  if (status === 'bajo')   return { pill: 'bg-red-100 text-red-600', value: 'text-red-600' }
-  if (status === 'alto')   return { pill: 'bg-orange-100 text-orange-600', value: 'text-orange-600' }
+  if (status === 'agotado') return { pill: 'bg-gray-100 text-gray-600', value: 'text-gray-600' }
+  if (status === 'bajo')    return { pill: 'bg-red-100 text-red-600', value: 'text-red-600' }
+  if (status === 'alto')    return { pill: 'bg-orange-100 text-orange-600', value: 'text-orange-600' }
   return { pill: 'bg-green-100 text-green-600', value: 'text-green-600' }
 }
 
@@ -62,7 +64,9 @@ export default function StockTable({
                   </td>
                   <td className="px-4 py-3">
                     <span className={`px-3 py-1 text-xs font-medium rounded-full ${cls.pill}`}>
-                      {it.status === 'bajo'
+                      {it.status === 'agotado'
+                        ? 'Agotado'
+                        : it.status === 'bajo'
                         ? 'Stock Bajo'
                         : it.status === 'alto'
                         ? 'Stock Alto'
