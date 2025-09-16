@@ -200,7 +200,7 @@ export default function MovimientosModal({
 ">
 
         {/* Header */}
-        <div className="flex-none bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 p-6">
+        <div className="flex-none p-6 rounded-t-2xl bg-gradient-to-r from-primary-pink to-light-pink">
           <div className="flex items-center justify-between">
             <AlertDialogTitle className="text-2xl font-bold text-white">
               Registrar Movimiento de Stock

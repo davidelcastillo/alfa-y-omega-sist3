@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import type { Supplier } from "@/lib/proveedores/types";
+import { SquarePen } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 
 type Props = {
   data: Supplier[];
@@ -143,19 +145,7 @@ export default function ProveedoresTable({
                         title="Editar"
                         aria-label={`Editar ${displayName || s.codigo}`}
                       >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                          />
-                        </svg>
+                      <SquarePen className="w-6 h-6" aria-hidden />
                       </Button>
 
                       <Button
@@ -185,7 +175,7 @@ export default function ProveedoresTable({
                               d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728"
                             /> 
                           </svg>*/
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinecap="round" className="lucide lucide-trash-2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                          <Trash2  className="w-6 h-6" aria-hidden />
 
                         ) : ( //esto es lo que hizo gaston del icono desactivado
                           <svg

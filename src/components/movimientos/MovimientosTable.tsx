@@ -5,6 +5,7 @@ import { FC } from 'react';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import type { Movimiento } from '@/lib/movimientos/productsData';
+import { Eye } from 'lucide-react'
 
 type Props = {
   data: Movimiento[];
@@ -91,7 +92,7 @@ const MovimientosTable: FC<Props> = ({ data, onViewDetail, onNew }) => {
                   <Td>
                     <div className="flex gap-2">
                       <Button variant="outline" size="sm" onClick={() => onViewDetail?.(m)}>
-                        Ver
+                        <Eye className="w-4 h-4" aria-hidden />
                       </Button>
                     </div>
                   </Td>
