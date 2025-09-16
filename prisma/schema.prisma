@@ -191,10 +191,12 @@ model Proveedores {
   telefono          String?
   paginaWeb         String?
   correoElectronico String?
-  estado            Boolean                @default(true)
-  comprobantes      ComprobanteProveedor[]
-  ordenesCompra     OrdenCompra[]
-  categoriaFiscal   CategoriaFiscal?       @relation(fields: [categoriaFiscalId], references: [id])
+  estado           Boolean   @default(true)
+
+  categoriaFiscal  CategoriaFiscal? @relation(fields: [categoriaFiscalId], references: [id])
+
+  ordenesCompra   OrdenCompra[]
+  comprobantes    ComprobanteProveedor[]
 }
 
 model MetodoPago {
