@@ -12,6 +12,9 @@ type Row = {
   rubro: string | null;
   marca: string | null;
   unidad: string | null;
+  depositoId: number;          // 👈 agregado
+  depositoNombre: string;      // 👈 agregado
+  depositoUbicacion: string | null; // 👈 agregado
   stockActual: number;
   stockMinimo: number;
   stockMaximo: number | null;
@@ -20,8 +23,8 @@ type Row = {
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   // 1) validar depósito
-  const depositId = Number(params.id);
-  if (!Number.isInteger(depositId) || depositId <= 0) {
+  const depositId = params.id === 'all' ? null : Number(params.id);
+  if (depositId !== null && (!Number.isInteger(depositId) || depositId <= 0)) {
     return NextResponse.json({ ok: false, error: 'Bad deposit id' }, { status: 400 });
   }
 
@@ -34,10 +37,11 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   const sortMap: Record<typeof qp.sort, string> = {
     nombre: 'p."nombre"',
     stock: 'spd."stockActual"',
-    rubro: 'r."nombre"',
-    marca: 'm."nombre"',
-    unidad: 'u."nombre"',
+    stockMinimo: 'spd."stockMinimo"',   // agregado
+    stockMaximo: 'spd."stockMaximo"',   // agregado
+    updatedAt: 'spd."updatedAt"',       // agregado ⚠️ revisá si existe en tu tabla
   };
+
   const orderSql = `${sortMap[qp.sort]} ${qp.dir.toUpperCase()}`;
 
   // 4) regla de niveles
@@ -63,7 +67,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       LEFT JOIN "Rubro" r ON r.id = p."rubroId"
       LEFT JOIN "Marca" m ON m.id = p."marcaId"
       LEFT JOIN "Unidad" u ON u.id = p."unidadId"
-      WHERE spd."depositoId" = ${depositId}
+      WHERE ${depositId ? Prisma.sql`spd."depositoId" = ${depositId}` : Prisma.empty}
         ${textQ ? Prisma.sql`AND (
           LOWER(p."nombre") LIKE ${textQ} OR LOWER(COALESCE(p."descripcion", '')) LIKE ${textQ} OR
           LOWER(COALESCE(r."nombre", '')) LIKE ${textQ} OR
@@ -103,13 +107,18 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       spd."stockActual",
       spd."stockMinimo",
       spd."stockMaximo",
+      d."id" AS "depositoId",
+      d."nombre" AS "depositoNombre",
+      d."ubicacion" AS "depositoUbicacion",
       ${levelCase} AS level
     FROM "StockPorDeposito" spd
     JOIN "Producto" p ON p.id = spd."productoId"
+    JOIN "Deposito" d ON d.id = spd."depositoId"
     LEFT JOIN "Rubro" r ON r.id = p."rubroId"
     LEFT JOIN "Marca" m ON m.id = p."marcaId"
     LEFT JOIN "Unidad" u ON u.id = p."unidadId"
-    WHERE spd."depositoId" = ${depositId}
+
+    WHERE ${depositId ? Prisma.sql`spd."depositoId" = ${depositId}` : Prisma.empty}
       ${textQ ? Prisma.sql`AND (
         LOWER(p."nombre") LIKE ${textQ} OR LOWER(COALESCE(p."descripcion", '')) LIKE ${textQ} OR
         LOWER(COALESCE(r."nombre", '')) LIKE ${textQ} OR
