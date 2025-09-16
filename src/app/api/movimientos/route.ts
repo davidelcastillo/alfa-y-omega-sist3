@@ -4,7 +4,7 @@ import { z, ZodError } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { createMovimiento } from '@/server/movimientos.service';
 
-// Runtime Node para usar streams y libs nativas
+// Runtime Node
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -19,6 +19,7 @@ const createSchema = z.object({
   tipoMovimientoId: z.coerce.number().int().positive(),
   tipoComprobanteId: z.coerce.number().int().positive(),
   numeroComprobante: z.string().min(1).optional(),
+  Comentario: z.string().optional(), // <- coincide con el schema
   detalles: z.array(detalleSchema).min(1, 'Debe incluir al menos un detalle'),
 });
 
@@ -27,9 +28,7 @@ export async function POST(req: Request) {
   try {
     const json = await req.json();
     const data = createSchema.parse(json);
-
     const movimiento = await createMovimiento(data);
-
     return NextResponse.json({ ok: true, data: movimiento }, { status: 201 });
   } catch (err: unknown) {
     if (err instanceof ZodError) {
@@ -38,13 +37,10 @@ export async function POST(req: Request) {
         { status: 422 },
       );
     }
-
     const msg = (err as Error)?.message ?? 'Internal Error';
-    // Mensajes de negocio que querés exponer al cliente
     if (/(no existe|inactivo|insuficiente|vac[ií]os|inexistente|inv[aá]lid)/i.test(msg)) {
       return NextResponse.json({ ok: false, error: msg }, { status: 400 });
     }
-
     return NextResponse.json({ ok: false, error: 'Internal Server Error' }, { status: 500 });
   }
 }
@@ -67,31 +63,28 @@ export async function GET(req: Request) {
     const marcaId = searchParams.get('marcaId');
     const unidadId = searchParams.get('unidadId');
     const productoId = searchParams.get('productoId');
-    const q = searchParams.get('q'); // búsqueda por texto
+    const q = searchParams.get('q');
     const minCantidad = searchParams.get('minCantidad');
     const maxCantidad = searchParams.get('maxCantidad');
-    const esIngreso = searchParams.get('esIngreso'); // true/false (mapea a tm.saldo)
+    const esIngreso = searchParams.get('esIngreso'); // mapea a tm.saldo
 
-    // Orden y paginación (keyset)
+    // Orden/paginación
     const orderBy = (searchParams.get('orderBy') || 'fecha').toLowerCase(); // 'fecha' | 'detalle_id'
     const dir = (searchParams.get('dir') || 'desc').toLowerCase(); // 'asc' | 'desc'
     const pageSize = Math.min(parseInt(searchParams.get('pageSize') || '50', 10), 500);
-    const cursor = searchParams.get('cursor'); // último detalle_id recibido
+    const cursor = searchParams.get('cursor');
 
-    // Rango por defecto: últimos 30 días
+    // Rango default: últimos 30 días
     const endDt = end ? new Date(end) : new Date();
     const startDt = start ? new Date(start) : new Date(endDt.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    // Whitelist de orden
     const orderDir = dir === 'asc' ? 'ASC' : 'DESC';
-
-    // Para keyset necesitamos un “tie breaker” estable
     const orderSql =
       orderBy === 'detalle_id'
         ? `ORDER BY dm.id ${orderDir}`
         : `ORDER BY ms.fecha ${orderDir}, dm.id ${orderDir}`;
 
-    // WHERE dinámico con parámetros posicionados
+    // WHERE dinámico
     const where: string[] = [`ms.fecha >= $1`, `ms.fecha <  $2`];
     const params: any[] = [startDt, endDt];
 
@@ -109,9 +102,8 @@ export async function GET(req: Request) {
     if (productoId) add(`p.id = $(?)`, Number(productoId));
     if (minCantidad) add(`dm.cantidad >= $(?)`, Number(minCantidad));
     if (maxCantidad) add(`dm.cantidad <= $(?)`, Number(maxCantidad));
-    if (esIngreso !== null) add(`tm."saldo" = $(?)`, toBool(esIngreso)); // <— CAMBIO CLAVE
+    if (esIngreso !== null) add(`tm."saldo" = $(?)`, toBool(esIngreso));
 
-    // Búsqueda simple por texto en varias columnas (ILIKE)
     if (q) {
       const like = `%${q}%`;
       const base = params.length + 1;
@@ -125,12 +117,10 @@ export async function GET(req: Request) {
       params.push(like, like, like, like, like);
     }
 
-    // Keyset cursor (por dm.id)
     if (cursor) {
       add(`dm.id ${orderDir === 'ASC' ? '>' : '<'} $(?)`, Number(cursor));
     }
 
-    // LIMIT + 1 para hasMore
     const limit = pageSize + 1;
     params.push(limit);
     const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
@@ -141,7 +131,7 @@ export async function GET(req: Request) {
         ms.fecha                    AS fecha,
         d.nombre                    AS deposito,
         tm.nombre                   AS tipo_movimiento,
-        tm."saldo"                  AS es_ingreso,        -- <— CAMBIO CLAVE
+        tm."saldo"                  AS es_ingreso,
         tc.nombre                   AS tipo_comprobante,
         p.nombre                    AS producto,
         r.nombre                    AS rubro,
@@ -150,7 +140,7 @@ export async function GET(req: Request) {
         dm.cantidad                 AS cantidad
       FROM "DetalleMovimiento" dm
       JOIN "MovimientoStock" ms   ON ms.id = dm."movimientoId"
-      JOIN "StockPorDeposito" s   ON s."productoId" = dm."productoId" AND s."depositoId" = ms."depositoId"  -- <— CAMBIO CLAVE
+      JOIN "StockPorDeposito" s   ON s."productoId" = dm."productoId" AND s."depositoId" = ms."depositoId"
       JOIN "Producto" p           ON p.id  = s."productoId"
       JOIN "Rubro" r              ON r.id  = p."rubroId"
       JOIN "Unidad" u             ON u.id  = p."unidadId"
