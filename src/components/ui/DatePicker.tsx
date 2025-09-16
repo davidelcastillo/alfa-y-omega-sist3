@@ -7,6 +7,7 @@ import { es } from 'date-fns/locale';
 import Button from '@/components/ui/Button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { Calendar as CalendarIcon } from "lucide-react";
 
 function parseISODate(iso?: string): Date | undefined {
   if (!iso) return undefined;
@@ -51,7 +52,8 @@ export default function DatePicker({
             disabled={disabled}
           >
             {date ? format(date, 'dd/MM/yyyy', { locale: es }) : placeholder}
-            <span className="opacity-60" aria-hidden>📅</span>
+            <CalendarIcon className="h-4 w-4 opacity-60" aria-hidden />
+            <span className="sr-only">Abrir calendario</span>          
           </Button>
         </PopoverTrigger>
         <PopoverContent className="p-0">

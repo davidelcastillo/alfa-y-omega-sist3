@@ -9,6 +9,7 @@ import SearchableSelect from '@/components/ui/SearchableSelect';
 import {
   AlertDialog,
   AlertDialogContent,
+  AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
 import type {
@@ -195,15 +196,15 @@ export default function MovimientosModal({
       glass-effect
       p-0 overflow-hidden  
       w-full max-w-3xl md:max-w-5xl
-      h-[85vh]                 /* ALTURA FIJA del modal */
+      h-[85vh]
 ">
 
         {/* Header */}
         <div className="flex-none bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 p-6">
           <div className="flex items-center justify-between">
-            <h3 id="modal-title-movimientos" className="text-2xl font-bold text-white">
+            <AlertDialogTitle className="text-2xl font-bold text-white">
               Registrar Movimiento de Stock
-            </h3>
+            </AlertDialogTitle>
             <button
               onClick={onClose}
               className="text-white hover:bg-white/20 p-2 rounded-lg"

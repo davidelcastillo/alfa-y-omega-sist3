@@ -7,6 +7,7 @@ import Badge from '@/components/ui/Badge';
 import {
   AlertDialog,
   AlertDialogContent,
+  AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import type { Movimiento } from '@/lib/movimientos/productsData';
 
@@ -40,19 +41,17 @@ export default function MovimientosDetailModal({ isOpen, onClose, movimiento }: 
     : 'status-inactive text-white';
 
   return (
-    <AlertDialog
-      open={isOpen}
-      onOpenChange={(open: boolean) => {
-        if (!open) onClose();
-      }}
-      >
-      <AlertDialogContent className="p-0 overflow-hidden glass-effect max-w-3xl md:max-w-4xl">
-        {/* Header con gradiente */}
+    <AlertDialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <AlertDialogContent className="      glass-effect
+      p-0 overflow-hidden  
+      w-full max-w-3xl md:max-w-5xl
+      h-[85vh]">
+        {/* Header */}
         <div className="bg-gradient-to-r from-primary-pink to-light-pink p-6">
           <div className="flex items-center justify-between">
-            <h3 id="modal-title-detalle-mov" className="text-2xl font-bold text-white">
+            <AlertDialogTitle className="text-2xl font-bold text-white">
               Detalle del Movimiento
-            </h3>
+            </AlertDialogTitle>
             <button
               onClick={onClose}
               className="text-white hover:bg-white/20 p-2 rounded-lg"
@@ -64,7 +63,7 @@ export default function MovimientosDetailModal({ isOpen, onClose, movimiento }: 
         </div>
 
         {/* Body */}
-        <div className="p-8 space-y-8">
+        <div className="flex-auto overflow-y-auto p-8 space-y-8">
           {/* Info principal */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="glass-effect rounded-xl p-6">
@@ -120,7 +119,7 @@ export default function MovimientosDetailModal({ isOpen, onClose, movimiento }: 
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left text-sm font-bold text-dark-blue">Producto</th>
-                    <th className="px-4 py-3 text-left text-sm font-bold text-dark-blue">Código</th>
+                    {/*<th className="px-4 py-3 text-left text-sm font-bold text-dark-blue">Código</th>  PRODUCTO NO TIENE CODIGO */}
                     <th className="px-4 py-3 text-center text-sm font-bold text-dark-blue">Cantidad</th>
                   </tr>
                 </thead>
@@ -128,7 +127,7 @@ export default function MovimientosDetailModal({ isOpen, onClose, movimiento }: 
                   {movimiento.productos.map((p, i) => (
                     <tr key={i} className="product-row">
                       <td className="px-4 py-3 text-sm">{p.producto.descripcion}</td>
-                      <td className="px-4 py-3 text-sm font-mono">{p.producto.codigo}</td>
+                      {/*<td className="px-4 py-3 text-sm font-mono">{p.producto.codigo}</td> PRODUCTO NO TIENE CODIGO */}
                       <td className="px-4 py-3 text-sm text-center">{p.cantidad}</td>
                     </tr>
                   ))}

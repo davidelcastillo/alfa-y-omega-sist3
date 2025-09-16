@@ -9,6 +9,7 @@ import ProveedoresFilters from "@/components/proveedores/ProveedoresFilters";
 import ProveedoresTable from "@/components/proveedores/ProveedoresTable";
 import ProveedoresModal, { type SupplierForm } from "@/components/proveedores/ProveedoresModal";
 import Button from "@/components/ui/Button";
+import { Plus } from "lucide-react";
 
 // Tipos, mocks y helpers
 import type {
@@ -111,30 +112,15 @@ export default function ProveedoresPage() {
         </div>
 
         <div className="flex space-x-4">
-            <Button
-                variant="primary"
-                size="lg"
-                onClick={handleCreate}
-                className="px-8 py-8 rounded-xl space-x-3 text-lg hover:shadow-lg"
-            >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/>
-                </svg>
-                <span>Nuevo Proveedor</span>
-            </Button>
-
-            {/*Ver si hay que borrar esto o no
-            <Button
-                variant="outline"
-                size="lg"
-                onClick={() => {
-                setSuppliers((arr) => sortByFechaRegistroDesc([...arr]));
-                }}
-                className="bg-gradient-to-r from-primary-blue to-dark-blue text-white hover:shadow-lg border-0"
-            >
-
-                <span>Actualizar</span>
-            </Button> */}
+          <Button
+            variant="primary"
+            size="lg"
+            onClick={handleCreate}
+            className="px-8 py-8 rounded-xl gap-3 text-lg hover:shadow-lg"
+          >
+            <Plus className="w-6 h-6" aria-hidden />
+            <span>Nuevo Proveedor</span>
+          </Button>
           </div>
       </div>
 

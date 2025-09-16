@@ -44,11 +44,6 @@ const MovimientosTable: FC<Props> = ({ data, onViewDetail, onNew }) => {
       {/* Header / CTA */}
       <div className="bg-gradient-to-r from-primary-pink to-light-pink p-6 flex items-center justify-between">
         <h3 className="text-xl font-bold text-white">Historial de Movimientos</h3>
-        {onNew && (
-          <Button variant="primary" size="lg" onClick={onNew} className="btn-primary">
-            Registrar Nuevo Movimiento
-          </Button>
-        )}
       </div>
 
       {/* Tabla */}
@@ -109,11 +104,6 @@ const MovimientosTable: FC<Props> = ({ data, onViewDetail, onNew }) => {
                 <td colSpan={8} className="px-6 py-12 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <p className="text-gray-500">No hay movimientos para los filtros seleccionados.</p>
-                    {onNew && (
-                      <Button variant="primary" onClick={onNew} className="btn-primary">
-                        Registrar Nuevo Movimiento
-                      </Button>
-                    )}
                   </div>
                 </td>
               </tr>

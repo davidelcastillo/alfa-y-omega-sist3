@@ -7,6 +7,7 @@ import MovimientosFilters, { type FiltersState } from '@/components/movimientos/
 import MovimientosTable from '@/components/movimientos/MovimientosTable';
 import MovimientosModal, { type MovimientoPayload } from '@/components/movimientos/MovimientosModal';
 import MovimientosDetailModal from '@/components/movimientos/MovimientosDetailModal';
+import { Plus } from 'lucide-react'
 
 import {
   depositosMock,
@@ -121,8 +122,9 @@ export default function MovimientosPage() {
           </h2>
           <p className="text-gray-600 text-lg">Historial completo de ingresos y egresos de inventario</p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="primary" size="lg" onClick={handleCreate} className="btn-primary">
+        <div className="flex space x-4">
+          <Button variant="primary" size="lg" onClick={handleCreate} className="px-8 py-8 rounded-xl gap-3 text-lg hover:shadow-lg">
+            <Plus className="w-10 h-5 mr-2" aria-hidden />
             Registrar Nuevo Movimiento
           </Button>
         </div>
