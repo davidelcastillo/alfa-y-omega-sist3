@@ -81,6 +81,7 @@ model MovimientoStock {
   numeroComprobante String?
   fecha             DateTime            @default(now())
   hora              DateTime            @default(now())
+  Comentario        String?
   detalles          DetalleMovimiento[]
   deposito          Deposito            @relation(fields: [depositoId], references: [id])
   tipoComprobante   TipoComprobante     @relation(fields: [tipoComprobanteId], references: [id])
@@ -191,12 +192,10 @@ model Proveedores {
   telefono          String?
   paginaWeb         String?
   correoElectronico String?
-  estado           Boolean   @default(true)
-
-  categoriaFiscal  CategoriaFiscal? @relation(fields: [categoriaFiscalId], references: [id])
-
-  ordenesCompra   OrdenCompra[]
-  comprobantes    ComprobanteProveedor[]
+  estado            Boolean                @default(true)
+  comprobantes      ComprobanteProveedor[]
+  ordenesCompra     OrdenCompra[]
+  categoriaFiscal   CategoriaFiscal?       @relation(fields: [categoriaFiscalId], references: [id])
 }
 
 model MetodoPago {
