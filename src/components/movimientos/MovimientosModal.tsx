@@ -20,19 +20,17 @@ import type {
 } from '@/lib/movimientos/productsData';
 
 type ProductRow = { productoId: number; cantidad: number };
+type StockIndex = Record<number, Record<number, number>>;
 
 export type MovimientoPayload = {
-  movimiento: MovimientoBasico; // Ingreso | Egreso
+  movimiento: MovimientoBasico; // (ingreso/egreso) hoy se muestra pero el valor real vendrá del tipo
   tipoMovimiento: TipoMovimiento;
-  // depósito único para compra/venta/ajuste/ingreso
   depositoId?: number;
-  // depósitos para transferencia
-  depositoOrigenId?: number;
-  depositoDestinoId?: number;
-  comprobanteId?: string;
-  comentario?: string;
+  depositoOrigenId?: number;     // aún presente por compatibilidad visual
+  depositoDestinoId?: number;    // aún presente por compatibilidad visual
+  comprobanteId?: string;        // nombre temporal
+  comentario?: string;           // no está en DB (placeholder UI)
   productos: Array<{ productoId: number; cantidad: number }>;
-  // extra opcional para “ajuste”
   ajusteSigno?: 'positivo' | 'negativo';
 };
 
@@ -40,10 +38,11 @@ type Props = {
   isOpen: boolean;
   onClose: () => void;
   depositos: Deposito[];
-  productos: ProductoLite[];
+  productosPorDeposito: Record<number, ProductoLite[]>;
+  //productos: ProductoLite[];
   onSubmit: (payload: MovimientoPayload) => void;
-  /** Opcional: valores iniciales (para edición en el futuro) */
   initial?: Partial<MovimientoPayload>;
+  stockIndex: StockIndex;
 };
 
 const TM_OPTS: TipoMovimiento[] = [
@@ -54,26 +53,32 @@ const TM_OPTS: TipoMovimiento[] = [
 ];
 
 // TEMP: mock de stock disponible hasta conectar DB.
-// Reemplazá por una consulta real (p. ej. fetch a tu API).
-function getStockDisponible(productoId: number, depositoId: number): number {
+{/*function getStockDisponible(productoId: number, depositoId: number): number {
   if (!productoId || !depositoId) return 0;
-  // TODO: reemplazar por el valor real
-  return 120; 
-}
+  return 120;
+}*/}
+function getStockDisponible(
+    productoId: number,
+    depositoId: number,
+    stockIndex: StockIndex
+  ): number {
+    if (!productoId || !depositoId) return 0;
+    return stockIndex[depositoId]?.[productoId] ?? 0;
+  }
 
 export default function MovimientosModal({
   isOpen,
   onClose,
   depositos,
-  productos,
+  productosPorDeposito,
   onSubmit,
   initial,
+  stockIndex,
 }: Props) {
   // ---- state base
   const [movimiento, setMovimiento] = useState<MovimientoBasico>('Ingreso');
   const [tipoMovimiento, setTipoMovimiento] = useState<TipoMovimiento>('Compra de inventario');
   const [numero, setNumero] = useState('');
-
 
   // depósitos (0 = ninguno)
   const [deposito, setDeposito] = useState<number>(0);
@@ -95,12 +100,24 @@ export default function MovimientosModal({
     () => depositos.map((d) => ({ id: d.id, nombre: d.nombre })),
     [depositos]
   );
+
+  // ⬇️ Productos disponibles según el depósito elegido
+  const productosDisponibles: ProductoLite[] = useMemo(() => {
+    const depId = Number(deposito);
+    return depId ? (productosPorDeposito[depId] ?? []) : [];
+  }, [productosPorDeposito, deposito]);
+
   const prodOptions = useMemo(
-    () => productos.map((p) => ({ id: p.id, nombre: `${p.descripcion} (${p.codigo})` })),
-    [productos]
+    () =>
+      productosDisponibles.map((p) => ({
+        id: p.id,
+        nombre: `${p.descripcion} (${p.codigo})`,
+      })),
+    [productosDisponibles]
   );
+
   const tipoMovOptions = useMemo(
-    () => TM_OPTS.map((t, i) => ({ id: i + 1, nombre: t })), // id sintético
+    () => TM_OPTS.map((t, i) => ({ id: i + 1, nombre: t })), // id sintético (UI)
     []
   );
 
@@ -140,7 +157,6 @@ export default function MovimientosModal({
     if (isTransfer) {
       return depositoOrigen > 0 && depositoDestino > 0 && depositoOrigen !== depositoDestino;
     }
-    // compra/venta/ajuste/ingreso → un solo depósito
     return deposito > 0;
   };
 
@@ -192,13 +208,14 @@ export default function MovimientosModal({
   // ---- render
   return (
     <AlertDialog open={isOpen} onOpenChange={(open: boolean) => { if (!open) onClose(); }}>
-      <AlertDialogContent className="
-      glass-effect
-      p-0 overflow-hidden  
-      w-full max-w-3xl md:max-w-5xl
-      h-[85vh]
-">
-
+      <AlertDialogContent
+        className="
+          glass-effect
+          p-0 overflow-hidden  
+          w-full max-w-3xl md:max-w-5xl
+          h-[85vh]
+        "
+      >
         {/* Header */}
         <div className="flex-none p-6 rounded-t-2xl bg-gradient-to-r from-primary-pink to-light-pink">
           <div className="flex items-center justify-between">
@@ -215,160 +232,153 @@ export default function MovimientosModal({
           </div>
         </div>
 
-          {/* Body */}
-          <div className="flex-auto overflow-y-auto p-8 space-y-8">
-            {/* Número (opcional) + Tipo de movimiento */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Reemplaza "Movimiento" por este input */}
-              <Input
-                label="Número"
-                placeholder="N° remito / N°  de factura"
-                value={numero}
-                onChange={(e) => setNumero(e.target.value)}
+        {/* Body */}
+        <div className="flex-auto overflow-y-auto p-8 space-y-8">
+          {/* Número (opcional) + Tipo de movimiento */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Input
+              label="Número de remito"
+              placeholder="Ingrese N° de remito"
+              value={numero}
+              onChange={(e) => setNumero(e.target.value)}
+              className="input-focus"
+            />
+
+            <div className="md:col-span-2">
+              <Select
+                label="Tipo de Movimiento *"
+                value={tipoMovimiento}
+                onChange={(e) => setTipoMovimiento(e.target.value as TipoMovimiento)}
                 className="input-focus"
-              />
-
-              <div className="md:col-span-2">
-                {/* Tipo de movimiento como menú desplegable (Select nativo) */}
-                <Select
-                  label="Tipo de Movimiento *"
-                  value={tipoMovimiento}
-                  onChange={(e) => setTipoMovimiento(e.target.value as TipoMovimiento)}
-                  className="input-focus"
-                >
-                  {TM_OPTS.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </Select>
-              </div>
+              >
+                {TM_OPTS.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </Select>
             </div>
+          </div>
 
-              <SearchableSelect
-                label="Depósito *"
-                options={depOptions}
-                valueId={deposito}
-                onChange={(opt) => setDeposito(opt?.id ?? 0)}
-                placeholder="Seleccionar depósito"
-              />
+          {/* Depósito */}
+          <Select
+            label="Depósito *"
+            value={String(deposito || 0)}
+            onChange={(e) => setDeposito(Number(e.target.value) || 0)}
+            className="input-focus"
+          >
+            <option value="0" disabled>Seleccionar depósito</option>
+            {depOptions.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.nombre}
+              </option>
+            ))}
+          </Select>
 
-            {/* Comprobante + Comentario */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+          {/* Comprobante + Comentario */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-2">
               <Input
-                label="ID Comprobante"
-                value={comprobanteId}
-                onChange={(e) => setComprobanteId(e.target.value)}
+                label="Comentario"
+                value={comentario}
+                onChange={(e) => setComentario(e.target.value)}
                 className="input-focus"
-                placeholder="Ej: F-000123"
+                placeholder="Notas del movimiento..."
               />
-              <div className="md:col-span-2">
-                <Input
-                  label="Comentario"
-                  value={comentario}
-                  onChange={(e) => setComentario(e.target.value)}
-                  className="input-focus"
-                  placeholder="Notas del movimiento..."
-                />
-              </div>
             </div>
+          </div>
 
-            {/* Productos */}
-            <div>
-              <h4 className="text-md font-semibold text-gray-800 mb-4">Productos</h4>
-              <div className="space-y-3">
-                {items.map((row, idx) => {
-                  // Depósito efectivo para el cálculo de stock:
-                  // - Transferencia: usamos el depósito DESTINO (ingreso en destino)
-                  // - Resto: el depósito elegido
-                  const depositoEfectivo = isTransfer ? depositoDestino : deposito;
+          {/* Productos */}
+          <div>
+            <h4 className="text-md font-semibold text-gray-800 mb-4">Productos</h4>
+            <div className="space-y-3">
+              {items.map((row, idx) => {
+                const depositoEfectivo = isTransfer ? depositoDestino : deposito;
 
-                  const stockActual =
-                    row.productoId && depositoEfectivo
-                      ? getStockDisponible(row.productoId, depositoEfectivo)
-                      : 0;
+                const stockActual =
+                  row.productoId && depositoEfectivo
+                    ? getStockDisponible(row.productoId, depositoEfectivo, stockIndex) // revisar
+                    : 0;
+                const resultante = stockActual + (Number(row.cantidad) || 0);
 
-                  // Por ahora asumimos TODO ingreso => resultante = actual + cantidad
-                  const resultante = stockActual + (Number(row.cantidad) || 0);
+                return (
+                  <div key={idx} className="product-row p-4 grid grid-cols-1 md:grid-cols-12 gap-3">
+                    <div className="md:col-span-8">
+                      <SearchableSelect
+                        label="Producto"
+                        options={prodOptions}
+                        valueId={row.productoId}
+                        onChange={(opt) => patchRow(idx, { productoId: opt?.id ?? 0 })}
+                        placeholder="Seleccionar producto"
+                      />
+                    </div>
 
-                  return (
-                    <div key={idx} className="product-row p-4 grid grid-cols-1 md:grid-cols-12 gap-3">
-                      <div className="md:col-span-8">
-                        <SearchableSelect
-                          label="Producto"
-                          options={prodOptions}
-                          valueId={row.productoId}
-                          onChange={(opt) => patchRow(idx, { productoId: opt?.id ?? 0 })}
-                          placeholder="Seleccionar producto"
-                        />
-                      </div>
+                    <div className="md:col-span-3">
+                      <Input
+                        label="Cantidad"
+                        type="number"
+                        min={1}
+                        value={row.cantidad}
+                        onChange={(e) =>
+                          patchRow(idx, {
+                            cantidad: Math.max(1, Number(e.target.value) || 1),
+                          })
+                        }
+                        className="input-focus"
+                      />
 
-                      <div className="md:col-span-3">
-                        <Input
-                          label="Cantidad"
-                          type="number"
-                          min={1}
-                          value={row.cantidad}
-                          onChange={(e) =>
-                            patchRow(idx, {
-                              cantidad: Math.max(1, Number(e.target.value) || 1),
-                            })
-                          }
-                          className="input-focus"
-                        />
-
-                        {/* Indicadores de stock */}
-                        <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                          <div className="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2">
-                            <div className="text-gray-500 font-medium">Stock actual</div>
-                            <div className="font-semibold text-dark-blue">{stockActual}</div>
-                          </div>
-                          <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2">
-                            <div className="text-emerald-700 font-medium">Stock resultante</div>
-                            <div className="font-semibold text-emerald-700">{resultante}</div>
-                          </div>
+                      {/* Indicadores de stock */}
+                      <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                        <div className="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2">
+                          <div className="text-gray-500 font-medium">Stock actual</div>
+                          <div className="font-semibold text-dark-blue">{stockActual}</div>
+                        </div>
+                        <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2">
+                          <div className="text-emerald-700 font-medium">Stock resultante</div>
+                          <div className="font-semibold text-emerald-700">{resultante}</div>
                         </div>
                       </div>
-
-                      <div className="md:col-span-1 flex items-end justify-end">
-                        <button
-                          type="button"
-                          onClick={() => removeRow(idx)}
-                          className="remove-product-btn w-10 h-10 rounded-lg bg-gray-200 hover:bg-red-500 text-gray-700 hover:text-white"
-                          title="Quitar"
-                          aria-label="Quitar producto"
-                        >
-                          ✕
-                        </button>
-                      </div>
                     </div>
-                  );
-                })}
-              </div>
 
-              <div className="mt-4">
-                <Button variant="outline" onClick={addRow}>
-                  Agregar producto
-                </Button>
-              </div>
+                    <div className="md:col-span-1 flex items-end justify-end">
+                      <button
+                        type="button"
+                        onClick={() => removeRow(idx)}
+                        className="remove-product-btn w-10 h-10 rounded-lg bg-gray-200 hover:bg-red-500 text-gray-700 hover:text-white"
+                        title="Quitar"
+                        aria-label="Quitar producto"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
-
-            {/* Actions */}
-            <div className="flex justify-end gap-4 pt-2">
-              <Button variant="outline" onClick={onClose}>
-                Cancelar
-              </Button>
-              <Button
-                variant="primary"
-                className="btn-primary"
-                disabled={!canSubmit()}
-                onClick={handleSubmit}
-              >
-                Registrar Movimiento
+            <div className="mt-4">
+              <Button variant="outline" onClick={addRow}>
+                Agregar producto
               </Button>
             </div>
           </div>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-4 pt-2">
+            <Button variant="outline" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              className="btn-primary"
+              disabled={!canSubmit()}
+              onClick={handleSubmit}
+            >
+              Registrar Movimiento
+            </Button>
+          </div>
+        </div>
       </AlertDialogContent>
     </AlertDialog>
   );

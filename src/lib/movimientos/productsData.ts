@@ -26,6 +26,8 @@ export const depositosMock: Deposito[] = [
   { id: 1, nombre: 'Depósito Central', ubicacion: 'Parque Industrial' },
   { id: 2, nombre: 'Depósito Norte', ubicacion: 'B° Norte' },
   { id: 3, nombre: 'Depósito Sur', ubicacion: 'B° Sur' },
+  { id: 4, nombre: 'Mock', ubicacion: 'B° Sur' },
+
 ];
 
 export const productosLiteMock: ProductoLite[] = [

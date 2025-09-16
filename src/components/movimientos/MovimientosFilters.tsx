@@ -107,8 +107,8 @@ const MovimientosFilters: FC<Props> = ({ state, onChange, depositos, onSearch, o
 
         {/* Búsqueda libre */}
         <Input
-          label="Buscar"
-          placeholder="Comentario o ID de comprobante…"
+          label="Buscar remito"
+          placeholder="Número de remito"
           value={state.q ?? ''}
           onChange={e => onChange({ q: e.target.value })}
           className="input-focus lg:col-span-1"
