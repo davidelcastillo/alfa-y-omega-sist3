@@ -87,9 +87,8 @@ export default function ProveedoresTable({
               const displayName =
                 s.tipo === "empresa" ? s.razonSocial ?? "" : s.nombreCompleto ?? "";
               const fantasy = s.nombreFantasia ? ` (${s.nombreFantasia})` : "";
-              const statusClass =
-                s.estado === "Activo" ? "status-active" : "status-inactive";
-
+              const statusClass = s.estado === "Activo" ? "status-active" : "status-inactive";
+              
               return (
                 <tr
                   key={s.id}
