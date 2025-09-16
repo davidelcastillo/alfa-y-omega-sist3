@@ -1,7 +1,7 @@
 // src/app/proveedores/page.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 
 // Componentes del módulo
 import StatsCards from "@/components/proveedores/StatsCards";
@@ -26,10 +26,29 @@ import {
 } from "@/lib/proveedores/helpers";
 
 export default function ProveedoresPage() {
-  // Estado base (ordenado por fecha desc)
-  const [suppliers, setSuppliers] = useState<Supplier[]>(
-    sortByFechaRegistroDesc(suppliersMock)
-  );
+  // Estado base (ordenado por fecha desc) ------------------------------------------------------------------------- CAMBIO
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  // creamos un useeffect ------------------------------------------------------------------------------------------ AGREGAMOS
+  useEffect(() => {
+    async function fetchProveedores() {
+      try {
+        const res = await fetch("/api/proveedores");
+        const data = await res.json();
+
+        if (res.ok && data) {
+          // asumimos que la API devuelve { data: [...] }
+          setSuppliers(data.data || []);
+        } else {
+          console.error("Error al cargar proveedores:", data.error);
+        }
+      } catch (err) {
+        console.error("Error al conectar con la API de proveedores:", err);
+      }
+    }
+
+    fetchProveedores();
+  }, []);
+
 
   // Filtros controlados
   const [filters, setFilters] = useState<ProveedoresFiltersState>({
