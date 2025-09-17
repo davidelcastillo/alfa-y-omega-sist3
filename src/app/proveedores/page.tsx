@@ -57,6 +57,17 @@ export default function ProveedoresPage() {
     status: "",
     category: "",
   });
+  // PARA PRUEBA -------------------------------------------------------------------------------------------
+  const categorias = useMemo(() => {
+    const map = new Map<number, string>();
+    suppliers.forEach((s) => {
+      if (s.categoriaFiscal?.id && s.categoriaFiscal?.nombre) {
+        map.set(s.categoriaFiscal.id, s.categoriaFiscal.nombre);
+      }
+    });
+    return Array.from(map, ([id, nombre]) => ({ id, nombre }))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [suppliers]);
 
   // Modal create/edit
   const [openModal, setOpenModal] = useState(false);
@@ -154,12 +165,11 @@ export default function ProveedoresPage() {
       <ProveedoresFilters
         value={filters}
         onChange={setFilters}
-        onSearch={() => {
-          // Si más adelante haces fetch server-side, podés dispararlo acá
-        }}
+        onSearch={() => {}}
         onClear={() =>
           setFilters({ searchName: "", searchCode: "", status: "", category: "" })
         }
+        categories={categorias}
       />
 
       {/* Tabla */}

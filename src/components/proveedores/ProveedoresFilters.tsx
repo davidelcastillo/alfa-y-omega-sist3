@@ -5,43 +5,23 @@ import { useCallback } from "react";
 import { Button } from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
-
-export type CategoriaFiscal =
-  | "Consumidor Final"
-  | "Exento"
-  | "Monotributista"
-  | "Responsable Inscripto"
-  | "Exterior";
-
-export type FiltroEstado = "" | "Activo" | "Inactivo";
-
-export type ProveedoresFiltersState = {
-  searchName: string;
-  searchCode: string;
-  status: FiltroEstado;
-  category: "" | CategoriaFiscal;
-};
+import type { ProveedoresFiltersState } from "@/lib/proveedores/types";
 
 type Props = {
   value: ProveedoresFiltersState;
   onChange: (next: ProveedoresFiltersState) => void;
   onSearch?: () => void;
   onClear?: () => void;
+  categories: { id: number; nombre: string }[]; // 👈 NUEVO
 };
 
-const CATEGORIAS: CategoriaFiscal[] = [
-  "Consumidor Final",
-  "Exento",
-  "Monotributista",
-  "Responsable Inscripto",
-  "Exterior",
-];
 
 export default function ProveedoresFilters({
   value,
   onChange,
   onSearch,
   onClear,
+  categories,
 }: Props) {
   const set = useCallback(
     <K extends keyof ProveedoresFiltersState>(
@@ -94,7 +74,7 @@ export default function ProveedoresFilters({
           <Select
             className="input-focus"
             value={value.status}
-            onChange={(e) => set("status", e.target.value as FiltroEstado)}
+            onChange={(e) => set("status", e.target.value as ProveedoresFiltersState["status"])}
           >
             <option value="">Todos</option>
             <option value="Activo">Activos</option>
@@ -115,9 +95,9 @@ export default function ProveedoresFilters({
             }
           >
             <option value="">Todas</option>
-            {CATEGORIAS.map((c) => (
-              <option key={c} value={c}>
-                {c}
+            {categories.map((cat) => (
+              <option key={cat.id} value={String(cat.id)}>
+                {cat.nombre}
               </option>
             ))}
           </Select>

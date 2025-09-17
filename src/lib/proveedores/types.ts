@@ -21,7 +21,7 @@ export interface Supplier {
   genero?: string | null;             // Campo opcional, si lo usan en el futuro
 
   // Relación con Categoría Fiscal
-  categoriaFiscalId: number | null;   // FK numérica (puede ser null)
+  categoriaFiscalId: { id: number; nombre: string } | null;  // FK numérica (puede ser null)
   categoriaFiscal?: {                 // Relación expandida opcional
     id: number;
     nombre: string;
@@ -53,8 +53,8 @@ export type FiltroEstado = "" | SupplierStatus;
 export interface ProveedoresFiltersState {
   searchName: string;
   searchCode: string;
-  status: FiltroEstado;
-  category: "" | CategoriaFiscal;
+  status:  "" | "Activo" | "Inactivo";
+  category: string;
 }
 
 export interface Stats {
