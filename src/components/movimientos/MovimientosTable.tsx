@@ -54,14 +54,15 @@ const MovimientosTable: FC<Props> = ({ data, onViewDetail, onNew }) => {
             <tr>
               <Th>ID</Th>
               <Th>Registro</Th>
+              <Th>N° Remito</Th>
               <Th>Depósito</Th>
               <Th>Movimiento</Th>
               <Th>Tipo de Movimiento</Th>
-              <Th>ID Comprobante</Th>
               <Th>Comentario</Th>
               <Th>Acciones</Th>
             </tr>
           </thead>
+
           <tbody>
             {data.map((m) => {
               const depositoLabel =
@@ -76,19 +77,27 @@ const MovimientosTable: FC<Props> = ({ data, onViewDetail, onNew }) => {
 
               return (
                 <tr key={m.id} className="product-row hover:bg-gray-50/60 transition-colors">
+                  {/* ID */}
                   <Td className="font-semibold">{m.id}</Td>
+                  {/* Registro */}
                   <Td>{m.fechaISO}</Td>
+                  {/* N° Remito */}
+                  <Td className="font-mono">{m.comprobanteId ?? '-'}</Td>
+                  {/* Depósito */}
                   <Td>{depositoLabel}</Td>
+                  {/* Movimiento */}
                   <Td>
                     <Badge className={`px-3 py-1 text-xs font-medium rounded-full ${badgeClass}`}>
                       {m.movimiento}
                     </Badge>
                   </Td>
+                  {/* Tipo de Movimiento */}
                   <Td>{m.tipoMovimiento}</Td>
-                  <Td className="font-mono">{m.comprobanteId ?? '-'}</Td>
+                  {/* Comentario */}
                   <Td className="max-w-[320px] truncate" title={m.comentario ?? ''}>
                     {m.comentario ?? '-'}
                   </Td>
+                  {/* Acciones */}
                   <Td>
                     <div className="flex gap-2">
                       <Button variant="outline" size="sm" onClick={() => onViewDetail?.(m)}>
@@ -112,6 +121,7 @@ const MovimientosTable: FC<Props> = ({ data, onViewDetail, onNew }) => {
           </tbody>
         </table>
       </div>
+
     </div>
   );
 };
