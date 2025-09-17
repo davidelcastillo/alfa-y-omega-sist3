@@ -19,7 +19,7 @@ const createSchema = z.object({
   tipoMovimientoId: z.coerce.number().int().positive(),
   tipoComprobanteId: z.coerce.number().int().positive(),
   numeroComprobante: z.string().min(1).optional(),
-  Comentario: z.string().optional(), // <- coincide con el schema
+  comentario: z.string().optional(), // <- coincide con el schema
   detalles: z.array(detalleSchema).min(1, 'Debe incluir al menos un detalle'),
 });
 

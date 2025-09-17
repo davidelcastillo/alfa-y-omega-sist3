@@ -81,7 +81,7 @@ model MovimientoStock {
   numeroComprobante String?
   fecha             DateTime            @default(now())
   hora              DateTime            @default(now())
-  Comentario        String?
+  comentario        String?             @map("Comentario")
   detalles          DetalleMovimiento[]
   deposito          Deposito            @relation(fields: [depositoId], references: [id])
   tipoComprobante   TipoComprobante     @relation(fields: [tipoComprobanteId], references: [id])
