@@ -55,8 +55,6 @@ type CreateMovimientoBody = {
 type ApiMovimientoItem = {
   detalle_id: number;
   fecha: string;
-  numero_comprobante: string | null;
-  comentario: string | null;
   deposito: string;
   tipo_movimiento: string;
   es_ingreso: boolean;
@@ -168,8 +166,8 @@ const fetchMovimientos = async (filters?: FiltersState): Promise<Movimiento[]> =
           fechaISO: item.fecha.split('T')[0],
           movimiento: item.es_ingreso ? 'Ingreso' : 'Egreso',
           tipoMovimiento: mapTipoMovimiento(item.tipo_movimiento),
-          comprobanteId: item.numero_comprobante || undefined,
-          comentario: item.comentario || undefined,
+          comprobanteId: undefined,
+          comentario: undefined,
           deposito: depositoEncontrado || { id: 999, nombre: item.deposito },
           productos: [{
             producto: { id: 0, codigo: '', descripcion: item.producto },
