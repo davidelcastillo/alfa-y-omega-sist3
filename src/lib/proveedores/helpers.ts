@@ -47,30 +47,43 @@ export function filterSuppliers(
   const codeQuery = normalize(filters.searchCode);
 
   return data.filter((s) => {
+    // blob de búsqueda por nombre / razón social / comercial / fantasia / completo
     const nameBlob = normalize(
       (s.razonSocial || "") +
-        " " +
-        (s.nombre || "") +
-        " " +
-        (s.nombreComercial || "")
+      " " +
+      (s.nombre || "") +
+      " " +
+      (s.nombreComercial || "") +
+      " " +
+      (s.nombreComercial || "") +
+      " " +
+      (s.nombre || "")
     );
+
+    // blob de búsqueda por código
     const codeBlob = normalize(s.codigo ?? ""); // fallback vacío si es null
 
+    // Filtro por nombre / razón social
     const okName = !nameQuery || nameBlob.includes(nameQuery);
+
+    // Filtro por código
     const okCode = !codeQuery || codeBlob.includes(codeQuery);
+
+    // Filtro por estado (Activo / Inactivo)
     const okStatus =
       !filters.status ||
       (filters.status === "Activo" && s.estado === true) ||
       (filters.status === "Inactivo" && s.estado === false);
 
+    // Filtro por categoría fiscal (comparación por id)
     const okCat =
       !filters.category ||
       String(s.categoriaFiscal?.id) === String(filters.category);
 
-
     return okName && okCode && okStatus && okCat;
   });
 }
+
 
 /** Estadísticas básicas */
 export function computeStats(data: Supplier[]): Stats {

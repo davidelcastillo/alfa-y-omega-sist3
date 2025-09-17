@@ -161,7 +161,7 @@ export default function ProveedoresTable({
                       <Button
                         variant="ghost"
                         onClick={() => onToggleStatus(s.id)}
-                        // 🔹 CAMBIO: ahora usamos estadoLabel (Activo/Inactivo) en vez de comparar string
+                        // CAMBIO: ahora usamos estadoLabel (Activo/Inactivo) en vez de comparar string
                         title={estadoLabel === "Activo" ? "Desactivar" : "Activar"}
                         aria-label={`${estadoLabel === "Activo" ? "Desactivar" : "Activar"} ${
                           displayName || s.codigo
@@ -169,25 +169,14 @@ export default function ProveedoresTable({
                         className={
                           estadoLabel === "Activo"
                             ? "text-red-600 hover:bg-red-50"
-                            : "text-green-600 hover:bg-green-50"
+                            : "text-green-600 hover:bg-white-50"
                         }
                       >
                         {estadoLabel === "Activo" ? (
                           <Trash2 className="w-6 h-6" aria-hidden />
                         ) : ( //esto es lo que hizo gaston del icono desactivado
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M5 13l4 4L19 7"
-                            />
-                          </svg>
+                          <Trash2 className="w-6 h-6 text-gray-400" aria-hidden />
+                          
                         )}
                       </Button>
                     </div>

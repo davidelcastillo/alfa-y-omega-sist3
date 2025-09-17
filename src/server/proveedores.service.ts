@@ -151,7 +151,12 @@ export async function listarProveedores(raw: ProveedoresQuery) {
         nombreComercial: true,
         razonSocial: true,
         cuil: true,
-        categoriaFiscalId: true,
+        categoriaFiscal: {
+          select: {
+            id: true,
+            nombre: true,
+          },
+        },
         provincia: true,
         localidad: true,
         correoElectronico: true,
