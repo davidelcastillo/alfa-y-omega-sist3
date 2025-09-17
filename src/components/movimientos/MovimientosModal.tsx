@@ -22,15 +22,19 @@ import type {
 type ProductRow = { productoId: number; cantidad: number };
 type StockIndex = Record<number, Record<number, number>>;
 
-// Tipo para los tipos de movimiento que vienen de la API
+// Tipos de movimiento que vienen de la API
 type TipoMovimientoDTO = { id: number; nombre: string; saldo: boolean };
 
 export type MovimientoPayload = {
   movimiento: MovimientoBasico; // hoy se muestra, el valor real podría venir del tipo (saldo)
   tipoMovimiento: TipoMovimiento; // seguimos guardando el nombre para tu UI actual
   depositoId?: number;
+  tipoMovimientoId?: number;
+  numeroComprobante?: string;
+
   depositoOrigenId?: number;   // compatibilidad visual si lo necesitás
   depositoDestinoId?: number;  // compatibilidad visual si lo necesitás
+
   comprobanteId?: string;
   comentario?: string;         // UI-only por ahora
   productos: Array<{ productoId: number; cantidad: number }>;
@@ -42,12 +46,13 @@ type Props = {
   onClose: () => void;
   depositos: Deposito[];
   productosPorDeposito: Record<number, ProductoLite[]>;
-  onSubmit: (payload: MovimientoPayload) => void;
-  initial?: Partial<MovimientoPayload>;
   stockIndex: StockIndex;
 
-  // 👉 NUEVO: los tipos traídos de /api/tipos-movimientos
+  // Tipos traídos de /api/tipos-movimientos
   tiposMovimiento: TipoMovimientoDTO[];
+
+  onSubmit: (payload: MovimientoPayload) => void;
+  initial?: Partial<MovimientoPayload>;
 };
 
 // (opcional) constante legacy que usabas antes, ya no se renderiza en el <Select>
@@ -81,7 +86,7 @@ export default function MovimientosModal({
   const [tipoMovimiento, setTipoMovimiento] =
     useState<TipoMovimiento>(DEFAULT_TIPO_MOVIMIENTO);
   const [tipoMovimientoId, setTipoMovimientoId] = useState<number>(0);
-
+  
   const [numero, setNumero] = useState('');
 
   // depósitos (0 = ninguno)
@@ -174,7 +179,7 @@ export default function MovimientosModal({
     if (!canSubmit()) return;
 
     const payload: MovimientoPayload = {
-      movimiento,
+      /*movimiento,
       // seguimos enviando el nombre (tu tipo actual); si preferís enviar el id,
       // cambiá este campo a number y adaptá el resto del flujo
       tipoMovimiento,
@@ -188,9 +193,18 @@ export default function MovimientosModal({
         cantidad:
           isAjuste && ajusteSigno === 'negativo'
             ? -Math.abs(Number(it.cantidad))
-            : Number(it.cantidad),
+            : Number(it.cantidad),*/
+      depositoId: Number(deposito) || undefined,
+      tipoMovimientoId: tipoMovimientoId || undefined,
+      numeroComprobante: numero || undefined,
+      comentario: (comentario || undefined),
+      productos: items.map(it => ({
+        productoId: Number(it.productoId),
+        cantidad: Number(it.cantidad),
       })),
       ajusteSigno: isAjuste ? ajusteSigno : undefined,
+      movimiento: 'Ingreso',
+      tipoMovimiento: 'Transferencia entre depósitos'
     };
 
     onSubmit(payload);

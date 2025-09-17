@@ -36,6 +36,28 @@ type StockRowDTO = {
 type StockIndex = Record<number, Record<number, number>>;  //Para mostrar el stockxdeposito
 type TipoMovimientoDTO = { id: number; nombre: string; saldo: boolean };  //Para traer los movimientos
 
+type CreateMovimientoBody = {
+  depositoId: number;
+  tipoMovimientoId: number;
+  tipoComprobanteId:number;      // no se si tenga que modificar luego
+  numeroComprobante?: string;
+  comentario?: string;
+  detalles: Array<{ productoId: number; cantidad: number }>;
+};
+
+async function postMovimiento(body: CreateMovimientoBody) {
+  const res = await fetch('/api/movimientos', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(json?.error || 'Error creando movimiento');
+  }
+  return json.data;
+}
+
 async function fetchStockTodos(q?: string): Promise<StockRowDTO[]> {
   const qs = q ? `?q=${encodeURIComponent(q)}` : "";
   const res = await fetch(`/api/depositos/stock${qs}`, { cache: "no-store" });
@@ -225,7 +247,9 @@ export default function MovimientosPage() {
   const onSearch = () => {};
   const handleCreate = () => setModalOpen(true);
 
-  const onSubmitModal = async (p: MovimientoPayload) => {
+  
+  /*const onSubmitModal = async (p: MovimientoPayload) => {
+    /*
     // TODO: reemplazar por POST real a /api/movimientos
     // Por ahora seguimos agregando a mock para que veas el flujo:
     const nextId = (movimientos[movimientos.length - 1]?.id ?? 0) + 1;
@@ -257,7 +281,78 @@ export default function MovimientosPage() {
 
     setMovimientos((prev) => [...prev, nuevo]);
     setModalOpen(false);
+  */
+   /* try {
+    if (!p.depositoId) throw new Error('Depósito requerido');
+    if (!p.tipoMovimientoId) throw new Error('Tipo de movimiento requerido');
+    if (!p.productos?.length) throw new Error('Debe incluir al menos un producto');
+
+    const body: CreateMovimientoBody = {
+      depositoId: p.depositoId,
+      tipoMovimientoId: p.tipoMovimientoId,
+      tipoComprobanteId: 2,                 // ⬅️ TODO: reemplazar cuando tengas selector real
+      numeroComprobante: p.numeroComprobante,
+      Comentario: p.comentario,             // ⬅️ la API pide "Comentario" capitalizado
+      detalles: p.productos.map(d => ({
+        productoId: d.productoId,
+        cantidad: d.cantidad,
+      })),
+    };
+
+    const creado = await postMovimiento(body);
+
+    // Opcional: refrescar stock en cliente para que los “stock actual/resultante” queden al día
+    // const nuevosStock = await fetchStockTodos();
+    // setStock(nuevosStock);
+
+    // Si querés mantener la tabla mock visible hasta conectar GET /api/movimientos:
+    // Podés mapear "creado" a tu tipo Movimiento e insertarlo, o simplemente cerrar modal.
+    setModalOpen(false);
+  } catch (e: any) {
+    alert(e.message ?? 'Error al crear movimiento');
+  }
+  };*/
+
+  const onSubmitModal = async (p: MovimientoPayload) => {
+  if (!p.depositoId) throw new Error('Depósito requerido');
+  if (!p.tipoMovimientoId) throw new Error('Tipo de movimiento requerido');
+  if (!p.productos?.length) throw new Error('Debe incluir al menos un producto');
+
+  const body: CreateMovimientoBody = {
+    depositoId: p.depositoId!,
+    tipoMovimientoId: p.tipoMovimientoId!,
+    tipoComprobanteId: 2,
+    numeroComprobante: p.numeroComprobante || undefined,
+    comentario: p.comentario || undefined,
+    detalles: p.productos.map(d => ({ productoId: d.productoId, cantidad: Math.abs(d.cantidad) })),
   };
+    /*{
+      depositoId: p.depositoId!,                  // requerido
+      tipoMovimientoId: p.tipoMovimientoId,       // requerido
+      tipoComprobanteId: 2,                       // el que uses en tu UI (agregá un select si hace falta)
+      numeroComprobante: p.comprobanteId || null, // opcional
+      Comentario: p.comentario || null,           // ¡con C mayúscula!
+      detalles: p.productos.map(d => ({
+        productoId: d.productoId,
+        cantidad: Math.abs(d.cantidad),          // siempre positiva; el signo lo aplica el servicio por `saldo`
+      })),
+    };*/
+    
+
+    const res = await fetch('/api/movimientos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    const json = await res.json();
+    if (!res.ok || !json.ok) throw new Error(json.error || 'No se pudo crear el movimiento');
+
+    // (Opcional) refrescar listado / stock en el cliente
+    // await reloadStock(); await reloadMovimientos();
+    setModalOpen(false);
+  };
+
 
   return (
     <main className="w-full max-w-none mx-auto px-3 sm:px-4 lg:px-6 py-8 fade-in">
@@ -329,7 +424,7 @@ export default function MovimientosPage() {
         onClose={() => setModalOpen(false)}
         depositos={depositos.map((d) => ({ id: d.id, nombre: d.nombre }))}        
         productosPorDeposito={productosPorDeposito}
-        productos={productosForDeposito(modalDepositoId)}  //revisar esto
+        //productos={productosForDeposito(modalDepositoId)}  //revisar esto
         onSubmit={onSubmitModal}
         initial={{ depositoId: modalDepositoId }}
         stockIndex={stockIndex}
