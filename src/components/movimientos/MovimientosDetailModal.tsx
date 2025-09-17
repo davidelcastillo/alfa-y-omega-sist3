@@ -70,10 +70,6 @@ export default function MovimientosDetailModal({ isOpen, onClose, movimiento }: 
               <h4 className="text-lg font-semibold text-dark-blue mb-4">Información del Comprobante</h4>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600 font-medium">ID del Comprobante:</span>
-                  <span className="font-semibold text-gray-900">{movimiento.comprobanteId ?? '-'}</span>
-                </div>
-                <div className="flex justify-between">
                   <span className="text-gray-600 font-medium">Tipo de Comprobante:</span>
                   <span className="font-semibold text-gray-900">{movimiento.tipoMovimiento}</span>
                 </div>

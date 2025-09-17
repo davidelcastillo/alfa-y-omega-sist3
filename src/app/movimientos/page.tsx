@@ -54,6 +54,7 @@ type CreateMovimientoBody = {
 // API Response types
 type ApiMovimientoItem = {
   detalle_id: number;
+  mov_id: number;   //  agrega /api/movimientos GET
   fecha: string;
   deposito: string;
   tipo_movimiento: string;
@@ -76,6 +77,48 @@ type ApiResponse = {
   nextCursor: string | null;
   items: ApiMovimientoItem[];
 };
+
+// -------- Detalle de un movimiento (GET /api/movimientos/[id]/detalles) --------
+type MovimientoDetalleAPI = {
+  ok: true;
+  data: {
+    movimiento: {
+      id: number;
+      fecha: string;
+      hora: string;
+      numeroComprobante: string | null;
+      comentario?: string | null; // si tu SELECT lo incluye
+      deposito: { id: number; nombre: string };
+      tipoMovimiento: { id: number; nombre: string; saldo: boolean };
+      tipoComprobante: { id: number; nombre: string };
+    };
+    summary: { totalLineas: number; totalIngreso: number; totalEgreso: number; neto: number };
+    items: Array<{
+      detalleId: number;
+      stockId: number;
+      productoId: number;
+      producto: string;
+      unidad: string | null;
+      marca: string | null;
+      rubro: string | null;
+      cantidad: number;
+      signo: 1 | -1;
+      stockAntes: number;
+      stockDespues: number;
+      stockMinimo: number;
+      stockMaximo: number | null;
+      estado: "OK" | "BELOW_MIN" | "AT_ZERO" | "OVER_MAX";
+    }>;
+  };
+};
+
+async function fetchMovimientoDetalle(id: number): Promise<MovimientoDetalleAPI['data']> {
+  const res = await fetch(`/api/movimientos/${id}/detalles`, { cache: 'no-store' });
+  if (!res.ok) throw new Error('No se pudo cargar el detalle');
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error || 'Error de API');
+  return json.data;
+}
 
 // ---------------- Fetchers ----------------
 async function fetchStockTodos(q?: string): Promise<StockRowDTO[]> {
@@ -118,8 +161,9 @@ const fetchMovimientos = async (filters?: FiltersState): Promise<Movimiento[]> =
     if (filters) {
       if (filters.fechaDesde) url.searchParams.set('start', filters.fechaDesde);
       if (filters.fechaHasta) url.searchParams.set('end', filters.fechaHasta);
-      if (filters.depositoId && filters.depositoId !== '') {
-        url.searchParams.set('depositoId', String(filters.depositoId));
+      const depId = Number(filters.depositoId);
+      if (Number.isFinite(depId) && depId > 0) {
+        url.searchParams.set('depositoId', String(depId));
       }
       
       // Filtro de ingreso/egreso
@@ -162,7 +206,7 @@ const fetchMovimientos = async (filters?: FiltersState): Promise<Movimiento[]> =
         const depositoEncontrado = depositosMock.find(d => d.nombre === item.deposito);
         
         movimientosMap.set(key, {
-          id: item.detalle_id,
+          id: item.mov_id, // 👈 antes era detalle_id; ahora el verdadero movimientoId
           fechaISO: item.fecha.split('T')[0],
           movimiento: item.es_ingreso ? 'Ingreso' : 'Egreso',
           tipoMovimiento: mapTipoMovimiento(item.tipo_movimiento),
@@ -367,6 +411,23 @@ export default function MovimientosPage() {
 
   const stats = useMemo(() => getStats(filtered), [filtered]);
 
+  // --- Paginación (10 por página) ---
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+
+  const totalItems = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [totalPages, page]);
+
+  const start = totalItems === 0 ? 0 : (page - 1) * pageSize;
+  const end = totalItems === 0 ? 0 : Math.min(start + pageSize, totalItems);
+
+  const pageData = useMemo(() => filtered.slice(start, end), [filtered, start, end]);
+
+
   // ---- Handlers ----
   const clearFilters = () =>
     setFilters({
@@ -529,14 +590,74 @@ export default function MovimientosPage() {
       />
 
       {/* Tabla */}
-      <MovimientosTable
-        data={filtered}
+      {/*<MovimientosTable
+        data={pageData}
         onViewDetail={(m) => {
           setSelected(m);
           setDetailOpen(true);
         }}
         onNew={handleCreate}
+      />*/}
+      <MovimientosTable
+        data={pageData}
+        onViewDetail={async (m) => {
+          try {
+            const det = await fetchMovimientoDetalle(m.id);
+            const movimientoDet: Movimiento = {
+              id: det.movimiento.id,
+              fechaISO: det.movimiento.fecha.slice(0, 10),
+              movimiento: det.movimiento.tipoMovimiento.saldo ? 'Ingreso' : 'Egreso',
+              tipoMovimiento: mapTipoMovimiento(det.movimiento.tipoMovimiento.nombre),
+              comprobanteId: det.movimiento.numeroComprobante ?? undefined,
+              comentario: det.movimiento.comentario ?? undefined,
+              deposito: { id: det.movimiento.deposito.id, nombre: det.movimiento.deposito.nombre },
+              productos: det.items.map((it) => ({
+                producto: { id: it.productoId, codigo: '', descripcion: it.producto },
+                cantidad: it.cantidad,
+              })),
+            };
+            setSelected(movimientoDet);
+            setDetailOpen(true);
+          } catch (e: any) {
+            alert(e.message || 'Error cargando detalle');
+          }
+        }}
+        onNew={handleCreate}
       />
+
+      <div className="flex flex-col md:flex-row justify-between items-center mt-8 gap-4">
+        <p className="text-gray-600 font-medium">
+          {totalItems === 0 ? (
+            <>Mostrando <span className="font-bold text-primary-pink">0</span> de <span className="font-bold text-primary-pink">0</span> movimientos</>
+          ) : (
+            <>Mostrando <span className="font-bold text-primary-pink">{start + 1}-{end}</span> de <span className="font-bold text-primary-pink">{totalItems}</span> movimientos</>
+          )}
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page <= 1}
+            className={`px-6 py-3 border-2 rounded-xl font-medium transition-colors
+              ${page <= 1 ? 'border-gray-200 text-gray-400 cursor-not-allowed' : 'border-gray-200 hover:bg-gray-50'}`}
+          >
+            Anterior
+          </button>
+
+          <span className="text-sm text-gray-700 px-2">
+            Página <span className="font-semibold">{Math.min(page, totalPages)}</span> de <span className="font-semibold">{totalPages}</span>
+          </span>
+
+          <button
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages}
+            className={`px-6 py-3 border-2 rounded-xl font-medium transition-colors
+              ${page >= totalPages ? 'border-gray-200 text-gray-400 cursor-not-allowed' : 'border-gray-200 hover:bg-gray-50'}`}
+          >
+            Siguiente
+          </button>
+        </div>
+      </div>
+
 
       {/* Modal de creación */}
       <MovimientosModal
@@ -578,44 +699,6 @@ export default function MovimientosPage() {
           <div className="mt-6 flex justify-end gap-3">
             <Button variant="outline" onClick={() => setSuccessOpen(false)}>
               Cerrar
-            </Button>
-            <Button
-              variant="primary"
-              onClick={async () => {
-                try {
-                  const res = await fetch(`/api/movimientos/${created?.id}`, { cache: 'no-store' });
-                  const json = await res.json();
-                  if (res.ok && json.ok) {
-                    setSelected({
-                      id: json.data.id,
-                      fechaISO: json.data.fecha?.slice?.(0, 10) ?? '',
-                      movimiento: json.data.tipoMovimiento?.saldo ? 'Ingreso' : 'Egreso',
-                      tipoMovimiento: json.data.tipoMovimiento?.nombre ?? '',
-                      comprobanteId: json.data.numeroComprobante ?? undefined,
-                      comentario: json.data.comentario ?? json.data.Comentario ?? undefined,
-                      deposito: json.data.deposito
-                        ? { id: json.data.deposito.id, nombre: json.data.deposito.nombre }
-                        : undefined,
-                      productos: (json.data.detalles || []).map((d: any) => ({
-                        producto: {
-                          id: d.producto.id,
-                          codigo: String(d.producto.id),
-                          descripcion: d.producto.nombre,
-                        },
-                        cantidad: d.cantidad,
-                      })),
-                    });
-                    setSuccessOpen(false);
-                    setDetailOpen(true);
-                  } else {
-                    setSuccessOpen(false);
-                  }
-                } catch {
-                  setSuccessOpen(false);
-                }
-              }}
-            >
-              Ver detalle
             </Button>
           </div>
         </AlertDialogContent>
