@@ -84,18 +84,23 @@ export default function ProveedoresTable({
 
           <tbody>
             {pageData.map((s) => {
-              const displayName =
-                s.tipo === "empresa" ? s.razonSocial ?? "" : s.nombreCompleto ?? "";
-              const fantasy = s.nombreFantasia ? ` (${s.nombreFantasia})` : "";
-              const statusClass = s.estado === "Activo" ? "status-active" : "status-inactive";
-              
+              // 🔹 CAMBIO: displayName ahora usa razonSocial o nombre, ya que no tenemos s.nombreCompleto
+              const displayName = s.razonSocial || s.nombre || "-";
+
+              // 🔹 CAMBIO: fantasy ahora usa nombreComercial (equivalente a nombreFantasia)
+              const fantasy = s.nombreComercial ? ` (${s.nombreComercial})` : "";
+
+              // 🔹 CAMBIO: estado ahora es boolean, lo convertimos a texto para mostrar
+              const estadoLabel = s.estado ? "Activo" : "Inactivo";
+              const statusClass = s.estado ? "status-active" : "status-inactive";
+
               return (
                 <tr
                   key={s.id}
                   className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
                 >
                   <td className="px-6 py-4">
-                    <div className="text-sm font-semibold text-gray-900">{s.codigo}</div>
+                    <div className="text-sm font-semibold text-gray-900">{s.codigo || "-"}</div>
                   </td>
 
                   <td className="px-6 py-4">
@@ -104,35 +109,41 @@ export default function ProveedoresTable({
                       {fantasy}
                     </div>
                     <div className="text-xs text-gray-500">
-                      {s.tipo === "empresa" ? "Empresa" : "Persona Física"}
+                      {/* 🔹 CAMBIO: antes era Empresa / Persona Física según s.tipo
+                          ahora mostramos el nombreComercial si existe */}
+                      {s.nombreComercial || ""}
                     </div>
                   </td>
 
                   <td className="px-6 py-4">
-                    <div className="text-sm font-semibold text-gray-900">{s.cuitCuil}</div>
+                    {/* 🔹 CAMBIO: antes era s.cuitCuil, ahora el backend devuelve s.cuil */}
+                    <div className="text-sm font-semibold text-gray-900">{s.cuil || "-"}</div>
                   </td>
 
                   <td className="px-6 py-4">
                     <div className="text-sm font-semibold text-gray-900">
-                      {s.categoriaFiscal}
+                      {/* 🔹 CAMBIO: ahora el backend devuelve categoriaFiscalId (número) o categoriaFiscal?.nombre */}
+                      {s.categoriaFiscal?.nombre ?? s.categoriaFiscalId ?? "-"}
                     </div>
                   </td>
 
                   <td className="px-6 py-4">
-                    <div className="text-sm text-gray-700">{s.telefono ?? "-"}</div>
-                    <div className="text-xs text-gray-500">{s.email || "Sin email"}</div>
+                    {/* 🔹 CAMBIO: antes usaba s.email, ahora es s.correoElectronico */}
+                    <div className="text-sm text-gray-700">{s.telefono || "-"}</div>
+                    <div className="text-xs text-gray-500">{s.correoElectronico || "Sin email"}</div>
                   </td>
 
                   <td className="px-6 py-4">
+                    {/* 🔹 CAMBIO: combinamos localidad + provincia dinámicamente y mostramos país si existe */}
                     <div className="text-sm text-gray-700">
-                      {s.localidad}, {s.provincia}
+                      {[s.localidad, s.provincia].filter(Boolean).join(", ")}
                     </div>
-                    <div className="text-xs text-gray-500">{s.pais}</div>
+                    <div className="text-xs text-gray-500">{s.pais || ""}</div>
                   </td>
 
                   <td className="px-6 py-4">
                     <Badge className={`text-white font-bold ${statusClass}`}>
-                      {s.estado}
+                      {estadoLabel}
                     </Badge>
                   </td>
 
@@ -144,52 +155,28 @@ export default function ProveedoresTable({
                         title="Editar"
                         aria-label={`Editar ${displayName || s.codigo}`}
                       >
-                      <SquarePen className="w-6 h-6" aria-hidden />
+                        <SquarePen className="w-6 h-6" aria-hidden />
                       </Button>
 
                       <Button
                         variant="ghost"
                         onClick={() => onToggleStatus(s.id)}
-                        title={s.estado === "Activo" ? "Desactivar" : "Activar"}
-                        aria-label={`${s.estado === "Activo" ? "Desactivar" : "Activar"} ${
+                        // 🔹 CAMBIO: ahora usamos estadoLabel (Activo/Inactivo) en vez de comparar string
+                        title={estadoLabel === "Activo" ? "Desactivar" : "Activar"}
+                        aria-label={`${estadoLabel === "Activo" ? "Desactivar" : "Activar"} ${
                           displayName || s.codigo
                         }`}
                         className={
-                          s.estado === "Activo"
+                          estadoLabel === "Activo"
                             ? "text-red-600 hover:bg-red-50"
-                            : "text-green-600 hover:bg-green-50"
+                            : "text-green-600 hover:bg-white-50"
                         }
                       >
-                        {s.estado === "Activo" ? (
-                          /*<svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728"
-                            /> 
-                          </svg>*/
-                          <Trash2  className="w-6 h-6" aria-hidden />
-
+                        {estadoLabel === "Activo" ? (
+                          <Trash2 className="w-6 h-6" aria-hidden />
                         ) : ( //esto es lo que hizo gaston del icono desactivado
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M5 13l4 4L19 7"
-                            />
-                          </svg>
+                          <Trash2 className="w-6 h-6 text-gray-400" aria-hidden />
+                          
                         )}
                       </Button>
                     </div>
@@ -206,6 +193,7 @@ export default function ProveedoresTable({
               </tr>
             )}
           </tbody>
+
         </table>
       </div>
 
