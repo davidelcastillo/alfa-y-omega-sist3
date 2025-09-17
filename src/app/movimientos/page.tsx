@@ -12,13 +12,19 @@ import { Plus } from "lucide-react";
 
 import { fetchDepositos, type DepositoDTO } from "@/lib/deposito/data";
 
-// Mocks SOLO para la tabla y stats (hasta conectar /api/movimientos GET)
+// Mocks DESPUES BORRARLOS
 import {
   movimientosMock,
   getStats,
   type Movimiento,
   type ProductoLite,
 } from "@/lib/movimientos/productsData";
+
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 // ---------------- Fetchers de STOCK ----------------
 type StockRowDTO = {
@@ -45,18 +51,6 @@ type CreateMovimientoBody = {
   detalles: Array<{ productoId: number; cantidad: number }>;
 };
 
-async function postMovimiento(body: CreateMovimientoBody) {
-  const res = await fetch('/api/movimientos', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  const json = await res.json();
-  if (!res.ok) {
-    throw new Error(json?.error || 'Error creando movimiento');
-  }
-  return json.data;
-}
 
 async function fetchStockTodos(q?: string): Promise<StockRowDTO[]> {
   const qs = q ? `?q=${encodeURIComponent(q)}` : "";
@@ -96,6 +90,15 @@ export default function MovimientosPage() {
   const [stock, setStock] = useState<StockRowDTO[]>([]);
   const [loadingStock, setLoadingStock] = useState(false);
   const [errorStock, setErrorStock] = useState<string | null>(null);
+
+  // Para la alerta de crear movimiento
+  const [successOpen, setSuccessOpen] = useState(false);
+  const [created, setCreated] = useState<{
+    id: number;
+    deposito?: string | null;
+    tipo?: string | null;
+    numero?: string | null;
+  } | null>(null);
 
   // Cargar depósitos
   useEffect(() => {
@@ -182,12 +185,6 @@ export default function MovimientosPage() {
   // depósito que sugerimos como inicial en el modal
   const modalDepositoId = depositos.length ? depositos[0].id : 0;
 
-  // Helper: productos para un depósito
-  const productosForDeposito = (depId: number): ProductoLite[] => {
-    if (!depId) return [];
-    return productosPorDeposito[depId] ?? [];
-  };
-
   // ---- filtros de UI (por ahora sólo afectan a la tabla mock)
   const [filters, setFilters] = useState<FiltersState>({
     fechaDesde: "",
@@ -247,110 +244,48 @@ export default function MovimientosPage() {
   const onSearch = () => {};
   const handleCreate = () => setModalOpen(true);
 
-  
-  /*const onSubmitModal = async (p: MovimientoPayload) => {
-    /*
-    // TODO: reemplazar por POST real a /api/movimientos
-    // Por ahora seguimos agregando a mock para que veas el flujo:
-    const nextId = (movimientos[movimientos.length - 1]?.id ?? 0) + 1;
-
-    const depById = (id?: number) =>
-      id ? depositos.find((d) => d.id === id) : undefined;
-
-    const productos = p.productos.map((it) => {
-      // Intentamos “enriquecer” con lo que ya tenemos en productosPorDeposito
-      const plist = it && p.depositoId ? productosPorDeposito[p.depositoId] ?? [] : [];
-      const prod = plist.find((x) => x.id === it.productoId) || {
-        id: it.productoId,
-        codigo: String(it.productoId),
-        descripcion: "Producto",
-      };
-      return { producto: prod, cantidad: it.cantidad };
-    });
-
-    const nuevo: Movimiento = {
-      id: nextId,
-      fechaISO: new Date().toISOString().slice(0, 10),
-      movimiento: p.movimiento,
-      tipoMovimiento: p.tipoMovimiento,
-      comprobanteId: p.comprobanteId,
-      comentario: p.comentario,
-      productos,
-      deposito: depById(p.depositoId),
-    };
-
-    setMovimientos((prev) => [...prev, nuevo]);
-    setModalOpen(false);
-  */
-   /* try {
-    if (!p.depositoId) throw new Error('Depósito requerido');
-    if (!p.tipoMovimientoId) throw new Error('Tipo de movimiento requerido');
-    if (!p.productos?.length) throw new Error('Debe incluir al menos un producto');
-
-    const body: CreateMovimientoBody = {
-      depositoId: p.depositoId,
-      tipoMovimientoId: p.tipoMovimientoId,
-      tipoComprobanteId: 2,                 // ⬅️ TODO: reemplazar cuando tengas selector real
-      numeroComprobante: p.numeroComprobante,
-      Comentario: p.comentario,             // ⬅️ la API pide "Comentario" capitalizado
-      detalles: p.productos.map(d => ({
-        productoId: d.productoId,
-        cantidad: d.cantidad,
-      })),
-    };
-
-    const creado = await postMovimiento(body);
-
-    // Opcional: refrescar stock en cliente para que los “stock actual/resultante” queden al día
-    // const nuevosStock = await fetchStockTodos();
-    // setStock(nuevosStock);
-
-    // Si querés mantener la tabla mock visible hasta conectar GET /api/movimientos:
-    // Podés mapear "creado" a tu tipo Movimiento e insertarlo, o simplemente cerrar modal.
-    setModalOpen(false);
-  } catch (e: any) {
-    alert(e.message ?? 'Error al crear movimiento');
-  }
-  };*/
 
   const onSubmitModal = async (p: MovimientoPayload) => {
-  if (!p.depositoId) throw new Error('Depósito requerido');
-  if (!p.tipoMovimientoId) throw new Error('Tipo de movimiento requerido');
-  if (!p.productos?.length) throw new Error('Debe incluir al menos un producto');
+    try {
+      if (!p.depositoId) throw new Error('Depósito requerido');
+      if (!p.tipoMovimientoId) throw new Error('Tipo de movimiento requerido');
+      if (!p.productos?.length) throw new Error('Debe incluir al menos un producto');
 
-  const body: CreateMovimientoBody = {
-    depositoId: p.depositoId!,
-    tipoMovimientoId: p.tipoMovimientoId!,
-    tipoComprobanteId: 2,
-    numeroComprobante: p.numeroComprobante || undefined,
-    comentario: p.comentario || undefined,
-    detalles: p.productos.map(d => ({ productoId: d.productoId, cantidad: Math.abs(d.cantidad) })),
-  };
-    /*{
-      depositoId: p.depositoId!,                  // requerido
-      tipoMovimientoId: p.tipoMovimientoId,       // requerido
-      tipoComprobanteId: 2,                       // el que uses en tu UI (agregá un select si hace falta)
-      numeroComprobante: p.comprobanteId || null, // opcional
-      Comentario: p.comentario || null,           // ¡con C mayúscula!
-      detalles: p.productos.map(d => ({
-        productoId: d.productoId,
-        cantidad: Math.abs(d.cantidad),          // siempre positiva; el signo lo aplica el servicio por `saldo`
-      })),
-    };*/
-    
+      const body: CreateMovimientoBody = {
+        depositoId: p.depositoId!,
+        tipoMovimientoId: p.tipoMovimientoId!,
+        tipoComprobanteId: 2,
+        numeroComprobante: p.numeroComprobante || undefined,
+        comentario: p.comentario || undefined,
+        detalles: p.productos.map(d => ({ productoId: d.productoId, cantidad: Math.abs(d.cantidad) })),
+      };
 
-    const res = await fetch('/api/movimientos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
+      const res = await fetch('/api/movimientos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
 
-    const json = await res.json();
-    if (!res.ok || !json.ok) throw new Error(json.error || 'No se pudo crear el movimiento');
+      const json = await res.json();
+      if (!res.ok || !json.ok) throw new Error(json.error || 'No se pudo crear el movimiento');
+        // (Opcional) refrescar listado / stock en el cliente
+        // await reloadStock(); await reloadMovimientos();
+      setModalOpen(false);
 
-    // (Opcional) refrescar listado / stock en el cliente
-    // await reloadStock(); await reloadMovimientos();
-    setModalOpen(false);
+      // Mostrar confirmación
+      const d = json.data; // viene del service con include(...)
+      setCreated({
+        id: d.id,
+        deposito: d.deposito?.nombre ?? null,
+        tipo: d.tipoMovimiento?.nombre ?? null,
+        numero: d.numeroComprobante ?? null,
+      });
+      setSuccessOpen(true);
+
+    } catch (e: any) {
+    alert(e.message ?? 'Error al crear movimiento');
+    }
+
   };
 
 
@@ -424,7 +359,6 @@ export default function MovimientosPage() {
         onClose={() => setModalOpen(false)}
         depositos={depositos.map((d) => ({ id: d.id, nombre: d.nombre }))}        
         productosPorDeposito={productosPorDeposito}
-        //productos={productosForDeposito(modalDepositoId)}  //revisar esto
         onSubmit={onSubmitModal}
         initial={{ depositoId: modalDepositoId }}
         stockIndex={stockIndex}
@@ -437,6 +371,73 @@ export default function MovimientosPage() {
         onClose={() => setDetailOpen(false)}
         movimiento={selected}
       />
+      
+      {/* Confirmación de creación */}
+      <AlertDialog open={successOpen} onOpenChange={setSuccessOpen}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogTitle className="text-xl font-bold">Movimiento registrado</AlertDialogTitle>
+
+          <div className="mt-3 space-y-2 text-sm text-gray-700">
+            <div><span className="font-semibold">ID:</span> {created?.id}</div>
+            {created?.numero ? (
+              <div><span className="font-semibold">N° Remito:</span> {created.numero}</div>
+            ) : null}
+            {created?.tipo ? (
+              <div><span className="font-semibold">Tipo:</span> {created.tipo}</div>
+            ) : null}
+            {created?.deposito ? (
+              <div><span className="font-semibold">Depósito:</span> {created.deposito}</div>
+            ) : null}
+          </div>
+
+          <div className="mt-6 flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setSuccessOpen(false)}>
+              Cerrar
+            </Button>
+            <Button
+              variant="primary"
+              onClick={async () => {
+                // Si querés abrir tu modal de detalle con fetch por ID:
+                try {
+                  const res = await fetch(`/api/movimientos/${created?.id}`, { cache: 'no-store' });
+                  const json = await res.json();
+                  if (res.ok && json.ok) {
+                    // Adaptá el objeto a tu tipo de detalle si hace falta
+                    setSelected({
+                      // mapeo mínimo para tu MovimientosDetailModal si aún usa el tipo mock
+                      id: json.data.id,
+                      fechaISO: json.data.fecha?.slice?.(0, 10) ?? '',
+                      movimiento: json.data.tipoMovimiento?.saldo ? 'Ingreso' : 'Egreso',
+                      tipoMovimiento: json.data.tipoMovimiento?.nombre ?? '',
+                      comprobanteId: json.data.numeroComprobante ?? undefined,
+                      comentario: json.data.comentario ?? json.data.Comentario ?? undefined,
+                      deposito: json.data.deposito
+                        ? { id: json.data.deposito.id, nombre: json.data.deposito.nombre }
+                        : undefined,
+                      productos: (json.data.detalles || []).map((d: any) => ({
+                        producto: {
+                          id: d.producto.id,
+                          codigo: String(d.producto.id),
+                          descripcion: d.producto.nombre,
+                        },
+                        cantidad: d.cantidad,
+                      })),
+                    });
+                    setSuccessOpen(false);
+                    setDetailOpen(true);
+                  } else {
+                    setSuccessOpen(false);
+                  }
+                } catch {
+                  setSuccessOpen(false);
+                }
+              }}
+            >
+              Ver detalle
+            </Button>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 }
