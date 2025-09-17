@@ -50,16 +50,23 @@ export function filterSuppliers(
     const nameBlob = normalize(
       (s.razonSocial || "") +
         " " +
-        (s.nombreCompleto || "") +
+        (s.nombre || "") +
         " " +
-        (s.nombreFantasia || "")
+        (s.nombreComercial || "")
     );
-    const codeBlob = normalize(s.codigo);
+    const codeBlob = normalize(s.codigo ?? ""); // fallback vacío si es null
 
     const okName = !nameQuery || nameBlob.includes(nameQuery);
     const okCode = !codeQuery || codeBlob.includes(codeQuery);
-    const okStatus = !filters.status || s.estado === filters.status;
-    const okCat = !filters.category || s.categoriaFiscal === filters.category;
+    const okStatus =
+      !filters.status ||
+      (filters.status === "Activo" && s.estado === true) ||
+      (filters.status === "Inactivo" && s.estado === false);
+
+    const okCat =
+      !filters.category ||
+      String(s.categoriaFiscal?.id) === String(filters.category);
+
 
     return okName && okCode && okStatus && okCat;
   });
@@ -68,8 +75,10 @@ export function filterSuppliers(
 /** Estadísticas básicas */
 export function computeStats(data: Supplier[]): Stats {
   const total = data.length;
-  const activos = data.filter((d) => d.estado === "Activo").length;
-  return { total, activos, inactivos: total - activos };
+  const activos = data.filter((d) => d.estado === true).length;   // ahora boolean
+  const inactivos = data.filter((d) => d.estado === false).length;
+
+  return { total, activos, inactivos };
 }
 
 /** ID incremental simple (si usás BD, reemplazar por ID real) */
@@ -79,7 +88,7 @@ export function nextSupplierId(arr: Supplier[]): number {
 
 /** Alterna estado activo/inactivo de un supplier */
 export function toggleStatus(s: Supplier): Supplier {
-  const next: SupplierStatus = s.estado === "Activo" ? "Inactivo" : "Activo";
+  const next = !s.estado; 
   return { ...s, estado: next };
 }
 

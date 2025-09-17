@@ -32,7 +32,7 @@ export default function ProveedoresPage() {
   useEffect(() => {
     async function fetchProveedores() {
       try {
-        const res = await fetch("/api/proveedores");
+        const res = await fetch("/api/proveedores?status=all");// usar esto para traer todos los activos /api/proveedores
         const data = await res.json();
 
         if (res.ok && data) {
