@@ -11,7 +11,7 @@ type CreateMovimientoDTO = {
   tipoMovimientoId: number;
   tipoComprobanteId: number;
   numeroComprobante?: string | null;
-  Comentario?: string | null; // <- en el schema está con mayúscula
+  comentario?: string | null; // <- en el schema está con mayúscula
   detalles: DetalleDTO[];
 };
 
@@ -42,7 +42,7 @@ export async function createMovimiento(data: CreateMovimientoDTO) {
         tipoMovimientoId: data.tipoMovimientoId,
         tipoComprobanteId: data.tipoComprobanteId,
         numeroComprobante: data.numeroComprobante ?? null,
-        Comentario: data.Comentario ?? null, // <- campo de tu schema
+        comentario: data.comentario ?? null, // <- campo de tu schema
         // fecha/hora tienen default(now())
       },
       select: { id: true, depositoId: true, fecha: true },
