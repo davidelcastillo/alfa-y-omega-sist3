@@ -13,8 +13,10 @@ type CategoriaFiscal =
   | "Exento"
   | "Monotributista"
   | "Responsable Inscripto"
-  | "Exterior";
-
+  | "Exterior"
+  | "Mock";  //borrar esto luego que es para los mocks
+  
+  
 export interface SupplierForm {
   id?: number;
   codigo: string;
@@ -23,7 +25,8 @@ export interface SupplierForm {
   nombreCompleto?: string;
   nombreFantasia?: string;
   genero?: string;
-  categoriaFiscal: CategoriaFiscal | "";
+  //categoriaFiscal: CategoriaFiscal | "";
+  categoriaFiscal: string | "";
   cuitCuil: string;
   pais: string;
   codigoPostal?: string;
@@ -53,6 +56,7 @@ const CATEGORIAS: CategoriaFiscal[] = [
   "Monotributista",
   "Responsable Inscripto",
   "Exterior",
+  "Mock",
 ];
 
 const PAISES = [
@@ -100,6 +104,32 @@ export default function ProveedoresModal({
     paginaWeb: "",
     estado: "Activo",
   });
+
+  type CategoriaApi = { id: number; nombre: string }
+
+  const [categorias, setCategorias] = useState<CategoriaApi[]>([])
+  const [catsLoading, setCatsLoading] = useState(false)
+  const [catsError, setCatsError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!open) return
+    let cancel = false
+    ;(async () => {
+      try {
+        setCatsLoading(true)
+        setCatsError(null)
+        const res = await fetch('/api/categorias-fiscales', { cache: 'no-store' })
+        const json = await res.json()
+        if (!res.ok || !json?.ok) throw new Error(json?.error || 'No se pudo cargar')
+        if (!cancel) setCategorias(json.data as CategoriaApi[])
+      } catch (e: any) {
+        if (!cancel) setCatsError(e?.message ?? 'Error al cargar categorías')
+      } finally {
+        if (!cancel) setCatsLoading(false)
+      }
+    })()
+    return () => { cancel = true }
+  }, [open])
 
   useEffect(() => {
     if (open) {
@@ -398,15 +428,25 @@ export default function ProveedoresModal({
                     className="input-focus"
                     value={form.categoriaFiscal}
                     onChange={(e) =>
-                      set("categoriaFiscal", e.target.value as CategoriaFiscal)
-                    }
+                      set("categoriaFiscal", e.target.value)}
                   >
-                    <option value="">Seleccionar categoría</option>
-                    {CATEGORIAS.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
+                    <option value="">{catsLoading ? "Cargando..." : "Seleccionar categoría"}</option>
+                      {catsError && (
+                        <option disabled>⚠️ {catsError}</option>
+                      )}
+
+                    {categorias.length > 0
+                      ? categorias.map((c) => (
+                          <option key={c.id} value={String(c.id)}>
+                            {c.nombre}
+                          </option>
+                        ))
+                      // Fallback si el endpoint todavía no devuelve nada:
+                      : CATEGORIAS.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
                   </Select>
                 </div>
 
