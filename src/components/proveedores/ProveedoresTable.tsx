@@ -161,7 +161,7 @@ export default function ProveedoresTable({
                       <Button
                         variant="ghost"
                         onClick={() => onToggleStatus(s.id)}
-                        // CAMBIO: ahora usamos estadoLabel (Activo/Inactivo) en vez de comparar string
+                        // 🔹 CAMBIO: ahora usamos estadoLabel (Activo/Inactivo) en vez de comparar string
                         title={estadoLabel === "Activo" ? "Desactivar" : "Activar"}
                         aria-label={`${estadoLabel === "Activo" ? "Desactivar" : "Activar"} ${
                           displayName || s.codigo
