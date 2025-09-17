@@ -16,7 +16,7 @@ import type {
   Deposito,
   ProductoLite,
   MovimientoBasico,
-  TipoMovimiento, // string union que ya tenías
+  TipoMovimiento,
 } from '@/lib/movimientos/productsData';
 
 type ProductRow = { productoId: number; cantidad: number };
@@ -26,17 +26,15 @@ type StockIndex = Record<number, Record<number, number>>;
 type TipoMovimientoDTO = { id: number; nombre: string; saldo: boolean };
 
 export type MovimientoPayload = {
-  movimiento: MovimientoBasico; // hoy se muestra, el valor real podría venir del tipo (saldo)
-  tipoMovimiento: TipoMovimiento; // seguimos guardando el nombre para tu UI actual
+  movimiento: MovimientoBasico;
+  tipoMovimiento: TipoMovimiento;
   depositoId?: number;
   tipoMovimientoId?: number;
   numeroComprobante?: string;
-
-  depositoOrigenId?: number;   // compatibilidad visual si lo necesitás
-  depositoDestinoId?: number;  // compatibilidad visual si lo necesitás
-
+  depositoOrigenId?: number;
+  depositoDestinoId?: number;
   comprobanteId?: string;
-  comentario?: string;         // UI-only por ahora
+  comentario?: string;
   productos: Array<{ productoId: number; cantidad: number }>;
   ajusteSigno?: 'positivo' | 'negativo';
 };
@@ -47,19 +45,13 @@ type Props = {
   depositos: Deposito[];
   productosPorDeposito: Record<number, ProductoLite[]>;
   stockIndex: StockIndex;
-
-  // Tipos traídos de /api/tipos-movimientos
   tiposMovimiento: TipoMovimientoDTO[];
-
   onSubmit: (payload: MovimientoPayload) => void;
   initial?: Partial<MovimientoPayload>;
 };
 
-// (opcional) constante legacy que usabas antes, ya no se renderiza en el <Select>
-// pero dejo el valor inicial por compat.
 const DEFAULT_TIPO_MOVIMIENTO: TipoMovimiento = 'Compra de inventario';
 
-// Stock desde índice
 function getStockDisponible(
   productoId: number,
   depositoId: number,
@@ -77,40 +69,27 @@ export default function MovimientosModal({
   onSubmit,
   initial,
   stockIndex,
-  tiposMovimiento, // 👈 lo recibimos de la página
+  tiposMovimiento,
 }: Props) {
-  // ---- state base
+  // ---- Estados ----
   const [movimiento, setMovimiento] = useState<MovimientoBasico>('Ingreso');
-
-  // mantenés un string (para tu UI/tabla) + el id seleccionado
-  const [tipoMovimiento, setTipoMovimiento] =
-    useState<TipoMovimiento>(DEFAULT_TIPO_MOVIMIENTO);
+  const [tipoMovimiento, setTipoMovimiento] = useState<TipoMovimiento>(DEFAULT_TIPO_MOVIMIENTO);
   const [tipoMovimientoId, setTipoMovimientoId] = useState<number>(0);
-  
   const [numero, setNumero] = useState('');
-
-  // depósitos (0 = ninguno)
   const [deposito, setDeposito] = useState<number>(0);
   const [depositoOrigen, setDepositoOrigen] = useState<number>(0);
   const [depositoDestino, setDepositoDestino] = useState<number>(0);
-
-  // comentario / comprobante
   const [comprobanteId, setComprobanteId] = useState('');
   const [comentario, setComentario] = useState('');
-
-  // productos
   const [items, setItems] = useState<ProductRow[]>([{ productoId: 0, cantidad: 1 }]);
-
-  // ajuste
   const [ajusteSigno, setAjusteSigno] = useState<'positivo' | 'negativo'>('positivo');
 
-  // opciones depósito
+  // ---- Opciones para selects ----
   const depOptions = useMemo(
     () => depositos.map((d) => ({ id: d.id, nombre: d.nombre })),
     [depositos]
   );
 
-  // productos según depósito elegido
   const productosDisponibles: ProductoLite[] = useMemo(() => {
     const depId = Number(deposito);
     return depId ? (productosPorDeposito[depId] ?? []) : [];
@@ -125,25 +104,20 @@ export default function MovimientosModal({
     [productosDisponibles]
   );
 
-  // creo que hay que borrar esto
   const isTransfer = tipoMovimiento === 'Transferencia entre depósitos';
-  const isAjuste = tipoMovimiento === 'Ajuste de stock';            
+  const isAjuste = tipoMovimiento === 'Ajuste de stock';
 
-  // ---- helpers
+  // ---- Helpers ----
   const resetForm = () => {
     setMovimiento(initial?.movimiento ?? 'Ingreso');
-
-    // si te pasan un tipo por initial en el futuro, sincronizá acá
     setTipoMovimiento(initial?.tipoMovimiento ?? DEFAULT_TIPO_MOVIMIENTO);
-    setTipoMovimientoId(0); // sin selección por defecto
-
+    setTipoMovimientoId(initial?.tipoMovimientoId ?? 0);
+    setNumero('');
     setDeposito(initial?.depositoId ?? 0);
     setDepositoOrigen(initial?.depositoOrigenId ?? 0);
     setDepositoDestino(initial?.depositoDestinoId ?? 0);
-
     setComprobanteId(initial?.comprobanteId ?? '');
     setComentario(initial?.comentario ?? '');
-
     setItems(
       initial?.productos?.length
         ? initial.productos.map((p) => ({
@@ -152,7 +126,6 @@ export default function MovimientosModal({
           }))
         : [{ productoId: 0, cantidad: 1 }]
     );
-
     setAjusteSigno(initial?.ajusteSigno ?? 'positivo');
   };
 
@@ -165,7 +138,7 @@ export default function MovimientosModal({
     if (isTransfer) {
       return depositoOrigen > 0 && depositoDestino > 0 && depositoOrigen !== depositoDestino;
     }
-    return deposito > 0 && tipoMovimientoId > 0; // aseguramos que eligieron un tipo
+    return deposito > 0 && tipoMovimientoId > 0;
   };
 
   const patchRow = (idx: number, patch: Partial<ProductRow>) => {
@@ -178,66 +151,55 @@ export default function MovimientosModal({
   const handleSubmit = () => {
     if (!canSubmit()) return;
 
+    // Obtener el tipo de movimiento seleccionado para determinar si es ingreso/egreso
+    const tipoSeleccionado = tiposMovimiento.find(t => t.id === tipoMovimientoId);
+    const esIngreso = tipoSeleccionado?.saldo ?? true;
+
     const payload: MovimientoPayload = {
-      /*movimiento,
-      // seguimos enviando el nombre (tu tipo actual); si preferís enviar el id,
-      // cambiá este campo a number y adaptá el resto del flujo
+      movimiento: esIngreso ? 'Ingreso' : 'Egreso',
       tipoMovimiento,
       depositoId: isTransfer ? undefined : Number(deposito),
+      tipoMovimientoId: Number(tipoMovimientoId),
+      numeroComprobante: numero || undefined,
       depositoOrigenId: isTransfer ? Number(depositoOrigen) : undefined,
       depositoDestinoId: isTransfer ? Number(depositoDestino) : undefined,
       comprobanteId: comprobanteId || undefined,
       comentario: comentario || undefined,
       productos: items.map((it) => ({
         productoId: Number(it.productoId),
-        cantidad:
-          isAjuste && ajusteSigno === 'negativo'
-            ? -Math.abs(Number(it.cantidad))
-            : Number(it.cantidad),*/
-      depositoId: Number(deposito) || undefined,
-      tipoMovimientoId: tipoMovimientoId || undefined,
-      numeroComprobante: numero || undefined,
-      comentario: (comentario || undefined),
-      productos: items.map(it => ({
-        productoId: Number(it.productoId),
-        cantidad: Number(it.cantidad),
+        cantidad: isAjuste && ajusteSigno === 'negativo'
+          ? -Math.abs(Number(it.cantidad))
+          : Math.abs(Number(it.cantidad)),
       })),
       ajusteSigno: isAjuste ? ajusteSigno : undefined,
-      movimiento: 'Ingreso',
-      tipoMovimiento: 'Transferencia entre depósitos'
     };
 
     onSubmit(payload);
     onClose();
   };
 
-  // ---- efectos
+  // ---- Efectos ----
   useEffect(() => {
     if (isOpen) resetForm();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
-  // Cerrar con ESC
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     if (isOpen) window.addEventListener('keydown', onEsc);
     return () => window.removeEventListener('keydown', onEsc);
   }, [isOpen, onClose]);
 
-  // 🔁 Sincronizar el nombre del tipo cuando cambia el ID seleccionado
+  // Sincronizar el nombre del tipo cuando cambia el ID seleccionado
   useEffect(() => {
     if (!tipoMovimientoId) return;
     const tm = tiposMovimiento.find((t) => t.id === tipoMovimientoId);
     if (tm) {
-      // nombre -> tu union TipoMovimiento; si hay tipos no contemplados en la union,
-      // casteamos por compatibilidad (o ampliá la union en productsData).
       setTipoMovimiento(tm.nombre as TipoMovimiento);
-      // si querés, acá podrías setear movimiento (Ingreso/Egreso) segun tm.saldo
-      // setMovimiento(tm.saldo ? 'Ingreso' : 'Egreso');
+      setMovimiento(tm.saldo ? 'Ingreso' : 'Egreso');
     }
   }, [tipoMovimientoId, tiposMovimiento]);
 
-  // ---- render
+  // ---- Render ----
   return (
     <AlertDialog open={isOpen} onOpenChange={(open: boolean) => { if (!open) onClose(); }}>
       <AlertDialogContent
@@ -266,7 +228,7 @@ export default function MovimientosModal({
 
         {/* Body */}
         <div className="flex-auto overflow-y-auto p-8 space-y-8">
-          {/* Número (opcional) + Tipo de movimiento */}
+          {/* Número + Tipo de movimiento */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Input
               label="Número de remito"
@@ -286,63 +248,121 @@ export default function MovimientosModal({
                 <option value="0" disabled>Seleccionar tipo</option>
                 {tiposMovimiento.map((tm) => (
                   <option key={tm.id} value={tm.id}>
-                    {tm.nombre}
+                    {tm.nombre} ({tm.saldo ? 'Ingreso' : 'Egreso'})
                   </option>
                 ))}
               </Select>
             </div>
           </div>
 
-          {/* Depósito */}
-          <Select
-            label="Depósito *"
-            value={String(deposito || 0)}
-            onChange={(e) => setDeposito(Number(e.target.value) || 0)}
-            className="input-focus"
-          >
-            <option value="0" disabled>Seleccionar depósito</option>
-            {depOptions.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.nombre}
-              </option>
-            ))}
-          </Select>
+          {/* Mostrar tipo de movimiento seleccionado */}
+          {tipoMovimientoId > 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  movimiento === 'Ingreso' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                }`}>
+                  {movimiento}
+                </div>
+                <span className="text-gray-700">{tipoMovimiento}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Depósitos */}
+          {!isTransfer ? (
+            <Select
+              label="Depósito *"
+              value={String(deposito || 0)}
+              onChange={(e) => setDeposito(Number(e.target.value) || 0)}
+              className="input-focus"
+            >
+              <option value="0" disabled>Seleccionar depósito</option>
+              {depOptions.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.nombre}
+                </option>
+              ))}
+            </Select>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Select
+                label="Depósito Origen *"
+                value={String(depositoOrigen || 0)}
+                onChange={(e) => setDepositoOrigen(Number(e.target.value) || 0)}
+                className="input-focus"
+              >
+                <option value="0" disabled>Seleccionar origen</option>
+                {depOptions.map((d) => (
+                  <option key={d.id} value={d.id} disabled={d.id === depositoDestino}>
+                    {d.nombre}
+                  </option>
+                ))}
+              </Select>
+
+              <Select
+                label="Depósito Destino *"
+                value={String(depositoDestino || 0)}
+                onChange={(e) => setDepositoDestino(Number(e.target.value) || 0)}
+                className="input-focus"
+              >
+                <option value="0" disabled>Seleccionar destino</option>
+                {depOptions.map((d) => (
+                  <option key={d.id} value={d.id} disabled={d.id === depositoOrigen}>
+                    {d.nombre}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          )}
 
           {/* Comentario */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="md:col-span-2">
-              <Input
-                label="Comentario"
-                value={comentario}
-                onChange={(e) => setComentario(e.target.value)}
+          <Input
+            label="Comentario"
+            value={comentario}
+            onChange={(e) => setComentario(e.target.value)}
+            className="input-focus"
+            placeholder="Notas del movimiento..."
+          />
+
+          {/* Signo para ajustes */}
+          {isAjuste && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tipo de Ajuste
+              </label>
+              <Select
+                value={ajusteSigno}
+                onChange={(e) => setAjusteSigno(e.target.value as 'positivo' | 'negativo')}
                 className="input-focus"
-                placeholder="Notas del movimiento..."
-              />
+              >
+                <option value="positivo">Ajuste Positivo (Sumar stock)</option>
+                <option value="negativo">Ajuste Negativo (Restar stock)</option>
+              </Select>
             </div>
-          </div>
+          )}
 
           {/* Productos */}
           <div>
-            <h4 className="text-md font-semibold text-gray-800 mb-4">Productos</h4>
+            <h4 className="text-md font-semibold text-gray-800 mb-4">Productos *</h4>
             <div className="space-y-3">
               {items.map((row, idx) => {
                 const depositoEfectivo = isTransfer ? depositoDestino : deposito;
+                const stockActual = row.productoId && depositoEfectivo
+                  ? getStockDisponible(row.productoId, depositoEfectivo, stockIndex)
+                  : 0;
 
-                const stockActual =
-                  row.productoId && depositoEfectivo
-                    ? getStockDisponible(row.productoId, depositoEfectivo, stockIndex)
-                    : 0;
+                // Calcular stock resultante
+                const tm = tiposMovimiento.find(t => t.id === tipoMovimientoId);
+                const esIngreso = tm?.saldo ?? true;
+                const cantidadNum = Number(row.cantidad) || 0;
 
-                  // signo según tipo movimiento (saldo) o ajuste
-                  const tm = tiposMovimiento.find(t => t.id === tipoMovimientoId);
-                  const esIngreso = tm?.saldo ?? true; // por defecto ingreso si no hay selección
-                  const cantidadNum = Number(row.cantidad) || 0;
+                const signedQty = isAjuste
+                  ? (ajusteSigno === 'negativo' ? -Math.abs(cantidadNum) : Math.abs(cantidadNum))
+                  : (esIngreso ? +Math.abs(cantidadNum) : -Math.abs(cantidadNum));
 
-                  const signedQty = isAjuste
-                    ? (ajusteSigno === 'negativo' ? -Math.abs(cantidadNum) : Math.abs(cantidadNum))
-                    : (esIngreso ? +Math.abs(cantidadNum) : -Math.abs(cantidadNum));
-
-                  const resultante = stockActual + signedQty;  //me permite numeros negativos, cambiar eso
+                const resultante = stockActual + signedQty;
+                const stockInsuficiente = resultante < 0;
 
                 return (
                   <div key={idx} className="product-row p-4 grid grid-cols-1 md:grid-cols-12 gap-3">
@@ -376,11 +396,29 @@ export default function MovimientosModal({
                           <div className="text-gray-500 font-medium">Stock actual</div>
                           <div className="font-semibold text-dark-blue">{stockActual}</div>
                         </div>
-                        <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2">
-                          <div className="text-emerald-700 font-medium">Stock resultante</div>
-                          <div className="font-semibold text-emerald-700">{resultante}</div>
+                        <div className={`rounded-lg px-3 py-2 ${
+                          stockInsuficiente 
+                            ? 'bg-red-50 border border-red-200' 
+                            : 'bg-emerald-50 border border-emerald-200'
+                        }`}>
+                          <div className={`font-medium ${
+                            stockInsuficiente ? 'text-red-700' : 'text-emerald-700'
+                          }`}>
+                            Stock resultante
+                          </div>
+                          <div className={`font-semibold ${
+                            stockInsuficiente ? 'text-red-700' : 'text-emerald-700'
+                          }`}>
+                            {resultante}
+                          </div>
                         </div>
                       </div>
+
+                      {stockInsuficiente && (
+                        <div className="mt-1 text-xs text-red-600">
+                          ⚠️ Stock insuficiente
+                        </div>
+                      )}
                     </div>
 
                     <div className="md:col-span-1 flex items-end justify-end">
@@ -390,6 +428,7 @@ export default function MovimientosModal({
                         className="remove-product-btn w-10 h-10 rounded-lg bg-gray-200 hover:bg-red-500 text-gray-700 hover:text-white"
                         title="Quitar"
                         aria-label="Quitar producto"
+                        disabled={items.length === 1}
                       >
                         ✕
                       </button>

@@ -1,3 +1,4 @@
+// src/app/movimientos/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
@@ -6,23 +7,18 @@ import MovimientosFilters, { type FiltersState } from '@/components/movimientos/
 import MovimientosTable from '@/components/movimientos/MovimientosTable';
 import MovimientosModal, { type MovimientoPayload } from '@/components/movimientos/MovimientosModal';
 import MovimientosDetailModal from '@/components/movimientos/MovimientosDetailModal';
-import Button from "@/components/ui/Button";
-import { Plus } from "lucide-react";
+import Button from '@/components/ui/Button';
+import { Plus } from 'lucide-react';
 
-import { fetchDepositos, type DepositoDTO } from "@/lib/deposito/data";
+import { fetchDepositos, type DepositoDTO } from '@/lib/deposito/data';
 
-// Mocks BORRADOS. Ya no son necesarios.
-// import {
-//   depositosMock,
-//   productosLiteMock,
-//   getStats,
-//   type Movimiento,
-//   type TipoMovimiento,
-// } from '@/lib/movimientos/productsData';
-
-// Se mantiene el tipo Movimiento y getStats, que son útiles para el componente
-import { getStats, type Movimiento, type ProductoLite, type TipoMovimiento } from "@/lib/movimientos/productsData";
-
+import {
+  depositosMock,
+  getStats,
+  type Movimiento,
+  type TipoMovimiento,
+  type ProductoLite,
+} from '@/lib/movimientos/productsData';
 
 import {
   AlertDialog,
@@ -30,8 +26,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-// ---------------- Fetchers de API ----------------
-// Se combinan y se mantienen los fetchers que usan la API real.
+// ---------------- Types ----------------
 type StockRowDTO = {
   id: number;
   depositId: number;
@@ -56,25 +51,12 @@ type CreateMovimientoBody = {
   detalles: Array<{ productoId: number; cantidad: number }>;
 };
 
-async function fetchStockTodos(q?: string): Promise<StockRowDTO[]> {
-  const qs = q ? `?q=${encodeURIComponent(q)}` : "";
-  const res = await fetch(`/api/depositos/stock${qs}`, { cache: "no-store" });
-  if (!res.ok) throw new Error("No se pudo obtener el stock");
-  const json = await res.json();
-  return json.data as StockRowDTO[];
-}
-
-async function fetchTiposMovimientos(): Promise<TipoMovimientoDTO[]> {
-  const res = await fetch('/api/tipos-movimientos', { cache: 'no-store' });
-  if (!res.ok) throw new Error('No se pudieron obtener los tipos de movimiento');
-  const json = await res.json();
-  return json.data as TipoMovimientoDTO[];
-}
-
-// Tipos para los datos de la API /api/movimientos
+// API Response types
 type ApiMovimientoItem = {
   detalle_id: number;
   fecha: string;
+  numero_comprobante: string | null;
+  comentario: string | null;
   deposito: string;
   tipo_movimiento: string;
   es_ingreso: boolean;
@@ -97,7 +79,23 @@ type ApiResponse = {
   items: ApiMovimientoItem[];
 };
 
-// Función para mapear el tipo de movimiento de la API al tipo local
+// ---------------- Fetchers ----------------
+async function fetchStockTodos(q?: string): Promise<StockRowDTO[]> {
+  const qs = q ? `?q=${encodeURIComponent(q)}` : "";
+  const res = await fetch(`/api/depositos/stock${qs}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("No se pudo obtener el stock");
+  const json = await res.json();
+  return json.data as StockRowDTO[];
+}
+
+async function fetchTiposMovimientos(): Promise<TipoMovimientoDTO[]> {
+  const res = await fetch('/api/tipos-movimientos', { cache: 'no-store' });
+  if (!res.ok) throw new Error('No se pudieron obtener los tipos de movimiento');
+  const json = await res.json();
+  return json.data as TipoMovimientoDTO[];
+}
+
+// Mapeo de tipos de movimiento de la API a los tipos esperados
 const mapTipoMovimiento = (apiTipo: string): TipoMovimiento => {
   switch (apiTipo) {
     case 'Transferencia entre depósitos':
@@ -114,24 +112,33 @@ const mapTipoMovimiento = (apiTipo: string): TipoMovimiento => {
   }
 };
 
+// Función para obtener movimientos de la API con filtros
 const fetchMovimientos = async (filters?: FiltersState): Promise<Movimiento[]> => {
   try {
     const url = new URL('/api/movimientos', window.location.origin);
-
+    
     if (filters) {
       if (filters.fechaDesde) url.searchParams.set('start', filters.fechaDesde);
       if (filters.fechaHasta) url.searchParams.set('end', filters.fechaHasta);
-      if (filters.depositoId) url.searchParams.set('depositoId', filters.depositoId);
-      if (filters.tipoMovimiento) {
-        url.searchParams.set('q', filters.tipoMovimiento);
+      if (filters.depositoId && filters.depositoId !== '') {
+        url.searchParams.set('depositoId', String(filters.depositoId));
       }
+      
+      // Filtro de ingreso/egreso
       if (filters.movimiento === 'Ingreso') {
         url.searchParams.set('esIngreso', 'true');
       } else if (filters.movimiento === 'Egreso') {
         url.searchParams.set('esIngreso', 'false');
       }
+      
+      // Búsqueda general
       if (filters.q) {
         url.searchParams.set('q', filters.q);
+      }
+      
+      // Si hay tipo de movimiento específico, también incluirlo en la búsqueda
+      if (filters.tipoMovimiento && !filters.q) {
+        url.searchParams.set('q', filters.tipoMovimiento);
       }
     }
 
@@ -139,31 +146,31 @@ const fetchMovimientos = async (filters?: FiltersState): Promise<Movimiento[]> =
     if (!response.ok) {
       throw new Error(`Error ${response.status}: ${response.statusText}`);
     }
-
+    
     const result: ApiResponse = await response.json();
-
+    
     if (!result.items) {
       throw new Error('Respuesta inválida de la API');
     }
 
+    // Agrupar items por movimiento
     const movimientosMap = new Map<string, Movimiento>();
 
     result.items.forEach((item) => {
       const key = `${item.fecha}-${item.deposito}-${item.tipo_movimiento}-${item.tipo_comprobante}`;
+      
       if (!movimientosMap.has(key)) {
-        // Asumiendo que `depositosMock` ya no existe, necesitamos una forma de obtener el ID del depósito real
-        // Aquí no podemos buscar por nombre, por lo que usaremos un placeholder
-        // Lo ideal sería que la API de movimientos devuelva el ID del depósito
-        const depositoPlaceholder = { id: 0, nombre: item.deposito };
-
+        // Buscar el depósito por nombre para obtener el ID real
+        const depositoEncontrado = depositosMock.find(d => d.nombre === item.deposito);
+        
         movimientosMap.set(key, {
           id: item.detalle_id,
           fechaISO: item.fecha.split('T')[0],
           movimiento: item.es_ingreso ? 'Ingreso' : 'Egreso',
           tipoMovimiento: mapTipoMovimiento(item.tipo_movimiento),
-          comprobanteId: undefined,
-          comentario: undefined,
-          deposito: depositoPlaceholder,
+          comprobanteId: item.numero_comprobante || undefined,
+          comentario: item.comentario || undefined,
+          deposito: depositoEncontrado || { id: 999, nombre: item.deposito },
           productos: [{
             producto: { id: 0, codigo: '', descripcion: item.producto },
             cantidad: item.cantidad
@@ -184,30 +191,32 @@ const fetchMovimientos = async (filters?: FiltersState): Promise<Movimiento[]> =
     return [];
   }
 };
-// ---------------------------------------------------
 
 export default function MovimientosPage() {
-  // ---- Estados unificados y completos
+  // ---- Estados principales ----
   const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  const [isModalOpen, setModalOpen] = useState(false);
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [selected, setSelected] = useState<Movimiento | null>(null);
 
+  // ---- Estados para datos reales ----
   const [depositos, setDepositos] = useState<DepositoDTO[]>([]);
   const [loadingDep, setLoadingDep] = useState(false);
   const [errorDep, setErrorDep] = useState<string | null>(null);
-
-  const [stock, setStock] = useState<StockRowDTO[]>([]);
-  const [loadingStock, setLoadingStock] = useState(false);
-  const [errorStock, setErrorStock] = useState<string | null>(null);
 
   const [tiposMov, setTiposMov] = useState<TipoMovimientoDTO[]>([]);
   const [loadingTipos, setLoadingTipos] = useState(false);
   const [errorTipos, setErrorTipos] = useState<string | null>(null);
 
+  const [stock, setStock] = useState<StockRowDTO[]>([]);
+  const [loadingStock, setLoadingStock] = useState(false);
+  const [errorStock, setErrorStock] = useState<string | null>(null);
+
+  // ---- Estados de modales ----
+  const [isModalOpen, setModalOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [selected, setSelected] = useState<Movimiento | null>(null);
+  
+  // ---- Estados de confirmación ----
   const [successOpen, setSuccessOpen] = useState(false);
   const [created, setCreated] = useState<{
     id: number;
@@ -216,79 +225,90 @@ export default function MovimientosPage() {
     numero?: string | null;
   } | null>(null);
 
-  // Funciones para recargar datos
-  const reloadMovimientos = async (filters?: FiltersState) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await fetchMovimientos(filters);
-      setMovimientos(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido');
-      console.error('Error cargando movimientos:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // ---- Filtros ----
+  const [filters, setFilters] = useState<FiltersState>({
+    fechaDesde: "",
+    fechaHasta: "",
+    movimiento: "",
+    depositoId: "",
+    tipoMovimiento: "",
+    q: "",
+  });
 
-  const reloadStock = async () => {
-    setLoadingStock(true);
-    setErrorStock(null);
-    try {
-      const data = await fetchStockTodos();
-      setStock(data);
-    } catch (e: any) {
-      setErrorStock(e?.message ?? "Error cargando stock");
-    } finally {
-      setLoadingStock(false);
-    }
-  };
-
-  // Cargar datos iniciales
+  // ---- Effects para cargar datos ----
+  
+  // Cargar movimientos
   useEffect(() => {
-    let mounted = true;
-    const loadData = async () => {
+    const loadMovimientos = async () => {
+      setLoading(true);
+      setError(null);
+      
       try {
-        setLoadingDep(true);
-        setLoadingTipos(true);
-        setLoadingStock(true);
-        setLoading(true);
-
-        const [depData, tiposData, stockData, movData] = await Promise.all([
-          fetchDepositos(),
-          fetchTiposMovimientos(),
-          fetchStockTodos(),
-          fetchMovimientos(),
-        ]);
-
-        if (mounted) {
-          setDepositos(depData);
-          setTiposMov(tiposData);
-          setStock(stockData);
-          setMovimientos(movData);
-        }
-      } catch (e: any) {
-        if (mounted) {
-          setError(e?.message ?? "Error cargando datos iniciales");
-          console.error('Error en carga inicial:', e);
-        }
+        const data = await fetchMovimientos();
+        setMovimientos(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Error desconocido');
+        console.error('Error cargando movimientos:', err);
       } finally {
-        if (mounted) {
-          setLoadingDep(false);
-          setLoadingTipos(false);
-          setLoadingStock(false);
-          setLoading(false);
-        }
+        setLoading(false);
       }
     };
 
-    loadData();
-    return () => {
-      mounted = false;
-    };
+    loadMovimientos();
   }, []);
 
-  // Creación de índices y mapas con useMemo
+  // Cargar depósitos
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setLoadingDep(true);
+        const data = await fetchDepositos();
+        if (mounted) setDepositos(data);
+      } catch (e: any) {
+        if (mounted) setErrorDep(e?.message ?? "Error cargando depósitos");
+      } finally {
+        if (mounted) setLoadingDep(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // Cargar tipos de movimiento
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setLoadingTipos(true);
+        const data = await fetchTiposMovimientos();
+        if (mounted) setTiposMov(data);
+      } catch (e: any) {
+        if (mounted) setErrorTipos(e?.message ?? 'Error cargando tipos de movimiento');
+      } finally {
+        if (mounted) setLoadingTipos(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // Cargar stock
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setLoadingStock(true);
+        const data = await fetchStockTodos();
+        if (mounted) setStock(data);
+      } catch (e: any) {
+        if (mounted) setErrorStock(e?.message ?? "Error cargando stock");
+      } finally {
+        if (mounted) setLoadingStock(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // ---- Memos para procesar datos ----
   const stockIndex = useMemo<StockIndex>(() => {
     const idx: StockIndex = {};
     for (const r of stock) {
@@ -298,7 +318,7 @@ export default function MovimientosPage() {
     return idx;
   }, [stock]);
 
-  const productosPorDeposito = useMemo<Record<number, ProductoLite[]>>(() => {
+  const productosPorDeposito: Record<number, ProductoLite[]> = useMemo(() => {
     const map: Record<number, ProductoLite[]> = {};
     for (const row of stock) {
       if (!map[row.depositId]) map[row.depositId] = [];
@@ -314,44 +334,64 @@ export default function MovimientosPage() {
     return map;
   }, [stock]);
 
-  const modalDepositoId = useMemo(() => depositos.length ? depositos[0].id : 0, [depositos]);
-
-  const [filters, setFilters] = useState<FiltersState>({
-    fechaDesde: "",
-    fechaHasta: "",
-    movimiento: "",
-    depositoId: "",
-    tipoMovimiento: "",
-    q: "",
-  });
-  
-  // El filtrado en cliente ya no es necesario, ahora se hace en `fetchMovimientos`
-  // Se mantiene solo si quieres tener un filtro local sin recargar
+  // Filtrado de movimientos
   const filtered = useMemo(() => {
     return movimientos.filter((m) => {
       const f = filters;
-      //... (lógica de filtrado)
+
       if (f.fechaDesde && m.fechaISO < f.fechaDesde) return false;
       if (f.fechaHasta && m.fechaISO > f.fechaHasta) return false;
       if (f.movimiento && m.movimiento !== f.movimiento) return false;
       if (f.tipoMovimiento && m.tipoMovimiento !== f.tipoMovimiento) return false;
-      if (f.depositoId && (!m.deposito || m.deposito.id !== Number(f.depositoId))) return false;
+
+      if (f.depositoId) {
+        const wanted = Number(f.depositoId);
+        const isTransfer = m.tipoMovimiento === "Transferencia entre depósitos";
+        if (isTransfer) {
+          const hit =
+            (m.depositoOrigen && m.depositoOrigen.id === wanted) ||
+            (m.depositoDestino && m.depositoDestino.id === wanted);
+          if (!hit) return false;
+        } else {
+          if (!m.deposito || m.deposito.id !== wanted) return false;
+        }
+      }
+
       if (f.q) {
         const q = f.q.toLowerCase();
         const txt = `${m.comentario ?? ""} ${m.comprobanteId ?? ""}`.toLowerCase();
         if (!txt.includes(q)) return false;
       }
+
       return true;
     });
   }, [movimientos, filters]);
 
   const stats = useMemo(() => getStats(filtered), [filtered]);
 
-  // ---- Handlers unificados
-  const onSearch = () => {
-    reloadMovimientos(filters);
+  // ---- Handlers ----
+  const clearFilters = () =>
+    setFilters({
+      fechaDesde: "",
+      fechaHasta: "",
+      movimiento: "",
+      depositoId: "",
+      tipoMovimiento: "",
+      q: "",
+    });
+
+  const onSearch = async () => {
+    setLoading(true);
+    try {
+      const data = await fetchMovimientos(filters);
+      setMovimientos(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error en la búsqueda');
+    } finally {
+      setLoading(false);
+    }
   };
-  
+
   const handleCreate = () => setModalOpen(true);
 
   const onSubmitModal = async (p: MovimientoPayload) => {
@@ -377,12 +417,14 @@ export default function MovimientosPage() {
 
       const json = await res.json();
       if (!res.ok || !json.ok) throw new Error(json.error || 'No se pudo crear el movimiento');
-      
-      setModalOpen(false);
-      
-      // Actualizar la lista de movimientos y el stock después de crear uno nuevo
-      await Promise.all([reloadMovimientos(filters), reloadStock()]);
 
+      setModalOpen(false);
+
+      // Recargar movimientos después de crear
+      const updatedMovimientos = await fetchMovimientos();
+      setMovimientos(updatedMovimientos);
+
+      // Mostrar confirmación
       const d = json.data;
       setCreated({
         id: d.id,
@@ -397,6 +439,7 @@ export default function MovimientosPage() {
     }
   };
 
+  // ---- Render states ----
   if (loading) {
     return (
       <main className="w-full max-w-none mx-auto px-3 sm:px-4 lg:px-6 py-8 fade-in">
@@ -429,9 +472,12 @@ export default function MovimientosPage() {
     );
   }
 
+  // ---- Render principal ----
+  const modalDepositoId = depositos.length ? depositos[0].id : 0;
+
   return (
     <main className="w-full max-w-none mx-auto px-3 sm:px-4 lg:px-6 py-8 fade-in">
-      {/* Breadcrumb / Header */}
+      {/* Breadcrumb */}
       <div className="flex items-center space-x-2 text-sm text-gray-600 mb-6">
         <span>Inicio</span>
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -440,6 +486,7 @@ export default function MovimientosPage() {
         <span className="text-primary-pink font-medium">Movimiento de Stock</span>
       </div>
 
+      {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
         <div>
           <h2 className="text-4xl font-bold bg-gradient-to-r from-primary-pink to-primary-blue bg-clip-text text-transparent">
@@ -457,7 +504,7 @@ export default function MovimientosPage() {
           )}
         </div>
 
-        <div className="flex space-x-4">
+        <div className="flex space x-4">
           <Button
             variant="primary"
             size="lg"
@@ -471,19 +518,19 @@ export default function MovimientosPage() {
         </div>
       </div>
 
+      {/* Stats */}
       <StatsCards total={stats.total} ingresos={stats.ingresos} egresos={stats.egresos} />
 
+      {/* Filtros */}
       <MovimientosFilters
         state={filters}
         onChange={(patch) => setFilters((s) => ({ ...s, ...patch }))}
         depositos={depositos.map((d) => ({ id: d.id, nombre: d.nombre }))}
         onSearch={onSearch}
-        onClear={() => {
-          clearFilters();
-          reloadMovimientos(); // Recarga sin filtros
-        }}
+        onClear={clearFilters}
       />
 
+      {/* Tabla */}
       <MovimientosTable
         data={filtered}
         onViewDetail={(m) => {
@@ -493,6 +540,7 @@ export default function MovimientosPage() {
         onNew={handleCreate}
       />
 
+      {/* Modal de creación */}
       <MovimientosModal
         isOpen={isModalOpen}
         onClose={() => setModalOpen(false)}
@@ -504,6 +552,7 @@ export default function MovimientosPage() {
         tiposMovimiento={tiposMov}
       />
 
+      {/* Modal de detalle */}
       <MovimientosDetailModal
         isOpen={detailOpen}
         onClose={() => setDetailOpen(false)}
