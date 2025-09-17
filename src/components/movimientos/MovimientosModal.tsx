@@ -36,7 +36,6 @@ export type MovimientoPayload = {
   comprobanteId?: string;
   comentario?: string;
   productos: Array<{ productoId: number; cantidad: number }>;
-  ajusteSigno?: 'positivo' | 'negativo';
 };
 
 type Props = {
@@ -49,8 +48,6 @@ type Props = {
   onSubmit: (payload: MovimientoPayload) => void;
   initial?: Partial<MovimientoPayload>;
 };
-
-const DEFAULT_TIPO_MOVIMIENTO: TipoMovimiento = 'Compra de inventario';
 
 function getStockDisponible(
   productoId: number,
@@ -73,7 +70,9 @@ export default function MovimientosModal({
 }: Props) {
   // ---- Estados ----
   const [movimiento, setMovimiento] = useState<MovimientoBasico>('Ingreso');
-  const [tipoMovimiento, setTipoMovimiento] = useState<TipoMovimiento>(DEFAULT_TIPO_MOVIMIENTO);
+  const [tipoMovimiento, setTipoMovimiento] = useState<TipoMovimiento>(
+    tiposMovimiento.find(tm => tm.saldo)?.nombre as TipoMovimiento ?? 'Ingreso por Compra'
+  );
   const [tipoMovimientoId, setTipoMovimientoId] = useState<number>(0);
   const [numero, setNumero] = useState('');
   const [deposito, setDeposito] = useState<number>(0);
@@ -82,7 +81,6 @@ export default function MovimientosModal({
   const [comprobanteId, setComprobanteId] = useState('');
   const [comentario, setComentario] = useState('');
   const [items, setItems] = useState<ProductRow[]>([{ productoId: 0, cantidad: 1 }]);
-  const [ajusteSigno, setAjusteSigno] = useState<'positivo' | 'negativo'>('positivo');
 
   // ---- Opciones para selects ----
   const depOptions = useMemo(
@@ -103,14 +101,14 @@ export default function MovimientosModal({
       })),
     [productosDisponibles]
   );
-
-  const isTransfer = tipoMovimiento === 'Transferencia entre depósitos';
-  const isAjuste = tipoMovimiento === 'Ajuste de stock';
-
+  
+  // Usar la propiedad 'nombre' para la lógica condicional
+  const isTransfer = tipoMovimiento === 'Egreso por Traspaso' || tipoMovimiento === 'Ingreso por Traspaso';
+  
   // ---- Helpers ----
   const resetForm = () => {
     setMovimiento(initial?.movimiento ?? 'Ingreso');
-    setTipoMovimiento(initial?.tipoMovimiento ?? DEFAULT_TIPO_MOVIMIENTO);
+    setTipoMovimiento(initial?.tipoMovimiento ?? (tiposMovimiento.find(tm => tm.saldo)?.nombre as TipoMovimiento ?? 'Ingreso por Compra'));
     setTipoMovimientoId(initial?.tipoMovimientoId ?? 0);
     setNumero('');
     setDeposito(initial?.depositoId ?? 0);
@@ -126,7 +124,6 @@ export default function MovimientosModal({
           }))
         : [{ productoId: 0, cantidad: 1 }]
     );
-    setAjusteSigno(initial?.ajusteSigno ?? 'positivo');
   };
 
   const canSubmit = () => {
@@ -157,7 +154,7 @@ export default function MovimientosModal({
 
     const payload: MovimientoPayload = {
       movimiento: esIngreso ? 'Ingreso' : 'Egreso',
-      tipoMovimiento,
+      tipoMovimiento: tipoSeleccionado?.nombre as TipoMovimiento,
       depositoId: isTransfer ? undefined : Number(deposito),
       tipoMovimientoId: Number(tipoMovimientoId),
       numeroComprobante: numero || undefined,
@@ -167,11 +164,8 @@ export default function MovimientosModal({
       comentario: comentario || undefined,
       productos: items.map((it) => ({
         productoId: Number(it.productoId),
-        cantidad: isAjuste && ajusteSigno === 'negativo'
-          ? -Math.abs(Number(it.cantidad))
-          : Math.abs(Number(it.cantidad)),
+        cantidad: esIngreso ? Math.abs(Number(it.cantidad)) : -Math.abs(Number(it.cantidad)),
       })),
-      ajusteSigno: isAjuste ? ajusteSigno : undefined,
     };
 
     onSubmit(payload);
@@ -196,6 +190,13 @@ export default function MovimientosModal({
     if (tm) {
       setTipoMovimiento(tm.nombre as TipoMovimiento);
       setMovimiento(tm.saldo ? 'Ingreso' : 'Egreso');
+      // Si el movimiento seleccionado es una transferencia, limpiar los campos de depósito
+      if (isTransfer) {
+        setDeposito(0);
+      } else {
+        setDepositoOrigen(0);
+        setDepositoDestino(0);
+      }
     }
   }, [tipoMovimientoId, tiposMovimiento]);
 
@@ -324,24 +325,7 @@ export default function MovimientosModal({
             className="input-focus"
             placeholder="Notas del movimiento..."
           />
-
-          {/* Signo para ajustes */}
-          {isAjuste && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tipo de Ajuste
-              </label>
-              <Select
-                value={ajusteSigno}
-                onChange={(e) => setAjusteSigno(e.target.value as 'positivo' | 'negativo')}
-                className="input-focus"
-              >
-                <option value="positivo">Ajuste Positivo (Sumar stock)</option>
-                <option value="negativo">Ajuste Negativo (Restar stock)</option>
-              </Select>
-            </div>
-          )}
-
+          
           {/* Productos */}
           <div>
             <h4 className="text-md font-semibold text-gray-800 mb-4">Productos *</h4>
@@ -357,9 +341,7 @@ export default function MovimientosModal({
                 const esIngreso = tm?.saldo ?? true;
                 const cantidadNum = Number(row.cantidad) || 0;
 
-                const signedQty = isAjuste
-                  ? (ajusteSigno === 'negativo' ? -Math.abs(cantidadNum) : Math.abs(cantidadNum))
-                  : (esIngreso ? +Math.abs(cantidadNum) : -Math.abs(cantidadNum));
+                const signedQty = esIngreso ? +Math.abs(cantidadNum) : -Math.abs(cantidadNum);
 
                 const resultante = stockActual + signedQty;
                 const stockInsuficiente = resultante < 0;

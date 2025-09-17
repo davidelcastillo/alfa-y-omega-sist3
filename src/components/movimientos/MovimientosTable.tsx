@@ -5,7 +5,7 @@ import { FC } from 'react';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import type { Movimiento } from '@/lib/movimientos/productsData';
-import { Eye } from 'lucide-react'
+import { Eye } from 'lucide-react';
 
 type Props = {
   data: Movimiento[];
@@ -64,52 +64,7 @@ const MovimientosTable: FC<Props> = ({ data, onViewDetail, onNew }) => {
           </thead>
 
           <tbody>
-            {data.map((m) => {
-              const depositoLabel =
-                m.tipoMovimiento === 'Transferencia entre depósitos'
-                  ? `${m.depositoOrigen?.nombre ?? '-'} → ${m.depositoDestino?.nombre ?? '-'}`
-                  : m.deposito?.nombre ?? '-';
-
-              const badgeClass =
-                m.movimiento === 'Ingreso'
-                  ? 'status-active text-white'
-                  : 'status-inactive text-white';
-
-              return (
-                <tr key={m.id} className="product-row hover:bg-gray-50/60 transition-colors">
-                  {/* ID */}
-                  <Td className="font-semibold">{m.id}</Td>
-                  {/* Registro */}
-                  <Td>{m.fechaISO}</Td>
-                  {/* N° Remito */}
-                  <Td className="font-mono">{m.comprobanteId ?? '-'}</Td>
-                  {/* Depósito */}
-                  <Td>{depositoLabel}</Td>
-                  {/* Movimiento */}
-                  <Td>
-                    <Badge className={`px-3 py-1 text-xs font-medium rounded-full ${badgeClass}`}>
-                      {m.movimiento}
-                    </Badge>
-                  </Td>
-                  {/* Tipo de Movimiento */}
-                  <Td>{m.tipoMovimiento}</Td>
-                  {/* Comentario */}
-                  <Td className="max-w-[320px] truncate" title={m.comentario ?? ''}>
-                    {m.comentario ?? '-'}
-                  </Td>
-                  {/* Acciones */}
-                  <Td>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => onViewDetail?.(m)}>
-                        <Eye className="w-4 h-4" aria-hidden />
-                      </Button>
-                    </div>
-                  </Td>
-                </tr>
-              );
-            })}
-
-            {data.length === 0 && (
+            {data.length === 0 ? (
               <tr>
                 <td colSpan={8} className="px-6 py-12 text-center">
                   <div className="flex flex-col items-center gap-3">
@@ -117,11 +72,51 @@ const MovimientosTable: FC<Props> = ({ data, onViewDetail, onNew }) => {
                   </div>
                 </td>
               </tr>
+            ) : (
+              data.map((m) => {
+                const badgeClass =
+                  m.movimiento === 'Ingreso'
+                    ? 'status-active text-white'
+                    : 'status-inactive text-white';
+
+                return (
+                  <tr key={m.id} className="product-row hover:bg-gray-50/60 transition-colors">
+                    {/* ID */}
+                    <Td className="font-semibold">{m.id}</Td>
+                    {/* Registro */}
+                    <Td>{m.fechaISO}</Td>
+                    {/* N° Remito */}
+                    <Td className="font-mono">{m.comprobanteId ?? '-'}</Td>
+                    {/* Depósito */}
+                    {/* Lógica simplificada: muestra solo el depósito principal del movimiento */}
+                    <Td>{m.deposito?.nombre ?? '-'}</Td> 
+                    {/* Movimiento */}
+                    <Td>
+                      <Badge className={`px-3 py-1 text-xs font-medium rounded-full ${badgeClass}`}>
+                        {m.movimiento}
+                      </Badge>
+                    </Td>
+                    {/* Tipo de Movimiento */}
+                    <Td>{m.tipoMovimiento}</Td>
+                    {/* Comentario */}
+                    <Td className="max-w-[320px] truncate" title={m.comentario ?? ''}>
+                      {m.comentario ?? '-'}
+                    </Td>
+                    {/* Acciones */}
+                    <Td>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => onViewDetail?.(m)}>
+                          <Eye className="w-4 h-4" aria-hidden />
+                        </Button>
+                      </div>
+                    </Td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
       </div>
-
     </div>
   );
 };

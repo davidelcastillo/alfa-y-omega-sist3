@@ -18,31 +18,55 @@ export type FiltersState = {
   q?: string; // búsqueda libre por comentario/comprobante
 };
 
+// Tipo para los tipos de movimiento de la API
+type TipoMovimientoDTO = {
+  id: number;
+  nombre: string;
+  saldo: boolean;
+};
+
 type Props = {
   state: FiltersState;
   onChange: (patch: Partial<FiltersState>) => void;
   depositos: Deposito[];
+  tiposMovimiento: TipoMovimientoDTO[]; // ← Agregar esta línea
   onSearch?: () => void;
   onClear?: () => void;
 };
 
+// Lista de fallback por si no hay datos de la API
 const TM_OPTS: TipoMovimiento[] = [
-  'Transferencia entre depósitos',
-  'Compra de inventario',
-  'Venta de inventario',
-  'Ajuste de stock',
+  'Egreso por Ajuste',
+  'Egreso por Obsolencia',
+  'Egreso por Traspaso',
+  'Egreso por Venta',
+  'Ingreso por Ajuste',
+  'Ingreso por Compra',
+  'Ingreso por Devolución',
+  'Ingreso por Traspaso',
 ];
 
-const MovimientosFilters: FC<Props> = ({ state, onChange, depositos, onSearch, onClear }) => {
+const MovimientosFilters: FC<Props> = ({ 
+  state, 
+  onChange, 
+  depositos, 
+  tiposMovimiento, // ← Recibir el parámetro
+  onSearch, 
+  onClear 
+}) => {
   const depositoOpts = useMemo(
     () => depositos.map(d => ({ id: d.id, nombre: d.nombre })),
     [depositos]
   );
 
-  const tipoMovOpts = useMemo(
-    () => TM_OPTS.map((t, i) => ({ id: i + 1, nombre: t })), // id sintético
-    []
-  );
+  // Usar los tipos de movimiento de la API si están disponibles, sino usar la lista hardcodeada
+  const tipoMovOpts = useMemo(() => {
+    if (tiposMovimiento && tiposMovimiento.length > 0) {
+      return tiposMovimiento.map(t => ({ id: t.id, nombre: t.nombre }));
+    }
+    // Fallback a la lista hardcodeada
+    return TM_OPTS.map((t, i) => ({ id: i + 1, nombre: t }));
+  }, [tiposMovimiento]);
 
   const depositoValueId = state.depositoId && Number(state.depositoId) > 0 ? Number(state.depositoId) : 0;
   const tipoMovValueId = state.tipoMovimiento
