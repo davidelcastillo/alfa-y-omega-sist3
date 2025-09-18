@@ -9,6 +9,7 @@ import ComprasStatsCards from "@/components/compras/ComprasStatsCards";
 import ComprasModal from "@/components/compras/ComprasModal";
 
 import { Button } from "@/components/ui/Button";
+import { Plus } from 'lucide-react';
 import { applyFilters, applySort } from "@/lib/compras/utils";
 import type {
   ComprasFiltersState,
@@ -97,7 +98,16 @@ export default function ComprasClient({ initialOrders, proveedores, depositos, p
   const proveedoresOptions = proveedores.map((p) => ({ id: p.id, name: p.name }));
 
   return (
-    <div className="space-y-8">
+    <main className="w-full max-w-none mx-auto px-3 sm:px-4 lg:px-6 py-8 fade-in">
+          {/* Breadcrumb */}
+      <div className="flex items-center space-x-2 text-sm text-gray-600 mb-6">
+        <span>Inicio</span>
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+        </svg>
+        <span className="text-primary-pink font-medium">Movimiento de Stock</span>
+      </div>
+    
       {/* Header de la sección */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-2 gap-4">
         <div>
@@ -106,11 +116,15 @@ export default function ComprasClient({ initialOrders, proveedores, depositos, p
           </h2>
           <p className="text-gray-600 text-lg">Administra y controla todas las órdenes de compra</p>
         </div>
-        <div className="flex gap-3">
-          <Button onClick={onOpenNew}>Nueva Orden</Button>
-          <Button variant="outline" onClick={() => {/* noop: simula refresh */}}>
-            Actualizar
-          </Button>
+        <div className="flex space-x-4">
+          <Button 
+            variant="primary"
+            size="lg"
+            className="px-8 py-8 rounded-xl gap-3 text-lg hover:shadow-lg"
+            onClick={onOpenNew}
+          >
+            <Plus className="w-10 h-5 mr-2" aria-hidden />
+            Nueva Orden</Button>
         </div>
       </div>
 
@@ -160,8 +174,8 @@ export default function ComprasClient({ initialOrders, proveedores, depositos, p
         }
         onSubmit={handleSubmit}
       />
-    </div>
-  );
+  </main>  
+);
 }
 
 /* ========= Helpers locales ========= */

@@ -81,7 +81,7 @@ export default function ComprasFilters({ initial, proveedores, depositos, onSear
 
       <div className="flex justify-between items-center mt-6">
         <Button variant="outline" onClick={handleClear}>Limpiar Filtros</Button>
-        <Button onClick={() => onSearch(filters)}>Buscar Órdenes</Button>
+        <Button variant="azul"  onClick={() => onSearch(filters)}>Buscar Órdenes</Button>
       </div>
     </div>
   );

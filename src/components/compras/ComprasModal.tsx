@@ -93,19 +93,41 @@ export default function ComprasModal({
     onSubmit({ proveedorId, deposito, fechaEntrega, items, totalCantidad, totalMonto });
   }
 
-  return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-3xl">
-        <AlertDialogHeader>
-          <AlertDialogTitle>Nueva / Editar Orden de Compra</AlertDialogTitle>
-        </AlertDialogHeader>
+return (
+  <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialogContent
+      className="
+        glass-effect
+        p-0 overflow-hidden
+        w-full max-w-3xl md:max-w-5xl
+        h-[75vh]
+      "
+    >
+      {/* Header (gradiente como el otro modal) */}
+      <div className="flex-none p-6 rounded-t-2xl bg-gradient-to-r from-primary-pink to-light-pink">
+        <div className="flex items-center justify-between">
+          <AlertDialogTitle className="text-2xl font-bold text-white">
+            Registrar Nueva Orden de Compra
+          </AlertDialogTitle>
+          <button
+            onClick={() => onOpenChange(false)}
+            className="text-white hover:bg-white/20 p-2 rounded-lg"
+            aria-label="Cerrar modal"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
 
+      {/* Body scrolleable */}
+      <div className="flex-auto overflow-y-auto p-8 space-y-8">
         {/* Cabecera */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Select
             label="Proveedor *"
             value={proveedorId}
             onChange={(e) => setProveedorId(e.target.value)}
+            className="input-focus"
           >
             <option value="">Seleccionar proveedor</option>
             {proveedores.map((p) => (
@@ -117,6 +139,7 @@ export default function ComprasModal({
             label="Depósito *"
             value={deposito}
             onChange={(e) => setDeposito(e.target.value)}
+            className="input-focus"
           >
             <option value="">Seleccionar depósito</option>
             {depositos.map((d) => (
@@ -129,70 +152,90 @@ export default function ComprasModal({
             type="date"
             value={fechaEntrega}
             onChange={(e) => setFechaEntrega(e.target.value)}
+            className="input-focus"
           />
         </div>
 
-        {/* Línea de productos */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6 p-4 bg-gray-50 rounded-xl">
-          <Select label="Producto" value={prodSel} onChange={(e) => setProdSel(e.target.value)}>
-            <option value="">Seleccionar…</option>
-            {productos.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} - ${money(p.price ?? 0)}
-              </option>
-            ))}
-          </Select>
-          <Input
-            label="Cantidad"
-            type="number"
-            min={1}
-            value={qty}
-            onChange={(e) => setQty(Math.max(1, Number(e.target.value || 1)))}
-          />
-          <Input
-            label="Precio Unitario"
-            type="number"
-            min={0}
-            step="0.01"
-            value={unit}
-            onChange={(e) => setUnit(Math.max(0, Number(e.target.value || 0)))}
-            hint="Si lo dejás en 0, se toma el precio del producto"
-          />
-          <div className="flex items-end">
-            <Button className="w-full" onClick={addItem}>Agregar</Button>
+        {/* Productos (caja igual estilo al otro) */}
+        <div>
+          <h4 className="text-md font-semibold text-gray-800 mb-4">Productos *</h4>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+            <Select
+              label="Producto"
+              value={prodSel}
+              onChange={(e) => setProdSel(e.target.value)}
+              className="input-focus"
+            >
+              <option value="">Seleccionar…</option>
+              {productos.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} - ${money(p.price ?? 0)}
+                </option>
+              ))}
+            </Select>
+
+            <Input
+              label="Cantidad"
+              type="number"
+              min={1}
+              value={qty}
+              onChange={(e) => setQty(Math.max(1, Number(e.target.value || 1)))}
+              className="input-focus"
+            />
+
+            <Input
+              label="Precio Unitario"
+              type="number"
+              min={0}
+              step="1"
+              value={unit}
+              onChange={(e) => setUnit(Math.max(0, Number(e.target.value || 0)))}
+              //hint="Si lo dejás en 0, se toma el precio del producto"
+              className="input-focus"
+            />
+
+            <div className="flex items-end">
+              <Button className="w-full" onClick={addItem}>
+                Agregar producto
+              </Button>
+            </div>
           </div>
         </div>
 
-        {/* Tabla de ítems */}
+        {/* Tabla de ítems + resumen (en “card” con borde/redondeado) */}
         {items.length > 0 && (
-          <div className="overflow-x-auto mt-4">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-sm font-bold text-blue-800">Producto</th>
-                  <th className="px-4 py-3 text-left text-sm font-bold text-blue-800">Cantidad</th>
-                  <th className="px-4 py-3 text-left text-sm font-bold text-blue-800">Precio Unit.</th>
-                  <th className="px-4 py-3 text-left text-sm font-bold text-blue-800">Subtotal</th>
-                  <th className="px-4 py-3 text-left text-sm font-bold text-blue-800">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((it, idx) => (
-                  <tr key={it.id} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                    <td className="px-4 py-3 font-medium text-gray-900">{it.productName}</td>
-                    <td className="px-4 py-3 text-gray-700">{it.quantity}</td>
-                    <td className="px-4 py-3 text-gray-700">${money(it.unitPrice)}</td>
-                    <td className="px-4 py-3 font-semibold text-gray-900">${money(it.totalPrice)}</td>
-                    <td className="px-4 py-3">
-                      <Button size="sm" variant="ghost" onClick={() => removeItem(it.id)}>Eliminar</Button>
-                    </td>
+          <div className="rounded-xl border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-blue-800">Producto</th>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-blue-800">Cantidad</th>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-blue-800">Precio Unit.</th>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-blue-800">Subtotal</th>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-blue-800">Acciones</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {items.map((it, idx) => (
+                    <tr key={it.id} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                      <td className="px-4 py-3 font-medium text-gray-900">{it.productName}</td>
+                      <td className="px-4 py-3 text-gray-700">{it.quantity}</td>
+                      <td className="px-4 py-3 text-gray-700">${money(it.unitPrice)}</td>
+                      <td className="px-4 py-3 font-semibold text-gray-900">${money(it.totalPrice)}</td>
+                      <td className="px-4 py-3">
+                        <Button size="sm" variant="ghost" onClick={() => removeItem(it.id)}>
+                          Eliminar
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
             {/* Resumen */}
-            <div className="mt-6 flex justify-end">
+            <div className="p-6 flex justify-end">
               <div className="text-right">
                 <div className="text-sm text-gray-600 mb-1">Cantidad Total: {totalCantidad}</div>
                 <div className="text-2xl font-bold text-blue-800">Total: ${money(totalMonto)}</div>
@@ -201,13 +244,23 @@ export default function ComprasModal({
           </div>
         )}
 
-        <AlertDialogFooter className="mt-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={submit} disabled={!proveedorId || !deposito || !fechaEntrega || items.length === 0}>
+        {/* Actions (al pie, como el otro diseño) */}
+        <div className="flex justify-end gap-4 pt-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button
+            variant="primary"
+            className="btn-primary"
+            disabled={!proveedorId || !deposito || !fechaEntrega || items.length === 0}
+            onClick={submit}
+          >
             Registrar Orden de Compra
           </Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
+        </div>
+      </div>
+    </AlertDialogContent>
+  </AlertDialog>
+);
+
 }

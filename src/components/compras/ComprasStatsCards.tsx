@@ -1,5 +1,6 @@
 // src/components/compras/ComprasStatsCards.tsx
-import { BadgeCheck, ClipboardList, CircleAlert, CircleDollarSign } from "lucide-react";
+import { CheckCircle2, XCircle, BadgeCheck, ClipboardList, CircleAlert, CircleDollarSign } from "lucide-react";
+
 
 type Props = {
   total: number;
@@ -19,7 +20,7 @@ export default function ComprasStatsCards({ total, completas, incompletas, monto
         <ClipboardList className="w-6 h-6 text-white" />
       </Card>
       <Card label="Órdenes Completas" value={completas} valueClass="text-green-600" gradient="from-green-400 to-green-600">
-        <BadgeCheck className="w-6 h-6 text-white" />
+        <CheckCircle2 className="w-6 h-6 text-white" />
       </Card>
       <Card label="Órdenes Incompletas" value={incompletas} valueClass="text-yellow-600" gradient="from-yellow-400 to-yellow-600">
         <CircleAlert className="w-6 h-6 text-white" />
