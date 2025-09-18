@@ -5,13 +5,14 @@ import { useEffect, useMemo, useState } from "react";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import type { Supplier } from "@/lib/proveedores/types";
-import { SquarePen } from 'lucide-react'
-import { Trash2 } from 'lucide-react'
+import { SquarePen } from "lucide-react";
+import { Trash2 } from "lucide-react";
+import { formatCuil } from "@/lib/proveedores/helpers";
 
 type Props = {
   data: Supplier[];
   onEdit: (id: number) => void;
-  onDelete?: (id: number) => void; 
+  onDelete?: (id: number) => void;
   pageSize?: number;
 };
 
@@ -22,7 +23,6 @@ export default function ProveedoresTable({
   pageSize = 10,
 }: Props) {
   const [page, setPage] = useState(1);
-
   const pages = Math.max(1, Math.ceil(data.length / pageSize));
 
   // Asegura que la página actual sea válida si cambian los datos
@@ -35,14 +35,11 @@ export default function ProveedoresTable({
     return data.slice(start, start + pageSize);
   }, [data, page, pageSize]);
 
-  // >>>>>> AGREGADO
   const totalItems = data.length;
   const totalPages = pages;
   const start = totalItems === 0 ? 0 : (page - 1) * pageSize;
   const end = totalItems === 0 ? 0 : Math.min(start + pageSize, totalItems);
-  // <<<<<< AGREGADO
 
-  // Ventana corta de páginas (máx. 5 botones)
   const pageWindow = useMemo(() => {
     const windowSize = 5;
     const half = Math.floor(windowSize / 2);
@@ -84,15 +81,17 @@ export default function ProveedoresTable({
 
           <tbody>
             {pageData.map((s) => {
-              // 🔹 CAMBIO: displayName ahora usa razonSocial o nombre, ya que no tenemos s.nombreCompleto
-              const displayName = s.razonSocial || s.nombre || "-";
+              // ✅ usamos razonSocial o nombre
+              const displayName = s.razonSocial || s.nombreCompleto || "-";
 
-              // 🔹 CAMBIO: fantasy ahora usa nombreComercial (equivalente a nombreFantasia)
-              const fantasy = s.nombreComercial ? ` (${s.nombreComercial})` : "";
+              // ✅ usamos nombreComercial directamente
+              const fantasy = s.nombreFantasia ? ` (${s.nombreFantasia})` : "";
 
-              // 🔹 CAMBIO: estado ahora es boolean, lo convertimos a texto para mostrar
-              const estadoLabel = s.estado ? "Activo" : "Inactivo";
-              const statusClass = s.estado ? "status-active" : "status-inactive";
+              // ✅ estado es string "Activo"/"Inactivo"
+              const estadoLabel = s.estado; // "Activo" | "Inactivo"
+              const statusClass = s.estado === "Activo" ? "status-active" : "status-inactive";
+
+
 
               return (
                 <tr
@@ -100,7 +99,9 @@ export default function ProveedoresTable({
                   className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
                 >
                   <td className="px-6 py-4">
-                    <div className="text-sm font-semibold text-gray-900">{s.codigo || "-"}</div>
+                    <div className="text-sm font-semibold text-gray-900">
+                      {s.codigo || "-"}
+                    </div>
                   </td>
 
                   <td className="px-6 py-4">
@@ -109,38 +110,41 @@ export default function ProveedoresTable({
                       {fantasy}
                     </div>
                     <div className="text-xs text-gray-500">
-                      {/* 🔹 CAMBIO: antes era Empresa / Persona Física según s.tipo
-                          ahora mostramos el nombreComercial si existe */}
-                      {s.nombreComercial || ""}
+                      {s.nombreFantasia || ""}
                     </div>
                   </td>
 
                   <td className="px-6 py-4">
-                    {/* 🔹 CAMBIO: antes era s.cuitCuil, ahora el backend devuelve s.cuil */}
-                    <div className="text-sm font-semibold text-gray-900">{s.cuil || "-"}</div>
+                    {/* ✅ usamos cuil. si no quieren ver asi xx-xxxxxxxxx-x, volver a {s.cuitCuil || "-"}*/}
+                    <div className="text-sm font-semibold text-gray-900">
+                      {s.cuitCuil ? formatCuil(s.cuitCuil) : "-"}
+                    </div>
                   </td>
 
                   <td className="px-6 py-4">
                     <div className="text-sm font-semibold text-gray-900">
-                      {/* 🔹 CAMBIO: ahora el backend devuelve categoriaFiscalId (número) o categoriaFiscal?.nombre */}
-                      {s.categoriaFiscal?.nombre 
-                      ? s.categoriaFiscal.nombre
-                      : s.categoriaFiscalId  
-                      ? String(s.categoriaFiscalId)
-                      : "-"}
+                      {s.categoriaFiscal?.nombre
+                        ? s.categoriaFiscal.nombre
+                        : s.categoriaFiscalId
+                        ? String(s.categoriaFiscalId)
+                        : "-"}
                     </div>
                   </td>
 
                   <td className="px-6 py-4">
-                    {/* 🔹 CAMBIO: antes usaba s.email, ahora es s.correoElectronico */}
-                    <div className="text-sm text-gray-700">{s.telefono || "-"}</div>
-                    <div className="text-xs text-gray-500">{s.correoElectronico || "Sin email"}</div>
+                    <div className="text-sm text-gray-700">
+                      {s.telefono || "-"}
+                    </div>
+                    {/* ✅ usamos correoElectronico */}
+                    <div className="text-xs text-gray-500">
+                      {s.email || "Sin email"}
+                    </div>
                   </td>
 
                   <td className="px-6 py-4">
-                    {/* 🔹 CAMBIO: combinamos localidad + provincia dinámicamente y mostramos país si existe */}
                     <div className="text-sm text-gray-700">
-                      {[s.localidad, s.provincia].filter(Boolean).join(", ") || "—"}
+                      {[s.localidad, s.provincia].filter(Boolean).join(", ") ||
+                        "—"}
                     </div>
                     <div className="text-xs text-gray-500">{s.pais || ""}</div>
                   </td>
@@ -164,8 +168,10 @@ export default function ProveedoresTable({
 
                       <Button
                         variant="ghost"
-                        onClick={() => onDelete?.(s.id)}   // cambio, usamos onDelete
-                        title={estadoLabel === "Activo" ? "Desactivar" : "Activar"}
+                        onClick={() => onDelete?.(s.id)}
+                        title={
+                          estadoLabel === "Activo" ? "Desactivar" : "Activar"
+                        }
                         aria-label={`${estadoLabel === "Activo" ? "Eliminar" : "Inactivo"} ${
                           displayName || s.codigo
                         }`}
@@ -177,12 +183,11 @@ export default function ProveedoresTable({
                       >
                         <Trash2
                           className={`w-6 h-6 ${
-                              estadoLabel === "Activo" ? "" : "text-gray-400"
-                            }`}
-                            aria-hidden 
+                            estadoLabel === "Activo" ? "" : "text-gray-400"
+                          }`}
+                          aria-hidden
                         />
                       </Button>
-
                     </div>
                   </td>
                 </tr>
@@ -191,29 +196,37 @@ export default function ProveedoresTable({
 
             {pageData.length === 0 && (
               <tr>
-                <td className="px-6 py-10 text-center text-gray-500" colSpan={8}>
+                <td
+                  className="px-6 py-10 text-center text-gray-500"
+                  colSpan={8}
+                >
                   No hay proveedores que coincidan con el filtro.
                 </td>
               </tr>
             )}
           </tbody>
-
         </table>
       </div>
 
-      {/* Paginación (REEMPLAZADO) */}
       <div className="flex flex-col md:flex-row justify-between items-center mt-8 gap-4">
         <p className="text-gray-600 font-medium">
           {totalItems === 0 ? (
             <>
-              Mostrando <span className="font-bold text-primary-pink">0</span> de{" "}
+              Mostrando{" "}
+              <span className="font-bold text-primary-pink">0</span> de{" "}
               <span className="font-bold text-primary-pink">0</span> proveedores
             </>
           ) : (
             <>
               Mostrando{" "}
-              <span className="font-bold text-primary-pink">{start + 1}-{end}</span> de{" "}
-              <span className="font-bold text-primary-pink">{totalItems}</span> proveedores
+              <span className="font-bold text-primary-pink">
+                {start + 1}-{end}
+              </span>{" "}
+              de{" "}
+              <span className="font-bold text-primary-pink">
+                {totalItems}
+              </span>{" "}
+              proveedores
             </>
           )}
         </p>
@@ -223,21 +236,32 @@ export default function ProveedoresTable({
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page <= 1}
             className={`px-6 py-3 border-2 rounded-xl font-medium transition-colors
-              ${page <= 1 ? "border-gray-200 text-gray-400 cursor-not-allowed" : "border-gray-200 hover:bg-gray-50"}`}
+              ${
+                page <= 1
+                  ? "border-gray-200 text-gray-400 cursor-not-allowed"
+                  : "border-gray-200 hover:bg-gray-50"
+              }`}
           >
             Anterior
           </button>
 
           <span className="text-sm text-gray-700 px-2">
-            Página <span className="font-semibold">{Math.min(page, totalPages)}</span> de{" "}
-            <span className="font-semibold">{totalPages}</span>
+            Página{" "}
+            <span className="font-semibold">
+              {Math.min(page, totalPages)}
+            </span>{" "}
+            de <span className="font-semibold">{totalPages}</span>
           </span>
 
           <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page >= totalPages}
             className={`px-6 py-3 border-2 rounded-xl font-medium transition-colors
-              ${page >= totalPages ? "border-gray-200 text-gray-400 cursor-not-allowed" : "border-gray-200 hover:bg-gray-50"}`}
+              ${
+                page >= totalPages
+                  ? "border-gray-200 text-gray-400 cursor-not-allowed"
+                  : "border-gray-200 hover:bg-gray-50"
+              }`}
           >
             Siguiente
           </button>

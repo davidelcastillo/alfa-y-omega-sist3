@@ -131,17 +131,46 @@ export default function ProveedoresModal({
     return () => { cancel = true }
   }, [open])
 
+
+  // SEPARAMOS CRER DE EDITAR, PARA QUE MUESTRE VACIO EL CREAR NUEVO PROVEEDOR Y NO CON DATOS DE ALGUNO YA EXISTENTE ------------
   useEffect(() => {
     if (open) {
-      console.log("👉 Modal abierto con initialData:", initialData);
+      console.log("Modal abierto con initialData:", initialData);
       setStep(1);
-      setForm((prev) => ({
-        ...prev,
-        ...(initialData ?? {}),
-        estado: initialData?.estado ?? (mode === "create" ? "Activo" : prev.estado),
-      }));
+
+      if (mode === "edit" && initialData) {
+        // Rellenar con datos del proveedor
+        setForm({
+          ...initialData,
+          cuitCuil: initialData.cuitCuil ?? "",
+          estado: initialData.estado ?? "Activo",
+        });
+      } else if (mode === "create") {
+        //Resetear a vacío al crear
+        setForm({
+          codigo: "",
+          tipo: "empresa",
+          razonSocial: "",
+          nombreCompleto: "",
+          nombreFantasia: "",
+          genero: "",
+          categoriaFiscal: "",
+          cuitCuil: "",
+          pais: "Argentina",
+          codigoPostal: "",
+          provincia: "",
+          localidad: "",
+          zona: "",
+          barrio: "",
+          telefono: "",
+          email: "",
+          paginaWeb: "",
+          estado: "Activo",
+        });
+      }
     }
   }, [open, initialData, mode]);
+
 
   const isEmpresa = form.tipo === "empresa";
 

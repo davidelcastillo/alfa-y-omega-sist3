@@ -12,6 +12,7 @@ import { Plus } from "lucide-react";
 import { toggleProveedorStatus  } from "@/lib/api";
 
 
+
 import {
   AlertDialog,
   AlertDialogContent,
@@ -20,7 +21,7 @@ import {
 
 // Tipos y helpers (sin mocks)
 import type { Supplier, ProveedoresFiltersState } from "@/lib/proveedores/types";
-import { filterSuppliers, computeStats, toggleStatus } from "@/lib/proveedores/helpers";
+import { filterSuppliers, computeStats, toggleStatus, formatCuil } from "@/lib/proveedores/helpers";
 
 /* =========================
   Mapeos entre tipos
@@ -40,7 +41,7 @@ function supplierToForm(s: Supplier): SupplierForm {
     categoriaFiscal: s && (s as any).categoriaFiscal
       ? String((s as any).categoriaFiscal.id ?? "")
       : "",
-    cuitCuil: (s as any).cuitCuil ?? (s as any).cuil ?? "",
+    cuitCuil: s ? formatCuil((s as any).cuitCuil ?? (s as any).cuil ?? "") : "",
     pais: (s as any).pais ?? "Argentina",
     codigoPostal: (s as any).codigoPostal ?? "",
     provincia: (s as any).provincia ?? "",
@@ -88,6 +89,7 @@ export default function ProveedoresPage() {
     try {
       const res = await fetch("/api/proveedores?status=all", { cache: "no-store" });
       const data = await res.json();
+      console.log("📦 Proveedores desde API:", data.data);
       if (!res.ok) throw new Error(data?.error || "Error al cargar proveedores");
       setSuppliers(data.data || []);
     } catch (err) {
@@ -106,6 +108,16 @@ export default function ProveedoresPage() {
     status: "",
     category: "",
   });
+
+
+  useEffect(() => {
+    if (suppliers.length > 0) {
+      console.log("📦 Suppliers cargados:", suppliers);
+    } else {
+      console.log("📦 No hay suppliers cargados todavía");
+    }
+  }, [suppliers]);
+
 
   // PARA PRUEBA ------------------------------------------------------------------------------------------- 
   const categorias = useMemo(() => {
@@ -146,26 +158,25 @@ export default function ProveedoresPage() {
   // Elimina (soft delete) un proveedor
   async function handleDelete(id: number) {
     try {
-      const updated = await toggleProveedorStatus (id);
+      const updated = await toggleProveedorStatus(id); // si updated.estado es boolean
+      const estadoStr: "Activo" | "Inactivo" = updated.estado ? "Activo" : "Inactivo";
 
-      // refresca lista local: marca inactivo en vez de borrarlo
-      setSuppliers((prev) =>
-        prev.map((s) =>
-          s.id === id ? { ...s, estado: updated.estado } : s
-        )
+      setSuppliers(prev =>
+        prev.map(s => s.id === id ? { ...s, estado: estadoStr } : s)
       );
     } catch (e: any) {
-      console.error("Error eliminando proveedor:", e);
-      alert(e?.message ?? "No se pudo eliminar proveedor");
+      console.error("Error cambiando estado proveedor:", e);
+      alert(e?.message ?? "No se pudo cambiar el estado del proveedor");
     }
   }
+
 
 /*
   function handleToggleStatus(id: number) {
     // Mantengo el toggle local (no afecta la carga, y es rápido).
     setSuppliers((arr) => arr.map((x) => (x.id === id ? toggleStatus(x) : x)));
   }*/
-
+  /*
   async function handleDelete(id: number) {
     try {
       const updated = await toggleProveedorStatus(id); // ✅ pega a la API
@@ -176,7 +187,7 @@ export default function ProveedoresPage() {
       console.error("Error cambiando estado proveedor:", e);
       alert(e?.message ?? "No se pudo cambiar el estado del proveedor");
     }
-  }
+  }*/
 
 
   // Crear/Editar contra la API y refrescar desde servidor
