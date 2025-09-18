@@ -71,6 +71,7 @@ export async function getOrdenesCompra(params: GetOrdenesCompraParams) {
   return {
     data: data.map((oc) => ({
       id: oc.id,
+      proveedorId: oc.proveedorId,                    // <--- Si rompe algo borrar
       proveedor: oc.proveedor?.nombre || oc.proveedor?.razonSocial,
       depositoId: oc.depositoId,
       estado: oc.estado,
