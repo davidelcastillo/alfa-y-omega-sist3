@@ -5,6 +5,7 @@ type DetalleCPDTO = {
   productoId: number;
   cantidad: number;
   precioUnitario: number;
+  descuento?: number | null;
   observaciones?: string | null;
 };
 
@@ -81,7 +82,33 @@ export async function crearComprobanteProveedorConMovimiento(
     if (yaExiste)
       throw new Error("El comprobante ya existe para ese proveedor");
 
-    // 3) Crear ComprobanteProveedor + detalles
+    // 3) Validar que los items estén en la OC y cantidades positivas
+    const ocItems = await tx.detalleOrdenCompra.findMany({
+      where: { ordenCompraId: data.ordenCompraId },
+      select: { productoId: true, precioUnitario: true, cantidad: true },
+    });
+    const setOc = new Set(ocItems.map((i) => i.productoId));
+    for (const d of data.detalles) {
+      if (!setOc.has(d.productoId)) {
+        throw new Error(
+          `El producto ${d.productoId} no pertenece a la Orden de Compra`
+        );
+      }
+      if (d.cantidad <= 0) throw new Error("Cantidad inválida en detalle");
+    }
+
+    // 3.1) Calcular montos por renglón y totales
+    const detallesCalculados = data.detalles.map((d) => {
+      const desc = d.descuento ? d.descuento / 100 : 0;
+      const precioXCantidad = d.cantidad * d.precioUnitario * (1 - desc);
+      return { ...d, precioXCantidad };
+    });
+    const total = detallesCalculados.reduce(
+      (acc, d) => acc + d.precioXCantidad,
+      0
+    );
+
+    // 3.2) Crear ComprobanteProveedor con totales y renglones calculados
     const fecha = new Date(data.fecha);
     const cp = await tx.comprobanteProveedor.create({
       data: {
@@ -91,16 +118,19 @@ export async function crearComprobanteProveedorConMovimiento(
         fecha,
         hora: data.hora ?? null,
         letra: data.letra ?? null,
-        numeroSucursal: data.numeroSucursal ?? null,
+        numeroSucursal: data.numeroSucursal ?? "0001", // default simple
         numero: data.numero ?? null,
         metodoPagoId: data.metodoPagoId ?? null,
         observaciones: data.observaciones ?? null,
-        // total/saldo se podrían calcular luego; acá dejamos nulos si no se envían
+        total, // ← total del comprobante
+        saldo: total, // ← saldo inicial igual al total
         detalleComprobante: {
-          create: data.detalles.map((d) => ({
+          create: detallesCalculados.map((d) => ({
             productoId: d.productoId,
             cantidad: d.cantidad,
             precioUnitario: d.precioUnitario,
+            descuento: d.descuento ?? null,
+            precioXCantidad: d.precioXCantidad, // ← monto por ítem
             observaciones: d.observaciones ?? null,
           })),
         },
