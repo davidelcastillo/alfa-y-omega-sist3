@@ -51,13 +51,9 @@ export function filterSuppliers(
     const nameBlob = normalize(
       (s.razonSocial || "") +
       " " +
-      (s.nombre || "") +
+      (s.nombreCompleto || "") +
       " " +
-      (s.nombreComercial || "") +
-      " " +
-      (s.nombreComercial || "") +
-      " " +
-      (s.nombre || "")
+      (s.nombreFantasia || "")
     );
 
     // blob de búsqueda por código
@@ -69,11 +65,9 @@ export function filterSuppliers(
     // Filtro por código
     const okCode = !codeQuery || codeBlob.includes(codeQuery);
 
-    // Filtro por estado (Activo / Inactivo)
+    // ✅ Filtro por estado (Activo / Inactivo → ahora string, no boolean)
     const okStatus =
-      !filters.status ||
-      (filters.status === "Activo" && s.estado === true) ||
-      (filters.status === "Inactivo" && s.estado === false);
+      !filters.status || s.estado === filters.status;
 
     // Filtro por categoría fiscal (comparación por id)
     const okCat =
@@ -84,13 +78,11 @@ export function filterSuppliers(
   });
 }
 
-
 /** Estadísticas básicas */
 export function computeStats(data: Supplier[]): Stats {
   const total = data.length;
-  const activos = data.filter((d) => d.estado === true).length;   // ahora boolean
-  const inactivos = data.filter((d) => d.estado === false).length;
-
+  const activos = data.filter((d) => d.estado === "Activo").length;
+  const inactivos = data.filter((d) => d.estado === "Inactivo").length;
   return { total, activos, inactivos };
 }
 
@@ -101,13 +93,13 @@ export function nextSupplierId(arr: Supplier[]): number {
 
 /** Alterna estado activo/inactivo de un supplier */
 export function toggleStatus(s: Supplier): Supplier {
-  const next = !s.estado; 
-  return { ...s, estado: next };
+  const nextEstado: "Activo" | "Inactivo" =
+    s.estado === "Activo" ? "Inactivo" : "Activo";
+  return { ...s, estado: nextEstado };
 }
-
 /** Ordena por fechaRegistro desc (YYYY-MM-DD) */
 export function sortByFechaRegistroDesc(list: Supplier[]): Supplier[] {
-  return [...list].sort((a, b) => (a.fechaRegistro < b.fechaRegistro ? 1 : -1));
+  return [...list].sort((a, b) => (a.fechaRegistro! < b.fechaRegistro! ? 1 : -1));
 }
 
 /** Mini base CP -> ubicación (demo) */
@@ -133,4 +125,14 @@ export function fillFromPostalCode(
   const hit = POSTAL_CODE_DB[codigoPostal];
   if (!hit) return {};
   return { provincia: hit.provincia, localidad: hit.localidad, zona: hit.zona };
+}
+
+// funcion para formatear el cuil
+export function formatCuil(cuil: string): string {
+  if (!cuil) return "";
+
+  const numbers = cuil.replace(/\D/g, "");
+  if (numbers.length !== 11) return cuil;
+
+  return `${numbers.slice(0, 2)}-${numbers.slice(2, 10)}-${numbers.slice(10, 11)}`;
 }

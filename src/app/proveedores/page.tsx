@@ -9,6 +9,9 @@ import ProveedoresTable from "@/components/proveedores/ProveedoresTable";
 import ProveedoresModal, { type SupplierForm } from "@/components/proveedores/ProveedoresModal";
 import Button from "@/components/ui/Button";
 import { Plus } from "lucide-react";
+import { toggleProveedorStatus  } from "@/lib/api";
+
+
 
 import {
   AlertDialog,
@@ -18,7 +21,7 @@ import {
 
 // Tipos y helpers (sin mocks)
 import type { Supplier, ProveedoresFiltersState } from "@/lib/proveedores/types";
-import { filterSuppliers, computeStats, toggleStatus } from "@/lib/proveedores/helpers";
+import { filterSuppliers, computeStats, toggleStatus, formatCuil } from "@/lib/proveedores/helpers";
 
 /* =========================
   Mapeos entre tipos
@@ -38,7 +41,7 @@ function supplierToForm(s: Supplier): SupplierForm {
     categoriaFiscal: s && (s as any).categoriaFiscal
       ? String((s as any).categoriaFiscal.id ?? "")
       : "",
-    cuitCuil: (s as any).cuitCuil ?? (s as any).cuil ?? "",
+    cuitCuil: s ? formatCuil((s as any).cuitCuil ?? (s as any).cuil ?? "") : "",
     pais: (s as any).pais ?? "Argentina",
     codigoPostal: (s as any).codigoPostal ?? "",
     provincia: (s as any).provincia ?? "",
@@ -86,6 +89,7 @@ export default function ProveedoresPage() {
     try {
       const res = await fetch("/api/proveedores?status=all", { cache: "no-store" });
       const data = await res.json();
+      console.log("📦 Proveedores desde API:", data.data);
       if (!res.ok) throw new Error(data?.error || "Error al cargar proveedores");
       setSuppliers(data.data || []);
     } catch (err) {
@@ -104,7 +108,18 @@ export default function ProveedoresPage() {
     status: "",
     category: "",
   });
-  // PARA PRUEBA -------------------------------------------------------------------------------------------
+
+
+  useEffect(() => {
+    if (suppliers.length > 0) {
+      console.log("📦 Suppliers cargados:", suppliers);
+    } else {
+      console.log("📦 No hay suppliers cargados todavía");
+    }
+  }, [suppliers]);
+
+
+  // PARA PRUEBA ------------------------------------------------------------------------------------------- 
   const categorias = useMemo(() => {
     const map = new Map<number, string>();
     suppliers.forEach((s) => {
@@ -140,14 +155,45 @@ export default function ProveedoresPage() {
     setOpenModal(true);
   }
 
+  // Elimina (soft delete) un proveedor
+  async function handleDelete(id: number) {
+    try {
+      const updated = await toggleProveedorStatus(id); // si updated.estado es boolean
+      const estadoStr: "Activo" | "Inactivo" = updated.estado ? "Activo" : "Inactivo";
+
+      setSuppliers(prev =>
+        prev.map(s => s.id === id ? { ...s, estado: estadoStr } : s)
+      );
+    } catch (e: any) {
+      console.error("Error cambiando estado proveedor:", e);
+      alert(e?.message ?? "No se pudo cambiar el estado del proveedor");
+    }
+  }
+
+
+/*
   function handleToggleStatus(id: number) {
     // Mantengo el toggle local (no afecta la carga, y es rápido).
     setSuppliers((arr) => arr.map((x) => (x.id === id ? toggleStatus(x) : x)));
-  }
+  }*/
+  /*
+  async function handleDelete(id: number) {
+    try {
+      const updated = await toggleProveedorStatus(id); // ✅ pega a la API
+      setSuppliers(prev =>
+        prev.map(s => s.id === id ? { ...s, estado: updated.estado } : s)
+      );
+    } catch (e: any) {
+      console.error("Error cambiando estado proveedor:", e);
+      alert(e?.message ?? "No se pudo cambiar el estado del proveedor");
+    }
+  }*/
+
 
   // Crear/Editar contra la API y refrescar desde servidor
   async function handleSubmit(payload: SupplierForm) {
     const isEdit = !!editing;
+    
 
     // Validaciones mínimas antes de llamar a la API
     const nombreBase =
@@ -268,8 +314,8 @@ export default function ProveedoresPage() {
       <ProveedoresTable
         data={filtered}
         onEdit={handleEdit}
-        onToggleStatus={handleToggleStatus}
-        pageSize={10}
+        onDelete={handleDelete}   // ---------------------------------------------------------------------- AGREGADO
+        pageSize={10} 
       />
 
       {/* Modal (create/edit) */}

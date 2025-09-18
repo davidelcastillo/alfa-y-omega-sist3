@@ -34,6 +34,7 @@ const querySchema = z.object({
   categoria_fiscal: z.string().optional(), // llega string, se castea a número en el servicio
   provincia: z.string().optional(),
   localidad: z.string().optional(),
+  pais: z.string().optional(), 
   sort: z.string().optional(), // ej: "nombre:desc"
   status: z.enum(['active','inactive','all']).optional(), // filtro por estado del proveedor
 });
