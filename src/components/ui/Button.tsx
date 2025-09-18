@@ -13,6 +13,7 @@ const buttonVariants = cva(
         primary: 'btn-primary text-white',
         ghost: 'text-gray-700 hover:bg-gray-100',
         outline: 'border-2 border-gray-300 hover:bg-gray-50',
+        azul: 'bg-gradient-to-r from-primary-blue to-dark-blue text-white'
       },
       size: {
         default: 'px-6 py-3',
