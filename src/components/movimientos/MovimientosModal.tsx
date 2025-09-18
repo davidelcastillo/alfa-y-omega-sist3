@@ -12,17 +12,20 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-import type {
-  Deposito,
-  ProductoLite,
-  MovimientoBasico,
-  TipoMovimiento,
-} from '@/lib/movimientos/productsData';
+// ---- Tipos locales (sin transferencias) ----
+export type MovimientoBasico = 'Ingreso' | 'Egreso';
+export type TipoMovimiento =
+  | 'Compra de inventario'
+  | 'Venta de inventario'
+  | 'Ajuste de stock'
+  | string;
+
+export type Deposito = { id: number; nombre: string };
+export type ProductoLite = { id: number; descripcion: string; codigo?: string };
 
 type ProductRow = { productoId: number; cantidad: number };
 type StockIndex = Record<number, Record<number, number>>;
 
-// Tipos de movimiento que vienen de la API
 type TipoMovimientoDTO = { id: number; nombre: string; saldo: boolean };
 
 export type MovimientoPayload = {
@@ -31,8 +34,6 @@ export type MovimientoPayload = {
   depositoId?: number;
   tipoMovimientoId?: number;
   numeroComprobante?: string;
-  depositoOrigenId?: number;
-  depositoDestinoId?: number;
   comprobanteId?: string;
   comentario?: string;
   productos: Array<{ productoId: number; cantidad: number }>;
@@ -50,8 +51,7 @@ type Props = {
   initial?: Partial<MovimientoPayload>;
 };
 
-const DEFAULT_TIPO_MOVIMIENTO: TipoMovimiento = 'Compra de inventario';
-
+// ---- Helpers ----
 function getStockDisponible(
   productoId: number,
   depositoId: number,
@@ -72,17 +72,25 @@ export default function MovimientosModal({
   tiposMovimiento,
 }: Props) {
   // ---- Estados ----
-  const [movimiento, setMovimiento] = useState<MovimientoBasico>('Ingreso');
-  const [tipoMovimiento, setTipoMovimiento] = useState<TipoMovimiento>(DEFAULT_TIPO_MOVIMIENTO);
-  const [tipoMovimientoId, setTipoMovimientoId] = useState<number>(0);
-  const [numero, setNumero] = useState('');
-  const [deposito, setDeposito] = useState<number>(0);
-  const [depositoOrigen, setDepositoOrigen] = useState<number>(0);
-  const [depositoDestino, setDepositoDestino] = useState<number>(0);
-  const [comprobanteId, setComprobanteId] = useState('');
-  const [comentario, setComentario] = useState('');
-  const [items, setItems] = useState<ProductRow[]>([{ productoId: 0, cantidad: 1 }]);
-  const [ajusteSigno, setAjusteSigno] = useState<'positivo' | 'negativo'>('positivo');
+  const [movimiento, setMovimiento] = useState<MovimientoBasico>(
+    (initial?.movimiento as MovimientoBasico) ?? 'Ingreso'
+  );
+  const [tipoMovimiento, setTipoMovimiento] = useState<TipoMovimiento>(
+    (initial?.tipoMovimiento as TipoMovimiento) ?? ''
+  );
+  const [tipoMovimientoId, setTipoMovimientoId] = useState<number>(initial?.tipoMovimientoId ?? 0);
+  const [numero, setNumero] = useState(initial?.numeroComprobante ?? '');
+  const [deposito, setDeposito] = useState<number>(initial?.depositoId ?? 0);
+  const [comprobanteId, setComprobanteId] = useState(initial?.comprobanteId ?? '');
+  const [comentario, setComentario] = useState(initial?.comentario ?? '');
+  const [items, setItems] = useState<ProductRow[]>(
+    initial?.productos?.length
+      ? initial.productos.map((p) => ({ productoId: p.productoId, cantidad: p.cantidad }))
+      : [{ productoId: 0, cantidad: 1 }]
+  );
+  const [ajusteSigno, setAjusteSigno] = useState<'positivo' | 'negativo'>(
+    (initial?.ajusteSigno as 'positivo' | 'negativo') ?? 'positivo'
+  );
 
   // ---- Opciones para selects ----
   const depOptions = useMemo(
@@ -104,18 +112,15 @@ export default function MovimientosModal({
     [productosDisponibles]
   );
 
-  const isTransfer = tipoMovimiento === 'Transferencia entre depósitos';
   const isAjuste = tipoMovimiento === 'Ajuste de stock';
 
-  // ---- Helpers ----
+  // ---- Helpers de formulario ----
   const resetForm = () => {
-    setMovimiento(initial?.movimiento ?? 'Ingreso');
-    setTipoMovimiento(initial?.tipoMovimiento ?? DEFAULT_TIPO_MOVIMIENTO);
+    setMovimiento((initial?.movimiento as MovimientoBasico) ?? 'Ingreso');
+    setTipoMovimiento((initial?.tipoMovimiento as TipoMovimiento) ?? '');
     setTipoMovimientoId(initial?.tipoMovimientoId ?? 0);
-    setNumero('');
+    setNumero(initial?.numeroComprobante ?? '');
     setDeposito(initial?.depositoId ?? 0);
-    setDepositoOrigen(initial?.depositoOrigenId ?? 0);
-    setDepositoDestino(initial?.depositoDestinoId ?? 0);
     setComprobanteId(initial?.comprobanteId ?? '');
     setComentario(initial?.comentario ?? '');
     setItems(
@@ -126,7 +131,7 @@ export default function MovimientosModal({
           }))
         : [{ productoId: 0, cantidad: 1 }]
     );
-    setAjusteSigno(initial?.ajusteSigno ?? 'positivo');
+    setAjusteSigno((initial?.ajusteSigno as 'positivo' | 'negativo') ?? 'positivo');
   };
 
   const canSubmit = () => {
@@ -135,9 +140,6 @@ export default function MovimientosModal({
       items.every((it) => Number(it.productoId) > 0 && Number(it.cantidad) > 0);
     if (!hasProducts) return false;
 
-    if (isTransfer) {
-      return depositoOrigen > 0 && depositoDestino > 0 && depositoOrigen !== depositoDestino;
-    }
     return deposito > 0 && tipoMovimientoId > 0;
   };
 
@@ -151,26 +153,26 @@ export default function MovimientosModal({
   const handleSubmit = () => {
     if (!canSubmit()) return;
 
-    // Obtener el tipo de movimiento seleccionado para determinar si es ingreso/egreso
-    const tipoSeleccionado = tiposMovimiento.find(t => t.id === tipoMovimientoId);
+    // Determinar ingreso/egreso por el tipo seleccionado (saldo=true => suma)
+    const tipoSeleccionado = tiposMovimiento.find((t) => t.id === tipoMovimientoId);
     const esIngreso = tipoSeleccionado?.saldo ?? true;
 
     const payload: MovimientoPayload = {
       movimiento: esIngreso ? 'Ingreso' : 'Egreso',
       tipoMovimiento,
-      depositoId: isTransfer ? undefined : Number(deposito),
+      depositoId: Number(deposito),
       tipoMovimientoId: Number(tipoMovimientoId),
       numeroComprobante: numero || undefined,
-      depositoOrigenId: isTransfer ? Number(depositoOrigen) : undefined,
-      depositoDestinoId: isTransfer ? Number(depositoDestino) : undefined,
       comprobanteId: comprobanteId || undefined,
       comentario: comentario || undefined,
-      productos: items.map((it) => ({
-        productoId: Number(it.productoId),
-        cantidad: isAjuste && ajusteSigno === 'negativo'
-          ? -Math.abs(Number(it.cantidad))
-          : Math.abs(Number(it.cantidad)),
-      })),
+      productos: items.map((it) => {
+        const cantidadAbs = Math.abs(Number(it.cantidad) || 0);
+        const qty =
+          isAjuste
+            ? (ajusteSigno === 'negativo' ? -cantidadAbs : cantidadAbs)
+            : (esIngreso ? cantidadAbs : -cantidadAbs);
+        return { productoId: Number(it.productoId), cantidad: qty };
+      }),
       ajusteSigno: isAjuste ? ajusteSigno : undefined,
     };
 
@@ -189,7 +191,7 @@ export default function MovimientosModal({
     return () => window.removeEventListener('keydown', onEsc);
   }, [isOpen, onClose]);
 
-  // Sincronizar el nombre del tipo cuando cambia el ID seleccionado
+  // Sincroniza nombre/ingreso-egreso cuando cambia el ID de tipo seleccionado
   useEffect(() => {
     if (!tipoMovimientoId) return;
     const tm = tiposMovimiento.find((t) => t.id === tipoMovimientoId);
@@ -205,7 +207,7 @@ export default function MovimientosModal({
       <AlertDialogContent
         className="
           glass-effect
-          p-0 overflow-hidden  
+          p-0 overflow-hidden
           w-full max-w-3xl md:max-w-5xl
           h-[85vh]
         "
@@ -259,9 +261,13 @@ export default function MovimientosModal({
           {tipoMovimientoId > 0 && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="flex items-center gap-3">
-                <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  movimiento === 'Ingreso' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                }`}>
+                <div
+                  className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    movimiento === 'Ingreso'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-red-100 text-red-800'
+                  }`}
+                >
                   {movimiento}
                 </div>
                 <span className="text-gray-700">{tipoMovimiento}</span>
@@ -269,52 +275,20 @@ export default function MovimientosModal({
             </div>
           )}
 
-          {/* Depósitos */}
-          {!isTransfer ? (
-            <Select
-              label="Depósito *"
-              value={String(deposito || 0)}
-              onChange={(e) => setDeposito(Number(e.target.value) || 0)}
-              className="input-focus"
-            >
-              <option value="0" disabled>Seleccionar depósito</option>
-              {depOptions.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.nombre}
-                </option>
-              ))}
-            </Select>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Select
-                label="Depósito Origen *"
-                value={String(depositoOrigen || 0)}
-                onChange={(e) => setDepositoOrigen(Number(e.target.value) || 0)}
-                className="input-focus"
-              >
-                <option value="0" disabled>Seleccionar origen</option>
-                {depOptions.map((d) => (
-                  <option key={d.id} value={d.id} disabled={d.id === depositoDestino}>
-                    {d.nombre}
-                  </option>
-                ))}
-              </Select>
-
-              <Select
-                label="Depósito Destino *"
-                value={String(depositoDestino || 0)}
-                onChange={(e) => setDepositoDestino(Number(e.target.value) || 0)}
-                className="input-focus"
-              >
-                <option value="0" disabled>Seleccionar destino</option>
-                {depOptions.map((d) => (
-                  <option key={d.id} value={d.id} disabled={d.id === depositoOrigen}>
-                    {d.nombre}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          )}
+          {/* Depósito único */}
+          <Select
+            label="Depósito *"
+            value={String(deposito || 0)}
+            onChange={(e) => setDeposito(Number(e.target.value) || 0)}
+            className="input-focus"
+          >
+            <option value="0" disabled>Seleccionar depósito</option>
+            {depOptions.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.nombre}
+              </option>
+            ))}
+          </Select>
 
           {/* Comentario */}
           <Input
@@ -347,19 +321,22 @@ export default function MovimientosModal({
             <h4 className="text-md font-semibold text-gray-800 mb-4">Productos *</h4>
             <div className="space-y-3">
               {items.map((row, idx) => {
-                const depositoEfectivo = isTransfer ? depositoDestino : deposito;
-                const stockActual = row.productoId && depositoEfectivo
-                  ? getStockDisponible(row.productoId, depositoEfectivo, stockIndex)
-                  : 0;
+                const stockActual =
+                  row.productoId && deposito
+                    ? getStockDisponible(row.productoId, deposito, stockIndex)
+                    : 0;
 
-                // Calcular stock resultante
-                const tm = tiposMovimiento.find(t => t.id === tipoMovimientoId);
+                const tm = tiposMovimiento.find((t) => t.id === tipoMovimientoId);
                 const esIngreso = tm?.saldo ?? true;
                 const cantidadNum = Number(row.cantidad) || 0;
 
                 const signedQty = isAjuste
-                  ? (ajusteSigno === 'negativo' ? -Math.abs(cantidadNum) : Math.abs(cantidadNum))
-                  : (esIngreso ? +Math.abs(cantidadNum) : -Math.abs(cantidadNum));
+                  ? ajusteSigno === 'negativo'
+                    ? -Math.abs(cantidadNum)
+                    : Math.abs(cantidadNum)
+                  : esIngreso
+                  ? +Math.abs(cantidadNum)
+                  : -Math.abs(cantidadNum);
 
                 const resultante = stockActual + signedQty;
                 const stockInsuficiente = resultante < 0;
@@ -396,28 +373,32 @@ export default function MovimientosModal({
                           <div className="text-gray-500 font-medium">Stock actual</div>
                           <div className="font-semibold text-dark-blue">{stockActual}</div>
                         </div>
-                        <div className={`rounded-lg px-3 py-2 ${
-                          stockInsuficiente 
-                            ? 'bg-red-50 border border-red-200' 
-                            : 'bg-emerald-50 border border-emerald-200'
-                        }`}>
-                          <div className={`font-medium ${
-                            stockInsuficiente ? 'text-red-700' : 'text-emerald-700'
-                          }`}>
+                        <div
+                          className={`rounded-lg px-3 py-2 ${
+                            stockInsuficiente
+                              ? 'bg-red-50 border border-red-200'
+                              : 'bg-emerald-50 border border-emerald-200'
+                          }`}
+                        >
+                          <div
+                            className={`font-medium ${
+                              stockInsuficiente ? 'text-red-700' : 'text-emerald-700'
+                            }`}
+                          >
                             Stock resultante
                           </div>
-                          <div className={`font-semibold ${
-                            stockInsuficiente ? 'text-red-700' : 'text-emerald-700'
-                          }`}>
+                          <div
+                            className={`font-semibold ${
+                              stockInsuficiente ? 'text-red-700' : 'text-emerald-700'
+                            }`}
+                          >
                             {resultante}
                           </div>
                         </div>
                       </div>
 
                       {stockInsuficiente && (
-                        <div className="mt-1 text-xs text-red-600">
-                          ⚠️ Stock insuficiente
-                        </div>
+                        <div className="mt-1 text-xs text-red-600">⚠️ Stock insuficiente</div>
                       )}
                     </div>
 
