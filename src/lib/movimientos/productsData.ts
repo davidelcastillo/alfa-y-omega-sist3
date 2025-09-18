@@ -1,9 +1,14 @@
 // src/lib/productsData.ts
 export type MovimientoBasico = 'Ingreso' | 'Egreso';
 export type TipoMovimiento =
-  | 'Transferencia entre depósitos'
-  | 'Compra de inventario'
-  | 'Venta de inventario'
+  | 'Egreso por Ajuste'
+  | 'Egreso por Obsolencia'
+  | 'Egreso por Traspaso'
+  | 'Egreso por Venta'
+  | 'Ingreso por Ajuste'
+  | 'Ingreso por Compra'
+  | 'Ingreso por Devolución'
+  | 'Ingreso por Traspaso'
   | 'Ajuste de stock';
 
 export type Deposito = { id: number; nombre: string; ubicacion?: string };
@@ -12,6 +17,7 @@ export type ProductoLite = { id: number; codigo: string; descripcion: string };
 export type Movimiento = {
   id: number;
   fechaISO: string; // YYYY-MM-DD
+  hora?: string; // HH:MM
   deposito?: Deposito; // para ingreso/ajuste/venta/compra
   depositoOrigen?: Deposito; // para transferencias
   depositoDestino?: Deposito; // para transferencias
@@ -27,7 +33,6 @@ export const depositosMock: Deposito[] = [
   { id: 2, nombre: 'Depósito Norte', ubicacion: 'B° Norte' },
   { id: 3, nombre: 'Depósito Sur', ubicacion: 'B° Sur' },
   { id: 4, nombre: 'Mock', ubicacion: 'B° Sur' },
-
 ];
 
 export const productosLiteMock: ProductoLite[] = [
@@ -42,7 +47,7 @@ export const movimientosMock: Movimiento[] = [
     fechaISO: '2025-09-10',
     deposito: depositosMock[0],
     movimiento: 'Ingreso',
-    tipoMovimiento: 'Compra de inventario',
+    tipoMovimiento: 'Ingreso por Compra', // Cambiado
     comprobanteId: 'F-000123',
     comentario: 'Proveedor ACME',
     productos: [
@@ -55,8 +60,8 @@ export const movimientosMock: Movimiento[] = [
     fechaISO: '2025-09-11',
     depositoOrigen: depositosMock[0],
     depositoDestino: depositosMock[2],
-    movimiento: 'Egreso',
-    tipoMovimiento: 'Transferencia entre depósitos',
+    movimiento: 'Egreso', // Sigue siendo 'Egreso' porque es un Egreso del Origen
+    tipoMovimiento: 'Egreso por Traspaso', // Cambiado
     comprobanteId: 'TR-000045',
     comentario: 'Urgente para obra',
     productos: [{ producto: productosLiteMock[1], cantidad: 50 }],
@@ -66,7 +71,7 @@ export const movimientosMock: Movimiento[] = [
     fechaISO: '2025-09-12',
     deposito: depositosMock[1],
     movimiento: 'Egreso',
-    tipoMovimiento: 'Venta de inventario',
+    tipoMovimiento: 'Egreso por Venta', // Cambiado
     comprobanteId: 'V-000778',
     productos: [{ producto: productosLiteMock[0], cantidad: 10 }],
   },

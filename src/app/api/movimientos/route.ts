@@ -127,8 +127,11 @@ export async function GET(req: Request) {
 
     const sql = `
       SELECT
+        ms.id                       AS mov_id,               --por si se necesita
         dm.id                       AS detalle_id,
         ms.fecha                    AS fecha,
+        ms."numeroComprobante"      AS "numeroComprobante",
+        ms."Comentario"             AS "comentario",
         d.nombre                    AS deposito,
         tm.nombre                   AS tipo_movimiento,
         tm."saldo"                  AS es_ingreso,
