@@ -40,6 +40,7 @@ const Td: FC<React.TdHTMLAttributes<HTMLTableCellElement>> = ({
 );
 
 const MovimientosTable: FC<Props> = ({ data, onViewDetail, onNew }) => {
+  
   return (
     <div className="glass-effect rounded-2xl overflow-hidden card-hover">
       {/* Header / CTA */}
@@ -54,7 +55,7 @@ const MovimientosTable: FC<Props> = ({ data, onViewDetail, onNew }) => {
             <tr>
               <Th>ID</Th>
               <Th>Registro</Th>
-              <Th>N° Remito</Th>
+              <Th>N° Comprobante</Th>
               <Th>Depósito</Th>
               <Th>Movimiento</Th>
               <Th>Tipo de Movimiento</Th>
@@ -85,7 +86,7 @@ const MovimientosTable: FC<Props> = ({ data, onViewDetail, onNew }) => {
                     <Td className="font-semibold">{m.id}</Td>
                     {/* Registro */}
                     <Td>{m.fechaISO}</Td>
-                    {/* N° Remito */}
+                    {/* N° Comprobante */}
                     <Td className="font-mono">{m.comprobanteId ?? '-'}</Td>
                     {/* Depósito */}
                     {/* Lógica simplificada: muestra solo el depósito principal del movimiento */}
