@@ -9,6 +9,8 @@ import ProveedoresTable from "@/components/proveedores/ProveedoresTable";
 import ProveedoresModal, { type SupplierForm } from "@/components/proveedores/ProveedoresModal";
 import Button from "@/components/ui/Button";
 import { Plus } from "lucide-react";
+import { toggleProveedorStatus  } from "@/lib/api";
+
 
 import {
   AlertDialog,
@@ -104,7 +106,8 @@ export default function ProveedoresPage() {
     status: "",
     category: "",
   });
-  // PARA PRUEBA -------------------------------------------------------------------------------------------
+
+  // PARA PRUEBA ------------------------------------------------------------------------------------------- 
   const categorias = useMemo(() => {
     const map = new Map<number, string>();
     suppliers.forEach((s) => {
@@ -140,14 +143,46 @@ export default function ProveedoresPage() {
     setOpenModal(true);
   }
 
+  // Elimina (soft delete) un proveedor
+  async function handleDelete(id: number) {
+    try {
+      const updated = await toggleProveedorStatus (id);
+
+      // refresca lista local: marca inactivo en vez de borrarlo
+      setSuppliers((prev) =>
+        prev.map((s) =>
+          s.id === id ? { ...s, estado: updated.estado } : s
+        )
+      );
+    } catch (e: any) {
+      console.error("Error eliminando proveedor:", e);
+      alert(e?.message ?? "No se pudo eliminar proveedor");
+    }
+  }
+
+/*
   function handleToggleStatus(id: number) {
     // Mantengo el toggle local (no afecta la carga, y es rápido).
     setSuppliers((arr) => arr.map((x) => (x.id === id ? toggleStatus(x) : x)));
+  }*/
+
+  async function handleDelete(id: number) {
+    try {
+      const updated = await toggleProveedorStatus(id); // ✅ pega a la API
+      setSuppliers(prev =>
+        prev.map(s => s.id === id ? { ...s, estado: updated.estado } : s)
+      );
+    } catch (e: any) {
+      console.error("Error cambiando estado proveedor:", e);
+      alert(e?.message ?? "No se pudo cambiar el estado del proveedor");
+    }
   }
+
 
   // Crear/Editar contra la API y refrescar desde servidor
   async function handleSubmit(payload: SupplierForm) {
     const isEdit = !!editing;
+    
 
     // Validaciones mínimas antes de llamar a la API
     const nombreBase =
@@ -268,8 +303,8 @@ export default function ProveedoresPage() {
       <ProveedoresTable
         data={filtered}
         onEdit={handleEdit}
-        onToggleStatus={handleToggleStatus}
-        pageSize={10}
+        onDelete={handleDelete}   // ---------------------------------------------------------------------- AGREGADO
+        pageSize={10} 
       />
 
       {/* Modal (create/edit) */}

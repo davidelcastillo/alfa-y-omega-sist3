@@ -19,7 +19,7 @@ export async function PATCH(_req: Request, ctx: { params: Promise<{ id: string }
     }
 
     // Idempotente: si ya está inactivo, devolvemos 200 igualmente
-    if (existente.estado === false) {
+   /* if (existente.estado === false) {
       const data = await prisma.proveedores.findUnique({
         where: { id: provId },
         select: {
@@ -30,10 +30,10 @@ export async function PATCH(_req: Request, ctx: { params: Promise<{ id: string }
       });
       return NextResponse.json({ ok: true, data, meta: { updated: false, reason: 'already_inactive' } });
     }
-
+*/
     const actualizado = await prisma.proveedores.update({
       where: { id: provId },
-      data: { estado: false },
+      data: { estado: !existente.estado }, // CAMBIO FALSE POR !existente.estado
       select: {
         id: true, nombre: true, razonSocial: true, nombreComercial: true,
         cuil: true, provincia: true, localidad: true,

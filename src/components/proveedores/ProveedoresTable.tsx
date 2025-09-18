@@ -11,14 +11,14 @@ import { Trash2 } from 'lucide-react'
 type Props = {
   data: Supplier[];
   onEdit: (id: number) => void;
-  onToggleStatus: (id: number) => void;
+  onDelete?: (id: number) => void; 
   pageSize?: number;
 };
 
 export default function ProveedoresTable({
   data,
   onEdit,
-  onToggleStatus,
+  onDelete,
   pageSize = 10,
 }: Props) {
   const [page, setPage] = useState(1);
@@ -123,7 +123,11 @@ export default function ProveedoresTable({
                   <td className="px-6 py-4">
                     <div className="text-sm font-semibold text-gray-900">
                       {/* 🔹 CAMBIO: ahora el backend devuelve categoriaFiscalId (número) o categoriaFiscal?.nombre */}
-                      {s.categoriaFiscal?.nombre ?? s.categoriaFiscalId ?? "-"}
+                      {s.categoriaFiscal?.nombre 
+                      ? s.categoriaFiscal.nombre
+                      : s.categoriaFiscalId  
+                      ? String(s.categoriaFiscalId)
+                      : "-"}
                     </div>
                   </td>
 
@@ -136,7 +140,7 @@ export default function ProveedoresTable({
                   <td className="px-6 py-4">
                     {/* 🔹 CAMBIO: combinamos localidad + provincia dinámicamente y mostramos país si existe */}
                     <div className="text-sm text-gray-700">
-                      {[s.localidad, s.provincia].filter(Boolean).join(", ")}
+                      {[s.localidad, s.provincia].filter(Boolean).join(", ") || "—"}
                     </div>
                     <div className="text-xs text-gray-500">{s.pais || ""}</div>
                   </td>
@@ -155,30 +159,30 @@ export default function ProveedoresTable({
                         title="Editar"
                         aria-label={`Editar ${displayName || s.codigo}`}
                       >
-                        <SquarePen className="w-6 h-6" aria-hidden />
+                        <SquarePen className="w-6 h-6 cursor-pointer" aria-hidden />
                       </Button>
 
                       <Button
                         variant="ghost"
-                        onClick={() => onToggleStatus(s.id)}
-                        // 🔹 CAMBIO: ahora usamos estadoLabel (Activo/Inactivo) en vez de comparar string
+                        onClick={() => onDelete?.(s.id)}   // cambio, usamos onDelete
                         title={estadoLabel === "Activo" ? "Desactivar" : "Activar"}
-                        aria-label={`${estadoLabel === "Activo" ? "Desactivar" : "Activar"} ${
+                        aria-label={`${estadoLabel === "Activo" ? "Eliminar" : "Inactivo"} ${
                           displayName || s.codigo
                         }`}
                         className={
                           estadoLabel === "Activo"
-                            ? "text-red-600 hover:bg-red-50"
-                            : "text-green-600 hover:bg-white-50"
+                            ? "text-red-600 hover:bg-red-50 cursor-pointer"
+                            : "text-gray-400 cursor-pointer"
                         }
                       >
-                        {estadoLabel === "Activo" ? (
-                          <Trash2 className="w-6 h-6" aria-hidden />
-                        ) : ( //esto es lo que hizo gaston del icono desactivado
-                          <Trash2 className="w-6 h-6 text-gray-400" aria-hidden />
-                          
-                        )}
+                        <Trash2
+                          className={`w-6 h-6 ${
+                              estadoLabel === "Activo" ? "" : "text-gray-400"
+                            }`}
+                            aria-hidden 
+                        />
                       </Button>
+
                     </div>
                   </td>
                 </tr>

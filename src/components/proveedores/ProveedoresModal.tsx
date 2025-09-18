@@ -133,6 +133,7 @@ export default function ProveedoresModal({
 
   useEffect(() => {
     if (open) {
+      console.log("👉 Modal abierto con initialData:", initialData);
       setStep(1);
       setForm((prev) => ({
         ...prev,
