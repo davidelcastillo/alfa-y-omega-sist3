@@ -25,3 +25,18 @@ export async function softDeleteDeposito(id: number) {
     estado: boolean 
   }
 }
+
+// PARA PROVEEDORES ---------------------------------------------
+// DELETE
+// /lib/api.ts
+export async function toggleProveedorStatus(id: number) {
+  const res = await fetch(`/api/proveedores/${id}/baja`, { method: "PATCH" })
+  const json = await res.json()
+  if (!res.ok) {
+    throw new Error(json?.error ?? "Error al cambiar estado del proveedor")
+  }
+  return json.data as { 
+    id: number; 
+    estado: boolean 
+  }
+}
