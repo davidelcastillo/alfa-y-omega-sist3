@@ -57,6 +57,7 @@ model Deposito {
   provincia   String?
   movimientos MovimientoStock[]
   stock       StockPorDeposito[]
+  comprobantes ComprobanteProveedor[]
 }
 
 model StockPorDeposito {
@@ -115,9 +116,11 @@ model ComprobanteProveedor {
   id                 Int                           @id @default(autoincrement())
   ordenCompraId      Int
   proveedorId        Int
+  depositoId         Int
   letra              String?
   numeroSucursal     String?
   numero             String?
+  moneda             String?
   tipoComprobanteId  Int
   fecha              DateTime
   hora               String?
@@ -131,7 +134,9 @@ model ComprobanteProveedor {
   ordenCompra        OrdenCompra                   @relation(fields: [ordenCompraId], references: [id])
   proveedor          Proveedores                   @relation(fields: [proveedorId], references: [id])
   tipoComprobante    TipoComprobante               @relation(fields: [tipoComprobanteId], references: [id])
+  deposito           Deposito                      @relation(fields: [depositoId], references: [id])
   detalleComprobante DetalleComprobanteProveedor[]
+  ordenPagos        OrdenPago[]
 }
 
 model DetalleComprobanteProveedor {
@@ -195,6 +200,7 @@ model Proveedores {
   estado            Boolean                @default(true)
   comprobantes      ComprobanteProveedor[]
   ordenesCompra     OrdenCompra[]
+  ordenesPago       OrdenPago[]
   categoriaFiscal   CategoriaFiscal?       @relation(fields: [categoriaFiscalId], references: [id])
 }
 
@@ -202,6 +208,7 @@ model MetodoPago {
   id           Int                    @id @default(autoincrement())
   nombre       String
   comprobantes ComprobanteProveedor[]
+  ordenesPago  OrdenPago[]
 }
 
 model CategoriaFiscal {
@@ -209,3 +216,22 @@ model CategoriaFiscal {
   nombre      String
   proveedores Proveedores[]
 }
+
+model OrdenPago {
+  id              Int      @id @default(autoincrement())
+  proveedorId     Int
+  comprobanteId   Int
+  fecha           DateTime @default(now())
+  nroInterno      String?
+  montoPagado     Float
+  metodoPagoId    Int
+  observaciones   String?
+  estado          Boolean  @default(true)
+
+  proveedor       Proveedores         @relation(fields: [proveedorId], references: [id])
+  comprobante     ComprobanteProveedor @relation(fields: [comprobanteId], references: [id])
+  metodoPago      MetodoPago          @relation(fields: [metodoPagoId], references: [id])
+}
+
+
+

@@ -69,6 +69,7 @@ CREATE TABLE "public"."MovimientoStock" (
     "tipoMovimientoId" INTEGER NOT NULL,
     "tipoComprobanteId" INTEGER NOT NULL,
     "numeroComprobante" TEXT,
+    "comentario" TEXT,
     "fecha" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "hora" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 

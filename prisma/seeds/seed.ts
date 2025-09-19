@@ -98,6 +98,56 @@ async function main() {
     productos.push(await prisma.producto.create({ data: prod }));
   }
 
+
+    const tipoComprobanteData = [
+      "Factura",
+      "Recibo",
+      "Nota de Crédito",
+      "Nota de Débito",
+      "Remito",
+  ];
+
+  const tipoComprobante = [];
+  for (const nombre of tipoComprobanteData) {
+    tipoComprobante.push(await prisma.tipoComprobante.create({ data: { nombre } }));
+  }
+
+  const MovimientoData = [
+    {
+      nombre: "Ingreso por compra",
+      saldo: true,
+    },
+    {
+       nombre: "Egreso por Ajuste",
+      saldo: false,
+    },
+    {
+      nombre: "Ingreso por Traspaso",
+      saldo: true,
+    },
+    {
+      nombre: "Egreso por Traspasoo",
+      saldo: false,
+    },
+    {
+      nombre: "Ingreso por Ajuste",
+      saldo: true,
+    },
+    {
+      nombre: "Egreso por Venta",
+      saldo: false,
+    },
+    {
+      nombre: "Ingreso por Devolución",
+      saldo: true,
+    },
+  ];
+
+  const TipoMovimiento = [];
+  for (const mov of MovimientoData) {
+    TipoMovimiento.push(await prisma.tipoMovimiento.create({ data: mov }));
+  }
+  
   // ---- STOCK POR DEPOSITO ----
   for (const producto of productos) {
     for (const deposito of depositos) {
@@ -114,6 +164,23 @@ async function main() {
     }
   }
 
+  // ---- MOVIMIENTO STOCK  ----
+  await prisma.movimientoStock.create({
+    data: {
+      fecha: new Date(),
+      depositoId: depositos[0].id,
+      tipoMovimientoId: 1,
+      tipoComprobanteId: 1,
+      comentario: "Orden generada automáticamente",
+      detalles : {
+        create: productos.map(p => ({
+          productoId: p.id,
+          cantidad: 5,
+        })),
+      },
+    },
+  });
+
   // ---- METODOS DE PAGO ----
   const metodosPagoData = ["Efectivo", "Transferencia", "Tarjeta Crédito"];
   const metodosPago = [];
@@ -122,6 +189,19 @@ async function main() {
   }
 
   // ---- PROVEEDORES ----
+  const categoriaFiscalData = [
+      "Responsable Inscripto",
+      "Exterior",
+      "Exento",
+      "Consumidor final",
+      "Monotributista",
+  ];
+
+  const CategoriaFiscal = [];
+  for (const nombre of categoriaFiscalData) {
+    CategoriaFiscal.push(await prisma.categoriaFiscal.create({ data: { nombre } }));
+  }
+
   const proveedor = await prisma.proveedores.create({
     data: {
       nombre: "Proveedor Ejemplo",
@@ -131,6 +211,8 @@ async function main() {
       pais: "Argentina",
       provincia: "Salta",
       localidad: "Salta",
+      categoriaFiscalId: CategoriaFiscal[0].id,
+      cuil: "30-12345678-9",
     },
   });
 
@@ -156,19 +238,27 @@ async function main() {
   });
 
   // ---- COMPROBANTE PROVEEDOR ----
-  const tipoComprobante = await prisma.tipoComprobante.create({ data: { nombre: "Factura A" } });
+  
 
   await prisma.comprobanteProveedor.create({
     data: {
-      ordenCompraId: ordenCompra.id,
-      proveedorId: proveedor.id,
-      tipoComprobanteId: tipoComprobante.id,
-      fecha: new Date(),
-      total: 10500,
-      saldo: 10500,
-      observaciones: "Comprobante generado automáticamente",
-      metodoPagoId: metodosPago[0].id,
-      detalleComprobante: {
+      ordenCompraId : ordenCompra.id,
+      proveedorId        : proveedor.id,
+      depositoId         : depositos[0].id,
+      letra              : "A",
+      numeroSucursal     : "001",
+      numero             : "0001",
+      moneda             : "ARS",
+      tipoComprobanteId  : tipoComprobante[0].id,
+      fecha              : new Date(),
+      hora               : "10:00",
+      total              : 10500,
+      saldo              : 10500,
+      metodoPagoId       : metodosPago[0].id,
+      estado             : true,
+      observaciones      : "Comprobante generado automáticamente",
+      tipoMovimientoId   : 1,
+      detalleComprobante  : {
         create: productos.map(p => ({
           productoId: p.id,
           cantidad: 5,
