@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -21,7 +20,7 @@ export default function ComprasFilters({ initial, proveedores, depositos, onSear
     fechaHasta: initial?.fechaHasta ?? "",
     numeroCP: initial?.numeroCP ?? "",
     proveedorId: initial?.proveedorId ?? "",
-    deposito: initial?.deposito ?? "",
+    depositoId: initial?.depositoId ?? "",
   });
 
   function update<K extends keyof ComprobanteFiltersState>(k: K, v: ComprobanteFiltersState[K]) {
@@ -29,7 +28,7 @@ export default function ComprasFilters({ initial, proveedores, depositos, onSear
   }
 
   function handleClear() {
-    const reset = { fechaDesde: "", fechaHasta: "", numeroCP: "", proveedorId: "", deposito: "" };
+    const reset = { fechaDesde: "", fechaHasta: "", numeroCP: "", proveedorId: "", depositoId: "" };
     setFilters(reset);
     onClear?.();
   }
@@ -69,8 +68,8 @@ export default function ComprasFilters({ initial, proveedores, depositos, onSear
         </Select>
         <Select
           label="Depósito"
-          value={filters.deposito ?? ""}
-          onChange={(e) => update("deposito", e.target.value)}
+          value={filters.depositoId ?? ""}
+          onChange={(e) => update("depositoId", e.target.value)}
         >
           <option value="">Todos</option>
           {depositos.map((d) => (
@@ -81,7 +80,7 @@ export default function ComprasFilters({ initial, proveedores, depositos, onSear
 
       <div className="flex justify-between items-center mt-6">
         <Button variant="outline" onClick={handleClear}>Limpiar Filtros</Button>
-        <Button variant="azul"  onClick={() => onSearch(filters)}>Buscar Órdenes</Button>
+        <Button variant="azul" onClick={() => onSearch(filters)}>Buscar Órdenes</Button>
       </div>
     </div>
   );

@@ -135,20 +135,50 @@ export default function ComprasModal({
     setItems((arr) => arr.filter((x) => x.id !== id));
   }
 
-  function submit() {
-    if (!proveedorId || !depositoId || !fecha || items.length === 0 || !tipoMovimientoId || !tipoComprobanteId || !metodoPagoId || !ordenCompraId) return;
-    onSubmit({
-      proveedorId,
-      depositoId,
-      fecha,
-      items,
-      totalCantidad,
-      totalMonto,
-      tipoMovimientoId,
-      tipoComprobanteId,
-      metodoPagoId,
-      ordenCompraId,
-    });
+  async function createComprobante() {
+    if (!proveedorId || !depositoId || !fecha || !tipoComprobanteId || !metodoPagoId || !ordenCompraId || items.length === 0) {
+      alert("Completar todos los campos obligatorios y agregar al menos un producto");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/comprobantes-proveedor/nuevo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          proveedorId: Number(proveedorId),
+          depositoId: Number(depositoId),
+          fecha,
+          tipoComprobanteId: Number(tipoComprobanteId),
+          metodoPagoId: Number(metodoPagoId),
+          ordenCompraId: Number(ordenCompraId),
+          tipoMovimientoId: Number(tipoMovimientoId),
+          letra: letra || null,
+          numeroSucursal: numeroSucursal || null,
+          numero: numero || null,
+          moneda: moneda || null,
+          observaciones: observaciones || null,
+          detalles: items.map(i => ({
+            productoId: i.productId,
+            cantidad: i.quantity,
+            precioUnitario: i.unitPrice,
+            descuento: i.discount ?? 0,
+            observaciones: i.observations ?? "",
+          })),
+        }),
+      });
+
+      const data = await res.json();
+      if (data.ok) {
+        alert("Comprobante creado correctamente");
+        onOpenChange(false);
+      } else {
+        alert("Error: " + (data.error ?? "Desconocido"));
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error al conectar con el servidor");
+    }
   }
 
 return (
@@ -355,7 +385,7 @@ return (
             variant="primary"
             className="btn-primary"
             disabled={!proveedorId || !depositoId || !fecha || items.length === 0}
-            onClick={submit}
+            onClick={createComprobante}
           >
             Registrar Comprobante de Proveedor
           </Button>

@@ -20,15 +20,15 @@ export function applyFilters(data: ComprobanteProveedor[], f: ComprobanteFilters
     out = out.filter((o) => o.id.toLowerCase().includes(q));
   }
   if (f.proveedorId) out = out.filter((o) => o.proveedor.id === f.proveedorId);
-  if (f.deposito) out = out.filter((o) => o.deposito.id === f.deposito);
-  if (f.deposito) out = out.filter((o) => o.deposito.id === f.deposito);
+  if (f.depositoId) out = out.filter((o) => o.deposito.id === f.depositoId);
+
 
   // Rango de fechas (creationDate dd/mm/yyyy vs filtros yyyy-mm-dd)
   const from = f.fechaDesde ? new Date(f.fechaDesde) : null;
   const to = f.fechaHasta ? new Date(f.fechaHasta) : null;
   if (from || to) {
     out = out.filter((o) => {
-      const d = parseDDMMYYYY(o.fecha);
+      const d = new Date(o.fecha);
       if (!d) return true;
       if (from && d < from) return false;
       if (to) {

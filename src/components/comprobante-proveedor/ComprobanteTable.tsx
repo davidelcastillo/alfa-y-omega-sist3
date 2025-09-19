@@ -108,7 +108,6 @@ export default function ComprasTable({
                 <td className="px-6 py-4 text-gray-700">
                   <div>
                     <div className="font-medium">{comprobante.fecha}</div>
-                    <div className="text-sm text-gray-500">{comprobante.hora}</div>
                   </div>
                 </td>
 

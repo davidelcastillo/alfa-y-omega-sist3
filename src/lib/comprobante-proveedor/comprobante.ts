@@ -85,7 +85,7 @@ export type ComprobanteFiltersState = {
   fechaHasta?: string; // yyyy-mm-dd
   numeroCP?: string;
   proveedorId?: string;
-  deposito?: string;
+  depositoId?: string;
 };
 
 // Ordenamiento
