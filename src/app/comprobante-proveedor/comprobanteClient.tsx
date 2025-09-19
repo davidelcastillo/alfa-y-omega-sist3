@@ -118,16 +118,23 @@ export default function ComprobanteClient({
     closeModal();
 
     try {
-      // 1️⃣ Crear comprobante usando Server Action
-      const newComprobante = await createComprobanteAction(payload);
+    // Convertir nulls a undefined
+    const cleanPayload = {
+      ...payload,
+      letra: payload.letra ?? undefined,
+      numeroSucursal: payload.numeroSucursal ?? undefined,
+      moneda: payload.moneda ?? undefined,
+      observaciones: payload.observaciones ?? undefined,
+    };
 
-      // 2️⃣ Actualizar estado local
-      setComprobantes((prev) => [newComprobante, ...prev]);
-      setPage(1); // volver a la primera página
-    } catch (err) {
-      console.error(err);
-      alert("Error al crear el comprobante");
-    }
+    const newComprobante = await createComprobanteAction(cleanPayload);
+
+    setComprobantes((prev) => [newComprobante, ...prev]);
+    setPage(1);
+  } catch (err) {
+    console.error(err);
+    alert("Error al crear el comprobante");
+  }
   }
 
   // ===================== OPCIONES PARA MODAL Y FILTROS =====================

@@ -18,9 +18,21 @@ export type Deposito = {
   name: string;
 };
 
+export type PurchaseOrderItem = {
+  id: string;
+  productId: string;
+  productName: string;
+  cantidad: number;
+  precioUnitario: number;
+  total: number;
+};
+
 export type PurchaseOrder = {
   id: string;
   supplier: { id: string; name: string;};
+  deposito: { id: string; name: string;};
+  status: boolean;
+  items: PurchaseOrderItem[];
 };
 
 export type TipoMovimiento = {
