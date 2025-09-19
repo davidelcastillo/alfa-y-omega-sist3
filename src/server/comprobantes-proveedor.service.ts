@@ -1,77 +1,72 @@
-// src/server/comprobantes-proveedor.service.ts
-import { prisma } from "@/lib/prisma";
+import { prisma } from '@/lib/prisma';
 
 type DetalleCPDTO = {
   productoId: number;
   cantidad: number;
   precioUnitario: number;
-  descuento?: number | null;
+  descuento?: number | null;   // %
   observaciones?: string | null;
 };
 
 export type CrearComprobanteProveedorDTO = {
   ordenCompraId: number;
-  proveedorId: number;
+  // proveedorId?: number;  // ← se ignora (se toma de la OC)
+  // depositoId?: number;   // ← se ignora (se toma de la OC)
   tipoComprobanteId: number;
-  fecha: string; // ISO (se parsea a Date)
+  fecha: string;               // ISO
   hora?: string | null;
   letra?: string | null;
   numeroSucursal?: string | null;
   numero?: string | null;
   metodoPagoId?: number | null;
   observaciones?: string | null;
-  depositoId?: number | null; // si no viene, se usa el de la OC
-  tipoMovimientoId?: number | null; // si no viene, se busca uno con saldo=true
   detalles: DetalleCPDTO[];
 };
 
-export async function crearComprobanteProveedorConMovimiento(
-  data: CrearComprobanteProveedorDTO
-) {
+export async function crearComprobanteProveedorConMovimiento(data: CrearComprobanteProveedorDTO) {
   return await prisma.$transaction(async (tx) => {
-    // 1) Validaciones base: OC, proveedor, tipo de comprobante
-    const [oc, prov, tipoComp] = await Promise.all([
-      tx.ordenCompra.findUnique({
-        where: { id: data.ordenCompraId },
-        select: { id: true, depositoId: true, proveedorId: true },
-      }),
-      tx.proveedores.findUnique({
-        where: { id: data.proveedorId },
-        select: { id: true, estado: true, nombre: true },
-      }),
-      tx.tipoComprobante.findUnique({
-        where: { id: data.tipoComprobanteId },
-        select: { id: true, nombre: true },
-      }),
-    ]);
-
-    if (!oc) throw new Error("Orden de compra inexistente");
-    if (!prov) throw new Error("Proveedor inexistente");
-    if (!prov.estado) throw new Error("Proveedor inactivo");
-    if (!tipoComp) throw new Error("Tipo de comprobante inexistente");
-    if (oc.proveedorId !== prov.id)
-      throw new Error("La OC no corresponde al proveedor");
-
-    // Depósito a usar: body.depositoId > OC.depositoId
-    const depositoId = data.depositoId ?? oc.depositoId;
-    if (!depositoId)
-      throw new Error("No hay depósito definido (en body ni en la OC)");
-
-    const deposito = await tx.deposito.findUnique({
-      where: { id: depositoId },
-      select: { id: true, estado: true, nombre: true },
+    // 1) Cargar OC obligatoria y usar su proveedor + depósito
+    const oc = await tx.ordenCompra.findUnique({
+      where: { id: data.ordenCompraId },
+      select: {
+        id: true,
+        proveedorId: true,
+        depositoId: true,
+        detalleOrdenCompra: { select: { productoId: true } },
+      },
     });
-    if (!deposito) throw new Error("Depósito inexistente");
-    if (!deposito.estado) throw new Error("El depósito está inactivo");
+    if (!oc) throw new Error('Orden de compra inexistente');
+    if (!oc.depositoId) throw new Error('La Orden de Compra no tiene depósito asignado');
 
-    if (!data.detalles?.length)
-      throw new Error("El comprobante no tiene detalles");
+    const proveedor = await tx.proveedores.findUnique({
+      where: { id: oc.proveedorId },
+      select: { id: true, estado: true },
+    });
+    if (!proveedor) throw new Error('Proveedor inexistente');
+    if (!proveedor.estado) throw new Error('Proveedor inactivo');
 
-    // 2) Evitar comprobantes duplicados (mismo prov + tipo + letra/sucursal/numero)
-    //    (Si tu DB no tiene UNIQUE, al menos chequeamos por app)
+    const tipoComp = await tx.tipoComprobante.findUnique({
+      where: { id: data.tipoComprobanteId },
+      select: { id: true },
+    });
+    if (!tipoComp) throw new Error('Tipo de comprobante inexistente');
+
+    if (!data.detalles?.length) throw new Error('El comprobante no tiene detalles');
+
+    // 2) Validar que TODOS los productos del body están en la OC
+    const productosEnOC = new Set(oc.detalleOrdenCompra.map(it => it.productoId));
+    for (const d of data.detalles) {
+      if (!productosEnOC.has(d.productoId)) {
+        throw new Error(`El producto ${d.productoId} no pertenece a la Orden de Compra`);
+      }
+      if (d.cantidad <= 0) throw new Error('Cantidad inválida en detalle');
+      if (d.precioUnitario <= 0) throw new Error('Precio unitario inválido en detalle');
+    }
+
+    // 3) Evitar CP duplicado (mismo prov + tipo + letra/sucursal/numero)
     const yaExiste = await tx.comprobanteProveedor.findFirst({
       where: {
-        proveedorId: data.proveedorId,
+        proveedorId: oc.proveedorId,
         tipoComprobanteId: data.tipoComprobanteId,
         letra: data.letra ?? null,
         numeroSucursal: data.numeroSucursal ?? null,
@@ -79,58 +74,40 @@ export async function crearComprobanteProveedorConMovimiento(
       },
       select: { id: true },
     });
-    if (yaExiste)
-      throw new Error("El comprobante ya existe para ese proveedor");
+    if (yaExiste) throw new Error('El comprobante ya existe para ese proveedor');
 
-    // 3) Validar que los items estén en la OC y cantidades positivas
-    const ocItems = await tx.detalleOrdenCompra.findMany({
-      where: { ordenCompraId: data.ordenCompraId },
-      select: { productoId: true, precioUnitario: true, cantidad: true },
-    });
-    const setOc = new Set(ocItems.map((i) => i.productoId));
-    for (const d of data.detalles) {
-      if (!setOc.has(d.productoId)) {
-        throw new Error(
-          `El producto ${d.productoId} no pertenece a la Orden de Compra`
-        );
-      }
-      if (d.cantidad <= 0) throw new Error("Cantidad inválida en detalle");
-    }
-
-    // 3.1) Calcular montos por renglón y totales
-    const detallesCalculados = data.detalles.map((d) => {
+    // 4) Calcular precioXCantidad + total/saldo
+    const detallesCalc = data.detalles.map(d => {
       const desc = d.descuento ? d.descuento / 100 : 0;
       const precioXCantidad = d.cantidad * d.precioUnitario * (1 - desc);
       return { ...d, precioXCantidad };
     });
-    const total = detallesCalculados.reduce(
-      (acc, d) => acc + d.precioXCantidad,
-      0
-    );
+    const total = detallesCalc.reduce((acc, d) => acc + d.precioXCantidad, 0);
 
-    // 3.2) Crear ComprobanteProveedor con totales y renglones calculados
     const fecha = new Date(data.fecha);
+
+    // 5) Crear CP usando proveedor/deposito de la OC
     const cp = await tx.comprobanteProveedor.create({
       data: {
-        ordenCompraId: data.ordenCompraId,
-        proveedorId: data.proveedorId,
+        ordenCompraId: oc.id,
+        proveedorId: oc.proveedorId,           // ← fijo por OC
         tipoComprobanteId: data.tipoComprobanteId,
         fecha,
         hora: data.hora ?? null,
         letra: data.letra ?? null,
-        numeroSucursal: data.numeroSucursal ?? "0001", // default simple
+        numeroSucursal: data.numeroSucursal ?? null,
         numero: data.numero ?? null,
         metodoPagoId: data.metodoPagoId ?? null,
         observaciones: data.observaciones ?? null,
-        total, // ← total del comprobante
-        saldo: total, // ← saldo inicial igual al total
+        total,
+        saldo: total,                          // saldo inicial = total
         detalleComprobante: {
-          create: detallesCalculados.map((d) => ({
+          create: detallesCalc.map(d => ({
             productoId: d.productoId,
             cantidad: d.cantidad,
             precioUnitario: d.precioUnitario,
             descuento: d.descuento ?? null,
-            precioXCantidad: d.precioXCantidad, // ← monto por ítem
+            precioXCantidad: d.precioXCantidad,
             observaciones: d.observaciones ?? null,
           })),
         },
@@ -140,86 +117,63 @@ export async function crearComprobanteProveedorConMovimiento(
       },
     });
 
-    // 4) Evitar duplicar el movimiento: usaremos un número "virtual"
-    //    único basado en el id del comprobante
+    // 6) Idempotencia del movimiento: numeroComprobante "CP-<id>"
     const numeroMov = `CP-${cp.id}`;
-
-    const movExistente = await tx.movimientoStock.findFirst({
+    const yaMov = await tx.movimientoStock.findFirst({
       where: {
         numeroComprobante: numeroMov,
         tipoComprobanteId: cp.tipoComprobanteId,
-        depositoId,
+        depositoId: oc.depositoId!,
       },
       select: { id: true },
     });
-    if (movExistente) {
-      // Ya estaba creado el movimiento para este CP
+    if (yaMov) {
       const mov = await tx.movimientoStock.findUnique({
-        where: { id: movExistente.id },
-        include: {
-          detalles: true,
-          tipoMovimiento: true,
-          tipoComprobante: true,
-          deposito: true,
-        },
+        where: { id: yaMov.id },
+        include: { detalles: true, tipoMovimiento: true, tipoComprobante: true, deposito: true },
       });
       return { comprobante: cp, movimiento: mov };
     }
 
-    // 5) Tipo de movimiento (entrada): id provisto o el primero con saldo=true
-    let tipoMovimientoId = data.tipoMovimientoId ?? null;
-    if (!tipoMovimientoId) {
-      const tm = await tx.tipoMovimiento.findFirst({
-        where: { saldo: true },
-        select: { id: true, nombre: true },
-        orderBy: { id: "asc" },
-      });
-      if (!tm)
-        throw new Error("No existe un TipoMovimiento con saldo=true (ingreso)");
-      tipoMovimientoId = tm.id;
-    }
+    // 7) TipoMovimiento de ENTRADA (saldo=true)
+    const tmIngreso = await tx.tipoMovimiento.findFirst({
+      where: { saldo: true },
+      select: { id: true, nombre: true },
+      orderBy: { id: 'asc' },
+    });
+    if (!tmIngreso) throw new Error('No existe un TipoMovimiento con saldo=true (ingreso)');
 
-    // 6) Crear MovimientoStock de ENTRADA
+    // 8) Crear movimiento en el depósito de la OC y actualizar stock
     const mov = await tx.movimientoStock.create({
       data: {
-        depositoId,
-        tipoMovimientoId,
+        depositoId: oc.depositoId!,                 // ← fijo por OC
+        tipoMovimientoId: tmIngreso.id,
         tipoComprobanteId: cp.tipoComprobanteId,
-        numeroComprobante: numeroMov, // vínculo estable con el comprobante
-        Comentario: `ComprobanteProveedor #${cp.id} - Proveedor #${cp.proveedorId}`, // campo prisma "comentario"
-        fecha, // si querés usar la misma fecha del comprobante
+        numeroComprobante: numeroMov,
+        Comentario: `ComprobanteProveedor #${cp.id} - Proveedor #${oc.proveedorId}`, // usa "Comentario" según tu client actual
+        fecha,
       },
       select: { id: true, depositoId: true },
     });
 
-    // 7) Aplicar stock y crear detalles del movimiento
     for (const det of cp.detalleComprobante) {
-      // upsert de stock por (producto, depósito)
       const spd = await tx.stockPorDeposito.upsert({
-        where: {
-          productoId_depositoId: { productoId: det.productoId, depositoId },
-        },
-        create: { productoId: det.productoId, depositoId, stockActual: 0 },
+        where: { productoId_depositoId: { productoId: det.productoId, depositoId: oc.depositoId! } },
+        create: { productoId: det.productoId, depositoId: oc.depositoId!, stockActual: 0 },
         update: {},
         select: { id: true, stockActual: true },
       });
 
-      const nuevoStock = spd.stockActual + det.cantidad; // ingreso
       await tx.stockPorDeposito.update({
         where: { id: spd.id },
-        data: { stockActual: nuevoStock },
+        data: { stockActual: spd.stockActual + det.cantidad }, // ingreso
       });
 
       await tx.detalleMovimiento.create({
-        data: {
-          movimientoId: mov.id,
-          productoId: det.productoId,
-          cantidad: det.cantidad,
-        },
+        data: { movimientoId: mov.id, productoId: det.productoId, cantidad: det.cantidad },
       });
     }
 
-    // 8) Devolver ambos
     const movCompleto = await tx.movimientoStock.findUnique({
       where: { id: mov.id },
       include: {
@@ -227,11 +181,7 @@ export async function crearComprobanteProveedorConMovimiento(
         tipoComprobante: { select: { id: true, nombre: true } },
         deposito: { select: { id: true, nombre: true } },
         detalles: {
-          select: {
-            id: true,
-            cantidad: true,
-            producto: { select: { id: true, nombre: true } },
-          },
+          select: { id: true, cantidad: true, producto: { select: { id: true, nombre: true } } },
         },
       },
     });

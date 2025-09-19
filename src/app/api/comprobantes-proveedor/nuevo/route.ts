@@ -1,12 +1,93 @@
-// src/app/api/comprobantes-proveedor/nuevo/route.ts
-import { NextResponse } from "next/server";
-import { z, ZodError } from "zod";
-import { crearComprobanteProveedorConMovimiento } from "@/server/comprobantes-proveedor.service";
+import { NextResponse } from 'next/server';
+import { z, ZodError } from 'zod';
+import { prisma } from '@/lib/prisma';
+import { crearComprobanteProveedorConMovimiento } from '@/server/comprobantes-proveedor.service';
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Schema para validar cada ítem del comprobante
+// ---------- GET: datos para el formulario ----------
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const ocId = Number(searchParams.get('ordenCompraId') ?? 'NaN');
+    if (!Number.isFinite(ocId)) {
+      return NextResponse.json({ ok: false, error: 'ordenCompraId requerido' }, { status: 400 });
+    }
+
+    // ❌ NO existe "deposito" como relación en OrdenCompra
+    // ✅ Pedimos depositoId y luego resolvemos el depósito aparte
+    const oc = await prisma.ordenCompra.findUnique({
+      where: { id: ocId },
+      select: {
+        id: true,
+        nroOC: true,
+        fecha: true,
+        proveedor: { select: { id: true, nombre: true } }, // esta relación sí existe
+        depositoId: true,
+        detalleOrdenCompra: {
+          select: {
+            productoId: true,
+            cantidad: true,
+            precioUnitario: true,
+            producto: {
+              select: {
+                id: true,
+                nombre: true,
+                unidad: { select: { nombre: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!oc) return NextResponse.json({ ok: false, error: 'Orden de compra inexistente' }, { status: 404 });
+    if (!oc.depositoId) return NextResponse.json({ ok: false, error: 'La OC no tiene depósito asignado' }, { status: 400 });
+
+    // Resolver depósito por id
+    const deposito = await prisma.deposito.findUnique({
+      where: { id: oc.depositoId },
+      select: { id: true, nombre: true },
+    });
+
+    const [tiposComprobante, metodosPago] = await Promise.all([
+      prisma.tipoComprobante.findMany({ select: { id: true, nombre: true }, orderBy: { nombre: 'asc' } }),
+      prisma.metodoPago.findMany({ select: { id: true, nombre: true }, orderBy: { nombre: 'asc' } }),
+    ]);
+
+    return NextResponse.json({
+      ok: true,
+      data: {
+        oc: {
+          id: oc.id,
+          nro: oc.nroOC,
+          fecha: oc.fecha,
+          proveedor: oc.proveedor,                 // read-only
+          deposito: deposito ? { id: deposito.id, nombre: deposito.nombre } : null, // read-only
+          items: oc.detalleOrdenCompra.map(d => ({
+            productoId: d.productoId,
+            producto: d.producto?.nombre ?? null,
+            unidad: d.producto?.unidad?.nombre ?? null,
+            cantidad: d.cantidad,
+            precioUnitario: d.precioUnitario,
+          })),
+        },
+        opciones: {
+          tiposComprobante,
+          metodosPago,
+        },
+      },
+    });
+  } catch (err: unknown) {
+    console.error('GET /api/comprobantes-proveedor/nuevo', err);
+    return NextResponse.json(
+      { ok: false, error: 'Error al preparar alta de comprobante', details: (err as Error)?.message },
+      { status: 500 },
+    );
+  }
+}
+// ---------- POST: alta (usa proveedor/deposito de la OC y valida items) ----------
 const detalleSchema = z.object({
   productId: z.number().int().positive(),
   quantity: z.number().int().positive(),
@@ -17,12 +98,9 @@ const detalleSchema = z.object({
 
 // Schema para validar el body completo
 const bodySchema = z.object({
-  ordenCompraId: z.string(),
-  proveedorId: z.string(),
-  depositoId: z.string(),
-  tipoComprobanteId: z.string(),
-  metodoPagoId: z.string(),
-  fecha: z.string().refine(v => !Number.isNaN(Date.parse(v)), "Fecha inválida (ISO)"),
+  ordenCompraId: z.coerce.number().int().positive(),
+  tipoComprobanteId: z.coerce.number().int().positive(),
+  fecha: z.string().refine(v => !Number.isNaN(Date.parse(v)), 'fecha inválida (ISO)'),
   hora: z.string().optional(),
   letra: z.string().optional(),
   numeroSucursal: z.string().optional(),
@@ -30,7 +108,7 @@ const bodySchema = z.object({
   tipoMovimientoId: z.string().optional(), // opcional, si backend asigna por defecto
   moneda: z.string().optional(),
   observaciones: z.string().optional(),
-  detalles: z.array(detalleSchema).min(1, "Debe incluir al menos un detalle"),
+  detalles: z.array(detalleSchema).min(1, 'Debe incluir al menos un detalle'),
 });
 
 export async function POST(req: Request) {
@@ -38,30 +116,7 @@ export async function POST(req: Request) {
     const json = await req.json();
     const data = bodySchema.parse(json);
 
-    // Llamada al servicio que crea el comprobante y el movimiento
-    const result = await crearComprobanteProveedorConMovimiento({
-      ordenCompraId: Number(data.ordenCompraId),
-  proveedorId: Number(data.proveedorId),
-  depositoId: Number(data.depositoId),
-  tipoComprobanteId: Number(data.tipoComprobanteId),
-  metodoPagoId: Number(data.metodoPagoId),
-  fecha: data.fecha,
-  hora: data.hora,
-  letra: data.letra,
-  numeroSucursal: data.numeroSucursal,
-  numero: data.numero,
-  tipoMovimientoId: data.tipoMovimientoId ? Number(data.tipoMovimientoId) : undefined,
-  observaciones: data.observaciones,
-  detalles: data.detalles.map(d => ({
-    productoId: d.productId,       // 🔹 rename
-    cantidad: d.quantity,          // 🔹 rename
-    precioUnitario: d.unitPrice,   // 🔹 rename
-    descuento: d.discount ?? 0,
-    observaciones: d.observations ?? "",
-      })),
-    });
-
-    // Devuelve comprobante completo con relaciones (proveedor, depósito, tipoComprobante, métodoPago, ítems)
+    const result = await crearComprobanteProveedorConMovimiento(data);
     return NextResponse.json({ ok: true, data: result }, { status: 201 });
   } catch (err: unknown) {
     if (err instanceof ZodError) {
@@ -70,9 +125,8 @@ export async function POST(req: Request) {
         { status: 422 }
       );
     }
-
-    const msg = (err as Error)?.message ?? "Internal Error";
-    if (/(inexistente|inactivo|no hay dep[oó]sito|ya existe|corresponde|inv[aá]lid)/i.test(msg)) {
+    const msg = (err as Error)?.message ?? 'Internal Error';
+    if (/(inexistente|inactivo|no pertenece|ya existe|inv[aá]lid|dep[oó]sito)/i.test(msg)) {
       return NextResponse.json({ ok: false, error: msg }, { status: 400 });
     }
 
