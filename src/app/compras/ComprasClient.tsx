@@ -7,6 +7,7 @@ import ComprasFilters from "@/components/compras/ComprasFilters";
 import ComprasTable from "@/components/compras/ComprasTable";
 import ComprasStatsCards from "@/components/compras/ComprasStatsCards";
 import ComprasModal from "@/components/compras/ComprasModal";
+import ComprasDetailDialog from "@/components/compras/ComprasDetailDialog";
 
 import { Button } from "@/components/ui/Button";
 import { Plus } from 'lucide-react';
@@ -38,6 +39,8 @@ export default function ComprasClient({ initialOrders, proveedores, depositos, p
   const [orders, setOrders] = useState<PurchaseOrder[]>(initialOrders);
   const [filters, setFilters] = useState<ComprasFiltersState>({});
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<PurchaseOrder | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   // Hooks propios
   const { sort, setSort, toggle } = useComprasSort({ key: "creationDate", dir: "desc" });
@@ -65,8 +68,10 @@ export default function ComprasClient({ initialOrders, proveedores, depositos, p
 
   // Navegación “Ver”
   function onView(id: string) {
-    // TODO: reemplazar por router.push(`/compras/${id}`)
-    alert(`Ver detalle de ${id} (pendiente de /compras/[id])`);
+    const order = orders.find((o) => o.id === id);
+    if (!order) return;
+    setSelectedOrder(order);
+    setDetailOpen(true);
   }
 
   // Editar
@@ -79,7 +84,8 @@ export default function ComprasClient({ initialOrders, proveedores, depositos, p
   // Crear / Actualizar (server actions)
   async function handleSubmit(payload: {
     proveedorId: string;
-    deposito: string;
+    depositoId: string;
+    depositoNombre?: string;
     fechaEntrega: string; // yyyy-mm-dd
     items: PurchaseOrderItem[];
     totalCantidad: number;
@@ -88,6 +94,13 @@ export default function ComprasClient({ initialOrders, proveedores, depositos, p
     setOpen(false);
     setEditingId(null);
     // TODO: disparar ToastNotificacion si querés
+  }
+
+  function handleDetailOpenChange(open: boolean) {
+    setDetailOpen(open);
+    if (!open) {
+      setSelectedOrder(null);
+    }
   }
 
   function onOpenNew() {
@@ -166,7 +179,7 @@ export default function ComprasClient({ initialOrders, proveedores, depositos, p
                 const o = orders.find((x) => x.id === editingId)!;
                 return {
                   proveedorId: o.supplier.id,
-                  deposito: o.warehouse,
+                  depositoId: o.warehouseId ?? "",
                   fechaEntrega: toYYYYMMDD(o.deliveryDate),
                   items: o.items,
                 };
@@ -175,14 +188,23 @@ export default function ComprasClient({ initialOrders, proveedores, depositos, p
         }
         onSubmit={handleSubmit}
       />
-  </main>  
+
+      <ComprasDetailDialog
+        order={selectedOrder}
+        open={detailOpen}
+        onOpenChange={handleDetailOpenChange}
+      />
+  </main>
 );
 }
 
 /* ========= Helpers locales ========= */
 function pad(n: number) { return n.toString().padStart(2, "0"); }
 
-function toYYYYMMDD(dd_mm_yyyy: string) {
-  const [d, m, y] = dd_mm_yyyy.split("/").map(Number);
+function toYYYYMMDD(date: string) {
+  if (!date) return "";
+  if (date.includes("-")) return date;
+  const [d, m, y] = date.split("/").map(Number);
+  if (!d || !m || !y) return "";
   return `${y}-${pad(m)}-${pad(d)}`;
 }
