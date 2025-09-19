@@ -46,7 +46,8 @@ export type ComprasFiltersState = {
   numeroOC?: string;
   proveedorId?: string;
   depositoId?: string;   // ← nuevo: filtrar por ID de depósito
-  deposito?: string;     // ← opcional/legacy (por nombre). Puedes quitarlo si ya no lo usas.};
+  deposito?: string;     // ← opcional/legacy (por nombre). Puedes quitarlo si ya no lo usas.
+};
 
 // Ordenamiento
 export type SortKey = "id" | "creationDate" | "supplier" | "warehouse" | "total" | "status";
