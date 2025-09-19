@@ -49,13 +49,14 @@ function mapApiToPurchaseOrder(row: any): PurchaseOrder {
     creationDate,
     creationTime: "",
     supplier: {
-      id: String(row.proveedorId ?? ""),   // 👈 ahora viene de la API
+      id: String(row.proveedorId ?? ""),   //
       name: row.proveedor ?? "—",          // sigue viniendo como string
       code: "",
       email: "",
       phone: "",
     },
-    warehouse: String(row.depositoId ?? "—"),
+    warehouse: row.deposito?.nombre ?? String(row.depositoId ?? "—"),
+    warehouseId: row.depositoId ? String(row.depositoId) : undefined,
     deliveryDate: "",
     status: row.estado ? "Completa" : "Incompleta",
     total: Number(row.total ?? 0),

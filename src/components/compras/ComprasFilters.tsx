@@ -10,7 +10,8 @@ import type { ComprasFiltersState } from "@/lib/compras/purchase";
 type Props = {
   initial?: ComprasFiltersState;
   proveedores: { id: string; name: string }[];
-  depositos: string[];
+  //depositos: string[];
+  depositos: { id: string; name: string }[];   //
   onSearch: (f: ComprasFiltersState) => void;
   onClear?: () => void;
 };
@@ -21,7 +22,8 @@ export default function ComprasFilters({ initial, proveedores, depositos, onSear
     fechaHasta: initial?.fechaHasta ?? "",
     numeroOC: initial?.numeroOC ?? "",
     proveedorId: initial?.proveedorId ?? "",
-    deposito: initial?.deposito ?? "",
+    //deposito: initial?.deposito ?? "",
+    depositoId: initial?.depositoId ?? "",     // 👈 usa depositoId
   });
 
   function update<K extends keyof ComprasFiltersState>(k: K, v: ComprasFiltersState[K]) {
@@ -29,7 +31,14 @@ export default function ComprasFilters({ initial, proveedores, depositos, onSear
   }
 
   function handleClear() {
-    const reset = { fechaDesde: "", fechaHasta: "", numeroOC: "", proveedorId: "", deposito: "" };
+    //const reset = { fechaDesde: "", fechaHasta: "", numeroOC: "", proveedorId: "", deposito: "" };
+    const reset: ComprasFiltersState = {
+    fechaDesde: "",
+    fechaHasta: "",
+    numeroOC: "",
+    proveedorId: "",
+    depositoId: "",   // ✅ antes tenías 'deposito'
+  };
     setFilters(reset);
     onClear?.();
   }
@@ -68,14 +77,14 @@ export default function ComprasFilters({ initial, proveedores, depositos, onSear
           ))}
         </Select>
         <Select
-          label="Depósito"
-          value={filters.deposito ?? ""}
-          onChange={(e) => update("deposito", e.target.value)}
-        >
-          <option value="">Todos</option>
-          {depositos.map((d) => (
-            <option key={d} value={d}>{d}</option>
-          ))}
+            label="Depósito"
+            value={filters.depositoId ?? ""}
+            onChange={(e) => update("depositoId", e.target.value)}
+          >
+            <option value="">Todos</option>
+            {depositos.map((d) => (
+              <option key={d.id} value={d.id}>{d.name}</option>
+            ))}
         </Select>
       </div>
 

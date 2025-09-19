@@ -31,6 +31,7 @@ export type PurchaseOrder = {
   creationTime: string;   // hh:mm
   supplier: { id: string; name: string; code: string };
   warehouse: string;
+  warehouseId?: string;       // 👈 nuevo
   deliveryDate: string;   // dd/mm/yyyy
   status: PurchaseStatus;
   total: number;
@@ -44,8 +45,8 @@ export type ComprasFiltersState = {
   fechaHasta?: string; // yyyy-mm-dd
   numeroOC?: string;
   proveedorId?: string;
-  deposito?: string;
-};
+  depositoId?: string;   // ← nuevo: filtrar por ID de depósito
+  deposito?: string;     // ← opcional/legacy (por nombre). Puedes quitarlo si ya no lo usas.};
 
 // Ordenamiento
 export type SortKey = "id" | "creationDate" | "supplier" | "warehouse" | "total" | "status";
