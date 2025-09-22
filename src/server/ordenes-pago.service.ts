@@ -3,7 +3,7 @@ import { OrdenPagoCreateDTO } from "@/lib/ordenes-pago/types";
 
 export async function crearOrdenPago(data: OrdenPagoCreateDTO) {
   return await prisma.$transaction(async (tx) => {
-    // 1) Proveedor y método de pago válidos
+    // 1) Validaciones cabecera
     const proveedor = await tx.proveedores.findUnique({
       where: { id: data.proveedorId }, select: { id: true, estado: true }
     });
@@ -15,33 +15,47 @@ export async function crearOrdenPago(data: OrdenPagoCreateDTO) {
     });
     if (!metodo) throw new Error("Método de pago inexistente");
 
-    // 2) Traer comprobantes involucrados y validar saldos
-    const ids = Array.from(new Set(data.detalles.map(d => Number(d.comprobanteId))));
+    // 2) Normalizar y validar detalles
+    if (data.detalles.length === 0) throw new Error("Debe incluir al menos un detalle");
+
+    // (2.a) agrupar por comprobante por si repiten renglones
+    const montosPorId = new Map<number, number>();
+    for (const d of data.detalles) {
+      const id = Number(d.comprobanteId);
+      const monto = Number(d.montoPagado);
+      if (!Number.isFinite(id) || id <= 0) throw new Error("comprobanteId inválido");
+      if (!Number.isFinite(monto) || monto <= 0) throw new Error("montoPagado debe ser > 0");
+      montosPorId.set(id, (montosPorId.get(id) ?? 0) + monto);
+    }
+
+    // (2.b) traer comprobantes y validar proveedor/estado
+    const ids = [...montosPorId.keys()];
     const comprobantes = await tx.comprobanteProveedor.findMany({
       where: { id: { in: ids } },
       select: { id: true, proveedorId: true, saldo: true, estado: true }
     });
     if (comprobantes.length !== ids.length) {
-      throw new Error("Uno o más comprobantes no existen");
+      const found = new Set(comprobantes.map(c => c.id));
+      const missing = ids.filter(id => !found.has(id));
+      throw new Error(`Comprobante(s) inexistente(s): ${missing.join(', ')}`);
     }
-    // todos del mismo proveedor
     if (comprobantes.some(c => c.proveedorId !== data.proveedorId)) {
       throw new Error("Hay comprobantes de otro proveedor");
     }
-    // saldos > 0 y montos no exceden
-    const byId = new Map(comprobantes.map(c => [c.id, c]));
-    for (const d of data.detalles) {
-      const c = byId.get(Number(d.comprobanteId))!;
-      const saldoPrevio = Number(c.saldo ?? 0);
-      if (saldoPrevio <= 0) throw new Error(`El comprobante ${c.id} no tiene saldo`);
-      if (d.montoPagado > saldoPrevio) {
-        throw new Error(`El pago (${d.montoPagado}) excede el saldo del comprobante ${c.id} (${saldoPrevio})`);
-      }
+    if (comprobantes.some(c => !c.estado)) {
+      throw new Error("Hay comprobantes anulados/inactivos");
+    }
+    // (2.c) validar que la suma a pagar por comprobante no supere su saldo actual
+    for (const c of comprobantes) {
+      const aPagar = montosPorId.get(c.id)!;
+      const saldo = Number(c.saldo ?? 0);
+      if (saldo <= 0) throw new Error(`El comprobante ${c.id} no tiene saldo`);
+      if (aPagar > saldo) throw new Error(`El pago (${aPagar}) excede el saldo del comprobante ${c.id} (${saldo})`);
     }
 
-    // 3) Crear Orden de Pago
+    // 3) Crear OP
     const fecha = new Date(data.fecha);
-    const totalPagado = data.detalles.reduce((a, d) => a + Number(d.montoPagado), 0);
+    const totalPagado = [...montosPorId.values()].reduce((a, n) => a + n, 0);
 
     const op = await tx.ordenPago.create({
       data: {
@@ -56,31 +70,39 @@ export async function crearOrdenPago(data: OrdenPagoCreateDTO) {
       select: { id: true, proveedorId: true, fecha: true, nroInterno: true, metodoPagoId: true, totalPagado: true }
     });
 
-    // 4) Crear detalles y actualizar saldos de comprobantes
-    const detallesOut: Array<{ comprobanteId:number, montoPagado:number, saldoPrevio:number|null, saldoRestante:number|null }> = [];
-    for (const d of data.detalles) {
-      const comp = byId.get(Number(d.comprobanteId))!;
-      const saldoPrevio = Number(comp.saldo ?? 0);
-      const saldoRestante = Math.max(0, saldoPrevio - Number(d.montoPagado));
+    // 4) Aplicar pagos y recalcular saldos (ATÓMICO)
+    const detallesOut: Array<{ comprobanteId:number, montoPagado:number, saldoPrevio:number, saldoRestante:number }> = [];
+
+    for (const c of comprobantes) {
+      const monto = montosPorId.get(c.id)!;           // suma a pagar para este comprobante
+      const saldoPrevio = Number(c.saldo ?? 0);
+      const saldoRestanteEsperado = saldoPrevio - monto; // validado arriba que >= 0
+
+      // 🔒 update atómico con condición: saldo >= monto
+      const res = await tx.comprobanteProveedor.updateMany({
+        where: { id: c.id, proveedorId: data.proveedorId, estado: true, saldo: { gte: monto } },
+        data:  { saldo: { decrement: monto } },
+      });
+      if (res.count !== 1) {
+        // alguien cambió el saldo entre la lectura y este update
+        throw new Error(`Saldo insuficiente o modificado para comprobante ${c.id}`);
+      }
 
       await tx.detalleOrdenPago.create({
         data: {
           ordenPagoId: op.id,
-          comprobanteId: comp.id,
-          montoPagado: Number(d.montoPagado),
-          saldoPrevio, saldoRestante,
+          comprobanteId: c.id,
+          montoPagado: monto,
+          saldoPrevio,
+          saldoRestante: saldoRestanteEsperado,
         }
       });
 
-      await tx.comprobanteProveedor.update({
-        where: { id: comp.id },
-        data: { saldo: saldoRestante }
-      });
-
       detallesOut.push({
-        comprobanteId: comp.id,
-        montoPagado: Number(d.montoPagado),
-        saldoPrevio, saldoRestante
+        comprobanteId: c.id,
+        montoPagado: monto,
+        saldoPrevio,
+        saldoRestante: saldoRestanteEsperado,
       });
     }
 
