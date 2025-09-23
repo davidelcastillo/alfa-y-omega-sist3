@@ -51,8 +51,6 @@ type Props = {
     depositoId: string;
     fecha: string;
     items: DetalleComprobanteProveedor[];
-    totalCantidad: number;
-    totalMonto: number;
     tipoMovimientoId: string;
     tipoComprobanteId: string;
     metodoPagoId: string;
@@ -62,7 +60,7 @@ type Props = {
     numero?: string;
     moneda?: string | null;
     observaciones?: string | null;
-  }) => void;
+  }) => Promise<void> | void;
 };
 
 function money(n: number) {
@@ -106,6 +104,7 @@ export default function ComprasModal({
 
   const totalCantidad = useMemo(() => items.reduce((s, i) => s + (i.quantity ?? 0), 0), [items]);
   const totalMonto = useMemo(() => items.reduce((s, i) => s + (i.totalPrice ?? 0), 0), [items]);
+  const [submitting, setSubmitting] = useState(false);
 
   // Helper: normaliza id a string
     // helpers al inicio del componente (fuera del return)
@@ -282,49 +281,34 @@ const uniqueOrdenes = useMemo(() => {
   }
 
 
-  async function createComprobante() {
+  async function handleSubmit() {
     if (!proveedorId || !depositoId || !fecha || !tipoComprobanteId || !metodoPagoId || !ordenCompraId || items.length === 0) {
       alert("Completar todos los campos obligatorios y agregar al menos un producto");
       return;
     }
 
-    const body = {
-      ordenCompraId: Number(ordenCompraId),
-      tipoComprobanteId: Number(tipoComprobanteId),
-      fecha,
-      hora: undefined,
-      letra: letra || null,
-      numeroSucursal: numeroSucursal || null,
-      numero: numero || null,
-      tipoMovimientoId: Number(tipoMovimientoId),
-      moneda: moneda || null,
-      observaciones: observaciones || null,
-      detalles: items.map(i => ({
-        // ajusta al schema que espera tu backend; aquí usamos productId/quantity/unitPrice
-        productId: Number(i.productId),
-        quantity: Number(i.quantity),
-        unitPrice: Number(i.unitPrice),
-        discount: i.discount ?? 0,
-        observations: i.observations ?? "",
-      }))
-    };
-
     try {
-      const res = await fetch("/api/comprobantes-proveedor/nuevo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+      setSubmitting(true);
+      await onSubmit({
+        proveedorId,
+        depositoId,
+        fecha,
+        items,
+        tipoMovimientoId,
+        tipoComprobanteId,
+        metodoPagoId,
+        ordenCompraId,
+        letra: letra || null,
+        numeroSucursal: numeroSucursal || null,
+        numero: numero || null,
+        moneda: moneda || null,
+        observaciones: observaciones || null,
       });
-      const json = await res.json();
-      if (json.ok) {
-        alert("Comprobante creado correctamente");
-        onOpenChange(false);
-      } else {
-        alert("Error: " + (json.error ?? "Desconocido"));
-      }
     } catch (err) {
-      console.error(err);
-      alert("Error al conectar con el servidor");
+      console.error("Error al registrar comprobante", err);
+      alert("Error al registrar el comprobante");
+    } finally {
+      setSubmitting(false);
     }
   }
   
@@ -438,7 +422,14 @@ const uniqueOrdenes = useMemo(() => {
 
           <div className="flex justify-end gap-4 pt-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button variant="primary" className="btn-primary" disabled={!proveedorId || !depositoId || !fecha || items.length === 0} onClick={createComprobante}>Registrar Comprobante de Proveedor</Button>
+            <Button
+              variant="primary"
+              className="btn-primary"
+              disabled={submitting || !proveedorId || !depositoId || !fecha || items.length === 0}
+              onClick={handleSubmit}
+            >
+              {submitting ? "Guardando..." : "Registrar Comprobante de Proveedor"}
+            </Button>
           </div>
         </div>
       </AlertDialogContent>

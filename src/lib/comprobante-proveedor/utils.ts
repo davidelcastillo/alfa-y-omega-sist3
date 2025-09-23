@@ -5,22 +5,23 @@ export function money(n: number) {
   return (n ?? 0).toLocaleString(undefined, { minimumFractionDigits: 0 });
 }
 
-// Convierte "dd/mm/yyyy" a Date (para comparar)
-export function parseDDMMYYYY(dmy: string): Date | null {
-  const [d, m, y] = dmy.split("/").map(Number);
-  if (!d || !m || !y) return null;
-  return new Date(y, m - 1, d);
-}
-
 // Aplica filtros al arreglo de órdenes
 export function applyFilters(data: ComprobanteProveedor[], f: ComprobanteFiltersState): ComprobanteProveedor[] {
   let out = [...data];
   if (f.numeroCP) {
     const q = f.numeroCP.toLowerCase();
-    out = out.filter((o) => o.id.toLowerCase().includes(q));
+    out = out.filter((o) => {
+      const values = [o.nroComprobante, o.numero, o.id]
+        .map((v) => (v == null ? "" : String(v).toLowerCase()));
+      return values.some((v) => v.includes(q));
+    });
   }
-  if (f.proveedorId) out = out.filter((o) => o.proveedor.id === f.proveedorId);
-  if (f.depositoId) out = out.filter((o) => o.deposito.id === f.depositoId);
+  if (f.proveedorId) {
+    out = out.filter((o) => String(o.proveedor?.id ?? "") === String(f.proveedorId));
+  }
+  if (f.depositoId) {
+    out = out.filter((o) => String(o.deposito?.id ?? "") === String(f.depositoId));
+  }
 
 
   // Rango de fechas (creationDate dd/mm/yyyy vs filtros yyyy-mm-dd)
@@ -28,7 +29,8 @@ export function applyFilters(data: ComprobanteProveedor[], f: ComprobanteFilters
   const to = f.fechaHasta ? new Date(f.fechaHasta) : null;
   if (from || to) {
     out = out.filter((o) => {
-      const d = new Date(o.fecha);
+      const fecha = o.fecha ?? o.hora ?? null;
+      const d = fecha ? new Date(fecha) : null;
       if (!d) return true;
       if (from && d < from) return false;
       if (to) {
@@ -52,27 +54,25 @@ export function applySort(data: ComprobanteProveedor[], sort?: SortState): Compr
     let bv: string | number = "";
     switch (key) {
       case "id":
-        av = a.id; bv = b.id; break;
+        av = String(a.id ?? ""); bv = String(b.id ?? ""); break;
       case "fecha": {
-        const ad = parseDDMMYYYY(a.fecha)?.getTime() ?? 0;
-        const bd = parseDDMMYYYY(b.fecha)?.getTime() ?? 0;
+        const ad = a.fecha ? new Date(a.fecha).getTime() : 0;
+        const bd = b.fecha ? new Date(b.fecha).getTime() : 0;
         av = ad; bv = bd; break;
       }
       case "proveedor":
-        av = a.proveedor.name.toLowerCase(); bv = b.proveedor.name.toLowerCase(); break;
-      case "proveedor":
-        av = a.proveedor.name.toLowerCase();
-        bv = b.proveedor.name.toLowerCase();
+        av = (a.proveedor?.name ?? "").toLowerCase();
+        bv = (b.proveedor?.name ?? "").toLowerCase();
         break;
 
       case "deposito":
-        av = a.deposito.name.toLowerCase();
-        bv = b.deposito.name.toLowerCase();
+        av = (a.deposito?.name ?? "").toLowerCase();
+        bv = (b.deposito?.name ?? "").toLowerCase();
         break;
 
       case "numero":
-        av = a.numero;
-        bv = b.numero;
+        av = String(a.numero ?? "");
+        bv = String(b.numero ?? "");
         break;
 
       case "total":
@@ -91,17 +91,17 @@ export function applySort(data: ComprobanteProveedor[], sort?: SortState): Compr
         break;
 
       case "tipoComprobante":
-        av = a.tipoComprobante.name.toLowerCase();
-        bv = b.tipoComprobante.name.toLowerCase();
+        av = (a.tipoComprobante?.name ?? "").toLowerCase();
+        bv = (b.tipoComprobante?.name ?? "").toLowerCase();
         break;
 
       case "tipoMovimiento":
-        av = a.tipoMovimiento.name.toLowerCase();
-        bv = b.tipoMovimiento.name.toLowerCase();
+        av = (a.tipoMovimiento?.name ?? "").toLowerCase();
+        bv = (b.tipoMovimiento?.name ?? "").toLowerCase();
         break;
     }
     if (av < bv) return -1;
-    if (av > bv) return 1;  
+    if (av > bv) return 1;
     return 0;
   });
   return dir === "desc" ? s.reverse() : s;

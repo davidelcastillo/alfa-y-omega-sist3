@@ -9,8 +9,8 @@ export type Supplier = {
 export type Product = {
   id: string;
   name: string;
-  code: string;
-  price: number;
+  code?: string;
+  price?: number;
 };
 
 export type Deposito = {
@@ -22,17 +22,17 @@ export type PurchaseOrderItem = {
   id: string;
   productId: string;
   productName: string;
-  cantidad: number;
-  precioUnitario: number;
-  total: number;
+  cantidad?: number;
+  precioUnitario?: number;
+  total?: number;
 };
 
 export type PurchaseOrder = {
   id: string;
-  supplier: { id: string; name: string;};
-  deposito: { id: string; name: string;};
-  status: boolean;
-  items: PurchaseOrderItem[];
+  supplier?: { id: string; name: string } | null;
+  deposito?: { id: string; name: string } | null;
+  status?: boolean | null;
+  items?: PurchaseOrderItem[];
 };
 
 export type TipoMovimiento = {
@@ -64,31 +64,32 @@ export type DetalleComprobanteProveedor = {
 
 export type ComprobanteProveedor = {
   id: string;
-  ordenCompra : PurchaseOrder;
-  proveedor:  { id: string; name: string};
-  deposito: { id: string; name: string};
+  nroComprobante?: string | null;
+  ordenCompra?: PurchaseOrder | null;
+  proveedor: Supplier;
+  deposito?: Deposito | null;
 
   letra?: string | null;
   numeroSucursal?: string | null;
-  numero: string;
+  numero?: string | null;
   moneda?: string | null;
 
-  tipoComprobante: TipoComprobante;
+  tipoComprobante?: TipoComprobante | null;
 
-  fecha: string; // ISO string
+  fecha?: string | null; // ISO string
   hora?: string | null;
 
   total: number;
   saldo: number;
 
-  metodoPagoId?: MetodoPago;
+  metodoPago?: MetodoPago | null;
 
-  estado: boolean;
+  estado?: boolean | null;
   observaciones?: string | null;
 
-  tipoMovimiento: TipoMovimiento;
+  tipoMovimiento?: TipoMovimiento | null;
 
-  items: DetalleComprobanteProveedor[];
+  items?: DetalleComprobanteProveedor[];
 };
 
 // Filtros

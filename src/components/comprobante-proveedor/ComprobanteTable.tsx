@@ -43,6 +43,13 @@ function money(n: number) {
   return (n ?? 0).toLocaleString(undefined, { minimumFractionDigits: 0 });
 }
 
+function formatFecha(fecha?: string | null) {
+  if (!fecha) return "—";
+  const date = new Date(fecha);
+  if (Number.isNaN(date.getTime())) return String(fecha);
+  return date.toLocaleDateString();
+}
+
 export default function ComprasTable({
   comprobantes,
   onView,
@@ -103,27 +110,29 @@ export default function ComprasTable({
           <tbody>
             {comprobantes.map((comprobante, idx) => (
               <tr key={comprobante.id} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                <td className="px-6 py-4 font-semibold text-blue-800">{comprobante.id}</td>
+                <td className="px-6 py-4 font-semibold text-blue-800">
+                  {comprobante.nroComprobante ?? comprobante.numero ?? comprobante.id}
+                </td>
 
                 <td className="px-6 py-4 text-gray-700">
                   <div>
-                    <div className="font-medium">{comprobante.fecha}</div>
+                    <div className="font-medium">{formatFecha(comprobante.fecha)}</div>
                   </div>
                 </td>
 
                 <td className="px-6 py-4">
                   <div className="font-medium text-gray-900 truncate max-w-[18ch]">
-                    {comprobante.ordenCompra.id}
+                    {comprobante.ordenCompra?.id ?? "—"}
                   </div>
                 </td>
 
                 <td className="px-6 py-4">
                   <div className="font-medium text-gray-900 truncate max-w-[18ch]">
-                    {comprobante.proveedor.name}
+                    {comprobante.proveedor?.name ?? "—"}
                   </div>
                 </td>
 
-                <td className="px-6 py-4 text-gray-700">{comprobante.deposito.name}</td>
+                <td className="px-6 py-4 text-gray-700">{comprobante.deposito?.name ?? "—"}</td>
 
                 <td className="px-6 py-4 font-semibold text-gray-900">
                   ${money(comprobante.total)}
@@ -138,7 +147,7 @@ export default function ComprasTable({
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => onView?.(comprobante.id)}
+                      onClick={() => onView?.(String(comprobante.id))}
                       title="Ver"
                       aria-label={`Ver ${comprobante.id}`}
                     >
@@ -149,7 +158,7 @@ export default function ComprasTable({
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => onEdit(comprobante.id)}
+                        onClick={() => onEdit(String(comprobante.id))}
                         title="Editar"
                         aria-label={`Editar ${comprobante.id}`}
                       >

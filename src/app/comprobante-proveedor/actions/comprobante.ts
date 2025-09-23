@@ -2,45 +2,73 @@
 
 import { revalidatePath } from "next/cache";
 import type { ComprobanteProveedor, DetalleComprobanteProveedor } from "@/lib/comprobante-proveedor/comprobante";
-
-// Base URL de tu API (asegurate de definir NEXT_PUBLIC_BASE_URL en .env)
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL!;
+import { getBaseUrl } from "@/lib/http";
+import { normalizeComprobante } from "@/lib/comprobante-proveedor/normalizers";
 
 // ===== Listar comprobantes con relaciones =====
 export async function listComprobanteAction(): Promise<ComprobanteProveedor[]> {
-  const res = await fetch(`${baseUrl}/api/comprobantes-proveedor?include=proveedor,deposito,ordenCompra,tipoComprobante,metodoPago,tipoMovimiento,items`, {
+  const baseUrl = getBaseUrl();
+  const res = await fetch(`${baseUrl}/api/comprobantes-proveedor?limit=50`, {
     cache: "no-store",
   });
 
-  if (!res.ok) throw new Error("No se pudo listar comprobantes");
-
   const result = await res.json();
-  return result.items; // la API debe devolver { items, meta }
+  if (!res.ok) throw new Error(result?.error ?? "No se pudo listar comprobantes");
+
+  return Array.isArray(result?.items) ? result.items.map(normalizeComprobante) : [];
 }
 
 // ===== Crear comprobante =====
-export async function createComprobanteAction(payload: {
+type CreatePayload = {
+  ordenCompraId: string;
   proveedorId: string;
   depositoId?: string;
   fecha: string;
-  letra?: string;
-  numeroSucursal?: string;
-  numero?: string;
-  moneda?: string;
   tipoComprobanteId: string;
   metodoPagoId?: string;
+  tipoMovimientoId?: string;
+  letra?: string | null;
+  numeroSucursal?: string | null;
+  numero?: string | null;
+  moneda?: string | null;
+  observaciones?: string | null;
   items: DetalleComprobanteProveedor[];
-  observaciones?: string;
-}): Promise<ComprobanteProveedor> {
-  const res = await fetch(`${baseUrl}/api/comprobantes-proveedor`, {
+};
+
+export async function createComprobanteAction(payload: CreatePayload): Promise<void> {
+  const baseUrl = getBaseUrl();
+  const body = {
+    ordenCompraId: Number(payload.ordenCompraId),
+    proveedorId: Number(payload.proveedorId),
+    depositoId: payload.depositoId ? Number(payload.depositoId) : undefined,
+    tipoComprobanteId: Number(payload.tipoComprobanteId),
+    metodoPagoId: payload.metodoPagoId ? Number(payload.metodoPagoId) : undefined,
+    tipoMovimientoId: payload.tipoMovimientoId ? Number(payload.tipoMovimientoId) : undefined,
+    fecha: payload.fecha,
+    letra: payload.letra ?? null,
+    numeroSucursal: payload.numeroSucursal ?? null,
+    numero: payload.numero ?? null,
+    moneda: payload.moneda ?? null,
+    observaciones: payload.observaciones ?? null,
+    detalles: payload.items.map((item) => ({
+      productId: Number(item.productId),
+      quantity: Number(item.quantity),
+      unitPrice: Number(item.unitPrice),
+      discount: item.discount ?? 0,
+      observations: item.observations ?? "",
+    })),
+  };
+
+  const res = await fetch(`${baseUrl}/api/comprobantes-proveedor/nuevo`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
   });
 
-  if (!res.ok) throw new Error("No se pudo crear el comprobante");
+  const json = await res.json();
+  if (!res.ok || !json?.ok) {
+    throw new Error(json?.error ?? "No se pudo crear el comprobante");
+  }
 
-  const newComprobante = await res.json();
-  revalidatePath("/comprobante-proveedor"); // refresca server component
-  return newComprobante;
+  revalidatePath("/comprobante-proveedor");
 }

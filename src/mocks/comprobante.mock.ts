@@ -76,7 +76,7 @@ export const comprobanteProveedorMock: ComprobanteProveedor = {
   hora: "10:45",
   total: 40000,
   saldo: 40000,
-  metodoPagoId: metodoPagosMock[0],
+  metodoPago: metodoPagosMock[0],
   estado: true,
   observaciones: "Comprobante de prueba",
   tipoMovimiento: tipoMovimientosMock[0],

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import ComprasFilters from "@/components/comprobante-proveedor/ComprobanteFilters";
 import ComprasTable from "@/components/comprobante-proveedor/ComprobanteTable";
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { Plus } from "lucide-react";
 
 import { applyFilters, applySort } from "@/lib/comprobante-proveedor/utils";
+import { normalizeComprobante } from "@/lib/comprobante-proveedor/normalizers";
 import type {
   ComprobanteProveedor,
   DetalleComprobanteProveedor,
@@ -43,6 +44,22 @@ type Props = {
   ordenCompra: PurchaseOrder[];
 };
 
+type ModalSubmitPayload = {
+  proveedorId: string;
+  depositoId: string;
+  fecha: string;
+  items: DetalleComprobanteProveedor[];
+  tipoMovimientoId: string;
+  tipoComprobanteId: string;
+  metodoPagoId: string;
+  ordenCompraId: string;
+  letra?: string | null;
+  numeroSucursal?: string | null;
+  numero?: string | null;
+  moneda?: string | null;
+  observaciones?: string | null;
+};
+
 export default function ComprobanteClient({
   initialComprobantes,
   proveedores,
@@ -65,6 +82,19 @@ export default function ComprobanteClient({
   const filtered = useMemo(() => applyFilters(comprobantes, filters), [comprobantes, filters]);
   const sorted = useMemo(() => applySort(filtered, sort), [filtered, sort]);
   const { page, pageItems, totalPages, next, prev, setPage, reset } = usePagination(sorted, 10);
+
+  const reloadComprobantes = useCallback(async () => {
+    try {
+      const res = await fetch("/api/comprobantes-proveedor?limit=50", { cache: "no-store" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error ?? "No se pudo obtener comprobantes");
+      const rows = Array.isArray(json?.items) ? json.items.map(normalizeComprobante) : [];
+      setComprobantes(rows);
+      setPage(1);
+    } catch (err) {
+      console.error("Error recargando comprobantes", err);
+    }
+  }, [setPage]);
 
   // ===================== STATS =====================
   const montoTotal = useMemo(() => filtered.reduce((s, c) => s + c.total, 0), [filtered]);
@@ -97,44 +127,32 @@ export default function ComprobanteClient({
   }
 
   // ===================== CREAR / ACTUALIZAR =====================
-  async function handleSubmit(payload: {
-    proveedorId: string;
-    depositoId: string;
-    fecha: string;
-    items: DetalleComprobanteProveedor[];
-    totalCantidad: number;
-    totalMonto: number;
-    tipoMovimientoId: string;
-    tipoComprobanteId: string;
-    metodoPagoId: string;
-    ordenCompraId: string;
-    letra?: string | null;
-    numeroSucursal?: string | null;
-    numero?: string;
-    moneda?: string | null;
-    observaciones?: string | null;
-  }) {
-    setEditingId(null);
-    closeModal();
-
+  async function handleSubmit(payload: ModalSubmitPayload) {
     try {
-    // Convertir nulls a undefined
-    const cleanPayload = {
-      ...payload,
-      letra: payload.letra ?? undefined,
-      numeroSucursal: payload.numeroSucursal ?? undefined,
-      moneda: payload.moneda ?? undefined,
-      observaciones: payload.observaciones ?? undefined,
-    };
+      const body = {
+        ordenCompraId: payload.ordenCompraId,
+        proveedorId: payload.proveedorId,
+        depositoId: payload.depositoId,
+        fecha: payload.fecha,
+        tipoComprobanteId: payload.tipoComprobanteId,
+        metodoPagoId: payload.metodoPagoId,
+        tipoMovimientoId: payload.tipoMovimientoId,
+        letra: payload.letra ?? null,
+        numeroSucursal: payload.numeroSucursal ?? null,
+        numero: payload.numero ?? null,
+        moneda: payload.moneda ?? null,
+        observaciones: payload.observaciones ?? null,
+        items: payload.items,
+      };
 
-    const newComprobante = await createComprobanteAction(cleanPayload);
-
-    setComprobantes((prev) => [newComprobante, ...prev]);
-    setPage(1);
-  } catch (err) {
-    console.error(err);
-    alert("Error al crear el comprobante");
-  }
+      await createComprobanteAction(body);
+      await reloadComprobantes();
+      setEditingId(null);
+      closeModal();
+    } catch (err) {
+      console.error("Error al crear comprobante", err);
+      throw err;
+    }
   }
 
   // ===================== OPCIONES PARA MODAL Y FILTROS =====================
@@ -215,15 +233,16 @@ export default function ComprobanteClient({
         initial={
           editingId
             ? (() => {
-                const c = comprobantes.find((x) => x.id === editingId)!;
+                const c = comprobantes.find((x) => String(x.id) === String(editingId));
+                if (!c) return undefined;
                 return {
-                  proveedorId: c.proveedor.id,
-                  depositoId: c.deposito.id,
-                  fecha: c.fecha.split("T")[0],
-                  numero: c.numero,
-                  tipoComprobanteId: c.tipoComprobante.id,
-                  metodoPagoId: c.metodoPagoId?.id ?? "",
-                  items: c.items,
+                  proveedorId: c.proveedor?.id ?? "",
+                  depositoId: c.deposito?.id ?? "",
+                  fecha: c.fecha ? new Date(c.fecha).toISOString().split("T")[0] : "",
+                  numero: c.numero ?? c.nroComprobante ?? "",
+                  tipoComprobanteId: c.tipoComprobante?.id ?? "",
+                  metodoPagoId: c.metodoPago?.id ?? "",
+                  items: c.items ?? [],
                 };
               })()
             : undefined
