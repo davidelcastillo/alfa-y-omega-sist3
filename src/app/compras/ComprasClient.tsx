@@ -85,7 +85,7 @@ export default function ComprasClient({ initialOrders, proveedores, depositos, p
     items: PurchaseOrderItem[];
     totalCantidad: number;
     totalMonto: number;
-  }) {    
+  }) {    }
 
   function onOpenNew() {
     setEditingId(null);

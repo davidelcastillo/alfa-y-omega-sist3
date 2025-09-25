@@ -68,12 +68,36 @@ export async function getOrdenesCompra(params: GetOrdenesCompraParams) {
     prisma.ordenCompra.count({ where }),
   ]);
 
+// ---- Lookup de nombres de depósito SIN relación Prisma ----CAMBIOS HECHOS POR LUIS, CUALQUIER CONSULTA A EL
+  const depositoIds = Array.from(
+    new Set(data.map(oc => oc.depositoId).filter((id): id is number => id != null))
+  );
+  let depMap = new Map<number, string>();
+  if (depositoIds.length) {
+    // Detecta el modelo correcto en tiempo de ejecución (evita errores de tipos)
+    const prismaAny = prisma as any;
+    const depositoModel =
+      prismaAny.deposito ??
+      prismaAny.depositos ??
+      prismaAny.Deposito ??
+      prismaAny.Depositos;
+    if (depositoModel) {
+      const rows = await depositoModel.findMany({
+        where: { id: { in: depositoIds } },
+        select: { id: true, nombre: true }, // ⚠️ si tu campo es 'descripcion', cambialo aquí y abajo
+      });
+      depMap = new Map(rows.map((r: { id: number; nombre: string }) => [r.id, r.nombre]));
+    }
+  }
+//-----
+
   return {
     data: data.map((oc) => ({
       id: oc.id,
       proveedorId: oc.proveedorId,                    // <--- Si rompe algo borrar
       proveedor: oc.proveedor?.nombre || oc.proveedor?.razonSocial,
       depositoId: oc.depositoId,
+      depositoNombre: oc.depositoId != null ? (depMap.get(oc.depositoId) ?? null) : null, //agregado
       estado: oc.estado,
       total: oc.total,
       fecha_creacion: oc.fecha,
