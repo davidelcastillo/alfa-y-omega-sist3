@@ -136,7 +136,7 @@ model ComprobanteProveedor {
   tipoComprobante    TipoComprobante               @relation(fields: [tipoComprobanteId], references: [id])
   deposito           Deposito                      @relation(fields: [depositoId], references: [id])
   detalleComprobante DetalleComprobanteProveedor[]
-  ordenPagos        OrdenPago[]
+  detallePagos       DetalleOrdenPago[]
 }
 
 model DetalleComprobanteProveedor {
@@ -218,20 +218,29 @@ model CategoriaFiscal {
 }
 
 model OrdenPago {
-  id              Int      @id @default(autoincrement())
+  id              Int                       @id @default(autoincrement())
   proveedorId     Int
-  comprobanteId   Int
-  fecha           DateTime @default(now())
-  nroInterno      String?
-  montoPagado     Float
-  metodoPagoId    Int
+  fecha           DateTime                  @default(now())
+  nroInterno      String?                   // Nº interno nuestro (referencia de orden de pago)
+  totalPagado     Float                     @default(0)
+  metodoPagoId    Int                       // 1 forma de pago (según requisito académico)
   observaciones   String?
-  estado          Boolean  @default(true)
+  estado          Boolean                   @default(true)
 
-  proveedor       Proveedores         @relation(fields: [proveedorId], references: [id])
-  comprobante     ComprobanteProveedor @relation(fields: [comprobanteId], references: [id])
-  metodoPago      MetodoPago          @relation(fields: [metodoPagoId], references: [id])
+  // Relaciones
+  proveedor       Proveedores               @relation(fields: [proveedorId], references: [id])
+  metodoPago      MetodoPago                @relation(fields: [metodoPagoId], references: [id])
+  detalles        DetalleOrdenPago[]
 }
 
+model DetalleOrdenPago {
+  id           Int                  @id @default(autoincrement())
+  ordenPagoId  Int
+  comprobanteId Int
+  montoPagado  Float                 // cuánto pagamos de ese comprobante en esta orden
+  saldoPrevio  Float?                // saldo antes de pagar
+  saldoRestante Float?               // saldo después de pagar
 
-
+  ordenPago    OrdenPago             @relation(fields: [ordenPagoId], references: [id])
+  comprobante  ComprobanteProveedor  @relation(fields: [comprobanteId], references: [id])
+}

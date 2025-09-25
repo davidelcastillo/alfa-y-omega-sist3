@@ -3,12 +3,12 @@
 import { revalidatePath } from "next/cache";
 import type { ComprobanteProveedor, DetalleComprobanteProveedor } from "@/lib/comprobante-proveedor/comprobante";
 
-// Base URL de tu API (asegurate de definir NEXT_PUBLIC_BASE_URL en .env)
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL!;
+// // Base URL de tu API (asegurate de definir NEXT_PUBLIC_BASE_URL en .env)
+// const baseUrl = process.env.NEXT_PUBLIC_BASE_URL!;
 
 // ===== Listar comprobantes con relaciones =====
 export async function listComprobanteAction(): Promise<ComprobanteProveedor[]> {
-  const res = await fetch(`${baseUrl}/api/comprobantes-proveedor?include=proveedor,deposito,ordenCompra,tipoComprobante,metodoPago,tipoMovimiento,items`, {
+  const res = await fetch(`http://localhost:3000/api/comprobantes-proveedor?include=proveedor,deposito,ordenCompra,tipoComprobante,metodoPago,tipoMovimiento,items`, {
     cache: "no-store",
   });
 
@@ -32,7 +32,7 @@ export async function createComprobanteAction(payload: {
   items: DetalleComprobanteProveedor[];
   observaciones?: string;
 }): Promise<ComprobanteProveedor> {
-  const res = await fetch(`${baseUrl}/api/comprobantes-proveedor`, {
+  const res = await fetch(`http://localhost:3000/api/comprobantes-proveedor`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

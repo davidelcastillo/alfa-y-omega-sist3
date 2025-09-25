@@ -222,7 +222,7 @@ export default function ComprobanteClient({
                   fecha: c.fecha.split("T")[0],
                   numero: c.numero,
                   tipoComprobanteId: c.tipoComprobante.id,
-                  metodoPagoId: c.metodoPagoId?.id ?? "",
+                  metodoPagoId: c.metodoPago?.id ?? "",
                   items: c.items,
                 };
               })()

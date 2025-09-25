@@ -28,7 +28,7 @@ export default async function Page() {
   const depositos: Deposito[] = initialComprobantes.map(c => c.deposito);
   const productos: Product[] = productsMock; // o fetch real
   const tipoComprobantes: TipoComprobante[] = initialComprobantes.map(c => c.tipoComprobante);
-  const metodosPagos: MetodoPago[] = initialComprobantes.map(c => c.metodoPagoId).filter(Boolean) as MetodoPago[];
+  const metodosPagos: MetodoPago[] = initialComprobantes.map(c => c.metodoPago).filter(Boolean) as MetodoPago[];
   const tiposMovimiento: TipoMovimiento[] = initialComprobantes.map(c => c.tipoMovimiento);
   const ordenCompra: PurchaseOrder[] = initialComprobantes.map(c => c.ordenCompra);
 

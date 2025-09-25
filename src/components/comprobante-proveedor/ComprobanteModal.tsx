@@ -16,6 +16,9 @@ import type {
   PurchaseOrder,
 } from "@/lib/comprobante-proveedor/comprobante";
 
+import {createComprobanteAction} from "../../service/comprobante-proveedor/comprobante.service";
+
+
 type SimpleOption = { id: string; name: string };
 
 type Props = {
@@ -282,51 +285,105 @@ const uniqueOrdenes = useMemo(() => {
   }
 
 
-  async function createComprobante() {
-    if (!proveedorId || !depositoId || !fecha || !tipoComprobanteId || !metodoPagoId || !ordenCompraId || items.length === 0) {
-      alert("Completar todos los campos obligatorios y agregar al menos un producto");
+ async function createComprobante() {
+  // validaciones UI
+  if (!proveedorId || !depositoId || !fecha || !tipoComprobanteId || !metodoPagoId || !ordenCompraId || items.length === 0) {
+    alert("Completar todos los campos obligatorios y agregar al menos un producto");
+    return;
+  }
+
+  // arma el body exactamente como espera tu endpoint /api/comprobantes-proveedor/nuevo
+  const body = {
+    ordenCompraId: Number(ordenCompraId),
+    // opcional: proveedorId/depositoId - si tu backend lo toma desde la OC podés omitirlos, pero aquí los enviamos
+    proveedorId: Number(proveedorId),
+    depositoId: Number(depositoId),
+
+    tipoComprobanteId: Number(tipoComprobanteId),
+    metodoPagoId: metodoPagoId ? Number(metodoPagoId) : undefined,
+    // tipoMovimientoId puede ser opcional, el backend asigna un fallback
+    tipoMovimientoId: tipoMovimientoId ? Number(tipoMovimientoId) : undefined,
+
+    fecha,
+    hora: undefined,
+    letra: letra || null,
+    numeroSucursal: numeroSucursal || null,
+    numero: numero || null,
+    moneda: moneda || null,
+    observaciones: observaciones || null,
+
+    // detalles con los nombres que espera Zod: productId/quantity/unitPrice
+    detalles: items.map((i) => ({
+      productId: Number(i.productId),
+      quantity: Number(i.quantity),
+      unitPrice: Number(i.unitPrice),
+      discount: i.discount ?? 0,
+      observations: i.observations ?? null,
+    })),
+  };
+
+  try {
+    const res = await fetch("/api/comprobantes-proveedor/nuevo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    const json = await res.json();
+
+    if (!res.ok) {
+      // manejar errores de validación Zod (422) con detalles
+      if (res.status === 422 && json?.issues) {
+        console.warn("Zod issues:", json.issues);
+        const msgs = (json.issues || []).map((it: any) => `${it.path?.join(".") ?? ""}: ${it.message}`).join("\n");
+        alert("Error de validación:\n" + msgs);
+        return;
+      }
+      // errores esperados (400 etc)
+      alert("Error: " + (json.error ?? "Desconocido"));
+      console.error("POST /nuevo response:", res.status, json);
       return;
     }
 
-    const body = {
-      ordenCompraId: Number(ordenCompraId),
-      tipoComprobanteId: Number(tipoComprobanteId),
+    // éxito: json.data debería traer { comprobante, movimiento } según tu backend
+    alert("Comprobante creado correctamente");
+
+    // llamamos al callback onSubmit con el shape que espera el padre (strings)
+    const payloadForParent = {
+      proveedorId: String(proveedorId),
+      depositoId: String(depositoId),
       fecha,
-      hora: undefined,
+      items: items,
+      totalCantidad: totalCantidad,
+      totalMonto: totalMonto,
+      tipoMovimientoId: String(tipoMovimientoId),
+      tipoComprobanteId: String(tipoComprobanteId),
+      metodoPagoId: String(metodoPagoId),
+      ordenCompraId: String(ordenCompraId),
       letra: letra || null,
       numeroSucursal: numeroSucursal || null,
       numero: numero || null,
-      tipoMovimientoId: Number(tipoMovimientoId),
       moneda: moneda || null,
       observaciones: observaciones || null,
-      detalles: items.map(i => ({
-        // ajusta al schema que espera tu backend; aquí usamos productId/quantity/unitPrice
-        productId: Number(i.productId),
-        quantity: Number(i.quantity),
-        unitPrice: Number(i.unitPrice),
-        discount: i.discount ?? 0,
-        observations: i.observations ?? "",
-      }))
     };
 
+    // actualizar la UI principal si corresponde
     try {
-      const res = await fetch("/api/comprobantes-proveedor/nuevo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const json = await res.json();
-      if (json.ok) {
-        alert("Comprobante creado correctamente");
-        onOpenChange(false);
-      } else {
-        alert("Error: " + (json.error ?? "Desconocido"));
-      }
+      onSubmit(payloadForParent);
     } catch (err) {
-      console.error(err);
-      alert("Error al conectar con el servidor");
+      // por si el parent no maneja onSubmit async
+      console.warn("onSubmit callback falló:", err);
     }
+
+    // cerrar modal
+    onOpenChange(false);
+  } catch (err) {
+    console.error("Error al conectar con el servidor", err);
+    alert("Error al conectar con el servidor");
   }
+}
+
+
   
 
   return (

@@ -21,6 +21,7 @@ export default function HomePage() {
           <p className="text-gray-600 text-lg">Elegí un módulo para comenzar:</p>
         </div> 
       </div>
+      
       <div className="space-y-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6" >
           <Link href="/productos" className="glass-effect rounded-2xl p-6 card-hover">
