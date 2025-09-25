@@ -1,7 +1,9 @@
+// src/components/ui/SearchableSelect.tsx
 'use client'
 import { useEffect, useMemo, useState } from 'react'
 
-type Option = { id: number; nombre: string }
+// Definimos un tipo genérico para las opciones.
+type Option = { id: string; name: string }
 
 export default function SearchableSelect({
   label = 'Marca *',
@@ -12,7 +14,7 @@ export default function SearchableSelect({
 }: {
   label?: string
   options: Option[]
-  valueId: number | 0
+  valueId: string | "" // El ID puede ser un string o vacío
   onChange: (opt: Option | null) => void
   placeholder?: string
 }) {
@@ -26,21 +28,19 @@ export default function SearchableSelect({
 
   // Sincroniza el texto con la opción seleccionada o limpia si no hay
   useEffect(() => {
-    if (valueId && valueId > 0) {
+    if (valueId && valueId !== "") { // Comprobamos que el valor no sea vacío
       const opt = options.find(o => o.id === valueId);
-      setText(opt ? opt.nombre : "");
+      setText(opt ? opt.name : "");
     } else {
-      // Nuevo producto → marcaId = 0 → mostrar placeholder
       setText("");
     }
   }, [valueId, options]);
 
-
-
   const filtered = useMemo(() => {
     const q = text.trim().toLowerCase()
     if (!q) return options.slice(0, 12)
-    return options.filter((o) => o.nombre.toLowerCase().includes(q)).slice(0, 12)
+    // Cambiamos 'nombre' por 'name'
+    return options.filter((o) => o.name.toLowerCase().includes(q)).slice(0, 12)
   }, [options, text])
 
   return (
@@ -62,10 +62,11 @@ export default function SearchableSelect({
           {filtered.map((opt) => (
             <li
               key={opt.id}
-              onMouseDown={(e) => { e.preventDefault(); onChange(opt); setText(opt.nombre); setOpen(false) }}
+              onMouseDown={(e) => { e.preventDefault(); onChange(opt); setText(opt.name); setOpen(false) }}
               className="px-4 py-3 cursor-pointer hover:bg-light-pink/50"
             >
-              {opt.nombre}
+              {/* Cambiamos 'nombre' por 'name' */}
+              {opt.name}
             </li>
           ))}
         </ul>

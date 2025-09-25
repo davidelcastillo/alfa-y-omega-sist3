@@ -68,11 +68,36 @@ export async function getOrdenesCompra(params: GetOrdenesCompraParams) {
     prisma.ordenCompra.count({ where }),
   ]);
 
+// ---- Lookup de nombres de depósito SIN relación Prisma ----CAMBIOS HECHOS POR LUIS, CUALQUIER CONSULTA A EL
+  const depositoIds = Array.from(
+    new Set(data.map(oc => oc.depositoId).filter((id): id is number => id != null))
+  );
+  let depMap = new Map<number, string>();
+  if (depositoIds.length) {
+    // Detecta el modelo correcto en tiempo de ejecución (evita errores de tipos)
+    const prismaAny = prisma as any;
+    const depositoModel =
+      prismaAny.deposito ??
+      prismaAny.depositos ??
+      prismaAny.Deposito ??
+      prismaAny.Depositos;
+    if (depositoModel) {
+      const rows = await depositoModel.findMany({
+        where: { id: { in: depositoIds } },
+        select: { id: true, nombre: true }, // ⚠️ si tu campo es 'descripcion', cambialo aquí y abajo
+      });
+      depMap = new Map(rows.map((r: { id: number; nombre: string }) => [r.id, r.nombre]));
+    }
+  }
+//-----
+
   return {
     data: data.map((oc) => ({
       id: oc.id,
+      proveedorId: oc.proveedorId,                    // <--- Si rompe algo borrar
       proveedor: oc.proveedor?.nombre || oc.proveedor?.razonSocial,
       depositoId: oc.depositoId,
+      depositoNombre: oc.depositoId != null ? (depMap.get(oc.depositoId) ?? null) : null, //agregado
       estado: oc.estado,
       total: oc.total,
       fecha_creacion: oc.fecha,
@@ -85,3 +110,35 @@ export async function getOrdenesCompra(params: GetOrdenesCompraParams) {
     },
   };
 }
+
+export async function listProveedoresBasic() {
+  const rows = await prisma.proveedores.findMany({
+    where: { estado: true }, // solo activos; quitalo si querés todos
+    select: { id: true, nombre: true, nombreComercial: true, razonSocial: true, codigo: true },
+    orderBy: { nombre: "asc" },
+    take: 500, // tope sano; ajustá si hace falta
+  });
+
+  // Devuelve shape compatible con tu UI (Supplier-like)
+  return rows.map(r => ({
+    id: String(r.id),
+    name: r.nombre ?? r.nombreComercial ?? r.razonSocial ?? `Proveedor ${r.id}`,
+    code: r.codigo ?? "", // tu tipo Supplier exige 'code'
+  }));
+}
+
+export async function listDepositosBasic() {
+  const rows = await prisma.deposito.findMany({
+    where: { estado: true }, // idem activos
+    select: { id: true, nombre: true },
+    orderBy: { nombre: "asc" },
+    take: 500,
+  });
+
+  // Devolvemos { id, name } para que sea fácil mapear a string[] si querés
+  return rows.map(r => ({
+    id: String(r.id),
+    name: r.nombre,
+  }));
+}
+

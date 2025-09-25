@@ -20,7 +20,9 @@ import type {
   Supplier,
 } from "@/lib/compras/purchase";
 
-import { createOrderAction } from "./actions/orders";
+//import { createOrderAction } from "./actions/orders";
+import { listOrdersAction } from "@/app/compras/actions/orders"; // Importación de listado (existente)
+import { createOrderAction } from "@/app/compras/actions/create"; // NUEVA IMPORTACIÓN
 import useComprasSort from "./hooks/useComprasSort";
 import usePagination from "./hooks/usePagination";
 import useModal from "./hooks/useModal";
@@ -83,11 +85,7 @@ export default function ComprasClient({ initialOrders, proveedores, depositos, p
     items: PurchaseOrderItem[];
     totalCantidad: number;
     totalMonto: number;
-  }) {
-    setOpen(false);
-    setEditingId(null);
-    // TODO: disparar ToastNotificacion si querés
-  }
+  }) {    }
 
   function onOpenNew() {
     setEditingId(null);
@@ -105,7 +103,7 @@ export default function ComprasClient({ initialOrders, proveedores, depositos, p
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
         </svg>
-        <span className="text-primary-pink font-medium">Movimiento de Stock</span>
+        <span className="text-primary-pink font-medium">Gestion de compras</span>
       </div>
     
       {/* Header de la sección */}
