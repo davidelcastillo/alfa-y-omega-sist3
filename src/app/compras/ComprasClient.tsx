@@ -21,6 +21,8 @@ import type {
 } from "@/lib/compras/purchase";
 
 //import { createOrderAction } from "./actions/orders";
+import { listOrdersAction } from "@/app/compras/actions/orders"; // Importación de listado (existente)
+import { createOrderAction } from "@/app/compras/actions/create"; // NUEVA IMPORTACIÓN
 import useComprasSort from "./hooks/useComprasSort";
 import usePagination from "./hooks/usePagination";
 import useModal from "./hooks/useModal";
@@ -83,11 +85,7 @@ export default function ComprasClient({ initialOrders, proveedores, depositos, p
     items: PurchaseOrderItem[];
     totalCantidad: number;
     totalMonto: number;
-  }) {
-    setOpen(false);
-    setEditingId(null);
-    // TODO: disparar ToastNotificacion si querés
-  }
+  }) {    
 
   function onOpenNew() {
     setEditingId(null);
