@@ -1,20 +1,19 @@
-import { PrismaClient } from "@/generated/prisma";
+// src/server/ordenes-compra.service.ts
+import { prisma } from "@/lib/prisma";
 
-const prisma = new PrismaClient();
+type GetOCParams = {
+  page: number;
+  limit: number;
+  estado?: boolean;
+  proveedorId?: number;
+  depositoId?: number;
+  fecha_desde?: string;
+  fecha_hasta?: string;
+  search?: string;
+  sort?: "asc" | "desc";
+};
 
-interface GetOrdenesCompraParams {
-  page?: number;           // Número de página para la paginación
-  limit?: number;          // Cantidad de resultados por página
-  estado?: boolean;        // Filtro: solo órdenes activas (true) o inactivas (false)
-  proveedorId?: number;    // Filtro: por proveedor específico
-  depositoId?: number;     // Filtro: por depósito específico
-  fecha_desde?: string;    // Filtro: fecha mínima de creación
-  fecha_hasta?: string;    // Filtro: fecha máxima de creación
-  search?: string;         // Búsqueda por nroOC u observaciones
-  sort?: "asc" | "desc";   // Ordenar resultados por fecha ascendente o descendente
-}
-
-export async function getOrdenesCompra(params: GetOrdenesCompraParams) {
+export async function getOrdenesCompra(params: GetOCParams) {
   const {
     page = 1,
     limit = 10,
@@ -27,61 +26,61 @@ export async function getOrdenesCompra(params: GetOrdenesCompraParams) {
     sort = "desc",
   } = params;
 
-  const skip = (page - 1) * limit;
-
   const where: any = {};
-
   if (estado !== undefined) where.estado = estado;
   if (proveedorId) where.proveedorId = proveedorId;
   if (depositoId) where.depositoId = depositoId;
-  // Filtro por rango de fechas
   if (fecha_desde || fecha_hasta) {
     where.fecha = {};
     if (fecha_desde) where.fecha.gte = new Date(fecha_desde);
-    if (fecha_hasta) where.fecha.lte = new Date(fecha_hasta);
+    if (fecha_hasta) {
+      const end = new Date(fecha_hasta);
+      if (!fecha_hasta.includes("T")) end.setHours(23, 59, 59, 999);
+      where.fecha.lte = end;
+    }
   }
-  if (search) {
+  if (search?.trim()) {
     where.OR = [
       { nroOC: { contains: search, mode: "insensitive" } },
       { observaciones: { contains: search, mode: "insensitive" } },
+      { proveedor: { is: { nombre: { contains: search, mode: "insensitive" } } } },
     ];
   }
 
-  // Ejecutar consultas en paralelo para obtener datos y total
-
-  const [data, total] = await Promise.all([
+  const [total, rowsRaw] = await Promise.all([
+    prisma.ordenCompra.count({ where }),
     prisma.ordenCompra.findMany({
-      skip,
-      take: limit,
       where,
       orderBy: { fecha: sort },
-      include: {
-        proveedor: {
-          select: { id: true, nombre: true, razonSocial: true },
-        },
-        comprobantes: {
-          select: { id: true },
-
-        },
+      take: limit,
+      skip: (page - 1) * limit,
+      select: {
+        id: true,
+        fecha: true,
+        hora: true,
+        nroOC: true,
+        proveedor: { select: { id: true, nombre: true } }, // 👈 objeto
+        depositoId: true,
+        subTotal: true,
+        otrosGastos: true,
+        total: true,
+        estado: true,
+        _count: { select: { detalleOrdenCompra: true } }, // 👈 presente
       },
     }),
-    prisma.ordenCompra.count({ where }),
   ]);
 
+  // Normalización de tipos para el front:
+  const rows = rowsRaw.map((r) => ({
+    ...r,
+    fecha: r.fecha instanceof Date ? r.fecha.toISOString() : String(r.fecha), // 👈 string ISO
+  }));
+
   return {
-    data: data.map((oc) => ({
-      id: oc.id,
-      proveedor: oc.proveedor?.nombre || oc.proveedor?.razonSocial,
-      depositoId: oc.depositoId,
-      estado: oc.estado,
-      total: oc.total,
-      fecha_creacion: oc.fecha,
-      usuario_creador: "pendiente", // si más adelante agregás usuario
-    })),
-    meta: {
-      total,  // cantidad total de registros encontrados
-      page,   // página actual
-      limit,  // límite de registros por página
-    },
+    page,
+    limit,
+    total,
+    pages: Math.ceil(total / limit),
+    data: rows,
   };
 }

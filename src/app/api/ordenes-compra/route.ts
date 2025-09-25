@@ -1,44 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getOrdenesCompra } from '@/server/ordenes-compra.service';
+// src/app/api/ordenes-compra/route.ts
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
+import { parseSearchParams } from "@/lib/utils";
+import {
+  OrdenCompraQuerySchema,
+  OrdenCompraCreateSchema,
+} from "@/lib/compras/types";
+import { getOrdenesCompra } from "@/server/ordenes-compra.service";
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
+    // ✅ mismo DTO entre front y back
+    const q = parseSearchParams(OrdenCompraQuerySchema, searchParams);
 
-    const page = Number(searchParams.get("page") || 1);
-    const limit = Number(searchParams.get("limit") || 10);
-    const estado = searchParams.get("estado")
-      ? searchParams.get("estado") === "true"
-      : undefined;
-    const proveedorId = searchParams.get("proveedorId")
-      ? Number(searchParams.get("proveedorId"))
-      : undefined;
-    const depositoId = searchParams.get("depositoId")
-      ? Number(searchParams.get("depositoId"))
-      : undefined;
-    const fecha_desde = searchParams.get("fecha_desde") || undefined;
-    const fecha_hasta = searchParams.get("fecha_hasta") || undefined;
-    const search = searchParams.get("search") || undefined;
-    const sort = (searchParams.get("sort") as "asc" | "desc") || "desc";
-
-    const result = await getOrdenesCompra({
-      page,
-      limit,
-      estado,
-      proveedorId,
-      depositoId,
-      fecha_desde,
-      fecha_hasta,
-      search,
-      sort,
-    });
-
+    const result = await getOrdenesCompra(q);
     return NextResponse.json(result, { status: 200 });
   } catch (error: any) {
     console.error("Error en GET /ordenes-compra:", error);
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: "Parámetros inválidos", detalles: error.flatten() },
+        { status: 400 }
+      );
+    }
     return NextResponse.json(
       { message: "Error al obtener órdenes de compra" },
       { status: 500 }
@@ -46,56 +33,66 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// Validaciones de entrada
-const ordenCompraSchema = z.object({
-  fecha: z.string().transform((val) => new Date(val)), // fecha como string ISO
-  hora: z.string().optional(),
-  nroOC: z.string().optional(),
-  proveedorId: z.number().int().positive(), // FK obligatoria
-  subTotal: z.number().optional(),
-  otrosGastos: z.number().optional(),
-  total: z.number().optional(),
-  fechaEntrega: z.string().optional().transform((val) => (val ? new Date(val) : null)),
-  depositoId: z.number().int().positive().optional(),
-  observaciones: z.string().optional(),
-});
-
 export async function POST(req: Request) {
   try {
+    // ✅ mismo DTO entre front y back
     const body = await req.json();
-    const data = ordenCompraSchema.parse(body);
+    const dto = OrdenCompraCreateSchema.parse(body);
 
-    // Crear la orden de compra
-    const nuevaOrden = await prisma.ordenCompra.create({
+    // Checks de FK mínimas (útiles para el front)
+    const prov = await prisma.proveedores.findUnique({
+      where: { id: dto.proveedorId },
+      select: { id: true },
+    });
+    if (!prov) {
+      return NextResponse.json(
+        { error: "Proveedor inexistente" },
+        { status: 400 }
+      );
+    }
+
+    if (dto.depositoId) {
+      const dep = await prisma.deposito.findUnique({
+        where: { id: dto.depositoId },
+        select: { id: true },
+      });
+      if (!dep) {
+        return NextResponse.json(
+          { error: "Depósito inexistente" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Crear OC
+    const nueva = await prisma.ordenCompra.create({
       data: {
-        fecha: data.fecha,
-        hora: data.hora ?? null,
-        nroOC: data.nroOC ?? null,
-        proveedorId: data.proveedorId, // Se asocia automáticamente con el proveedor
-        subTotal: data.subTotal ?? 0,
-        otrosGastos: data.otrosGastos ?? 0,
-        total: data.total ?? 0,
-        fechaEntrega: data.fechaEntrega ?? null,
-        depositoId: data.depositoId ?? null,
-        observaciones: data.observaciones ?? null,
-        estado: true, // por defecto activo
+        fecha: new Date(dto.fecha),
+        hora: dto.hora ?? null,
+        nroOC: dto.nroOC ?? null,
+        proveedorId: dto.proveedorId,
+        subTotal: dto.subTotal ?? 0,
+        otrosGastos: dto.otrosGastos ?? 0,
+        total: dto.total ?? 0,
+        fechaEntrega: dto.fechaEntrega ? new Date(dto.fechaEntrega) : null,
+        depositoId: dto.depositoId ?? null,
+        observaciones: dto.observaciones ?? null,
+        estado: true,
       },
       include: {
-        proveedor: true, // devuelve los datos del proveedor asociado
+        proveedor: { select: { id: true, nombre: true } },
       },
     });
 
-    return NextResponse.json(nuevaOrden, { status: 201 });
+    return NextResponse.json(nueva, { status: 201 });
   } catch (error: any) {
     console.error("Error creando orden de compra:", error);
-
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Datos inválidos", detalles: error.flatten() },
         { status: 400 }
       );
     }
-
     return NextResponse.json(
       { error: "Error interno al crear la orden de compra" },
       { status: 500 }

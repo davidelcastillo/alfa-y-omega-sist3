@@ -81,7 +81,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       ok: true,
       data: {
         id: oc.id,
-        fecha: oc.fecha,
+        fecha: oc.fecha instanceof Date ? oc.fecha.toISOString() : oc.fecha,
         hora: oc.hora,
         proveedor: oc.proveedor,
         deposito: deposito ? { id: deposito.id, nombre: deposito.nombre } : null,
