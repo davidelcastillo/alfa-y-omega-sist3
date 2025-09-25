@@ -14,3 +14,12 @@ export type UIProduct = {
 // exportación del SortOrder y SortKey para el ordenamiendo y agrupación 
 export type SortOrder = 'asc' | 'desc' | null ;
 export type SortKey = 'id' | 'nombre' | 'provincia' | 'ciudad' | 'ubicacion' | 'tipo' | 'capacidad' | 'itemsStock' | 'estado';
+// lib/types.ts
+import { z } from "zod";
+
+export const IdSchema = z.number().int().positive();
+export type Id = z.infer<typeof IdSchema>;
+
+export const ISODateString = z
+  .string()
+  .refine((v) => !Number.isNaN(Date.parse(v)), { message: "Fecha inválida" });

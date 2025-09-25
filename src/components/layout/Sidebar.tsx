@@ -50,7 +50,7 @@ const items: MenuItem[] = [
     children: [
       { label: 'Órdenes de compra', href: '/compras' },
       { label: 'NOSE', href: '#' }, //cambiar esto cuando se genere el diseño
-      { label: 'NOSE', href: '#' },
+      { label: 'pagos', href: '/pagos' },
     ],
   },
   {

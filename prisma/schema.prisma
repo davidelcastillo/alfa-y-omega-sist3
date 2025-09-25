@@ -57,7 +57,6 @@ model Deposito {
   provincia   String?
   movimientos MovimientoStock[]
   stock       StockPorDeposito[]
-  comprobantes ComprobanteProveedor[]
 }
 
 model StockPorDeposito {
@@ -130,13 +129,15 @@ model ComprobanteProveedor {
   estado             Boolean                       @default(true)
   observaciones      String?
   tipoMovimientoId   Int?
+  depositoId         Int
+  moneda             String?
+  Deposito           Deposito                      @relation(fields: [depositoId], references: [id])
   metodoPago         MetodoPago?                   @relation(fields: [metodoPagoId], references: [id])
   ordenCompra        OrdenCompra                   @relation(fields: [ordenCompraId], references: [id])
   proveedor          Proveedores                   @relation(fields: [proveedorId], references: [id])
   tipoComprobante    TipoComprobante               @relation(fields: [tipoComprobanteId], references: [id])
   deposito           Deposito                      @relation(fields: [depositoId], references: [id])
   detalleComprobante DetalleComprobanteProveedor[]
-  detallePagos       DetalleOrdenPago[]
 }
 
 model DetalleComprobanteProveedor {
@@ -200,7 +201,6 @@ model Proveedores {
   estado            Boolean                @default(true)
   comprobantes      ComprobanteProveedor[]
   ordenesCompra     OrdenCompra[]
-  ordenesPago       OrdenPago[]
   categoriaFiscal   CategoriaFiscal?       @relation(fields: [categoriaFiscalId], references: [id])
 }
 
@@ -208,7 +208,6 @@ model MetodoPago {
   id           Int                    @id @default(autoincrement())
   nombre       String
   comprobantes ComprobanteProveedor[]
-  ordenesPago  OrdenPago[]
 }
 
 model CategoriaFiscal {
@@ -217,30 +216,27 @@ model CategoriaFiscal {
   proveedores Proveedores[]
 }
 
-model OrdenPago {
-  id              Int                       @id @default(autoincrement())
-  proveedorId     Int
-  fecha           DateTime                  @default(now())
-  nroInterno      String?                   // Nº interno nuestro (referencia de orden de pago)
-  totalPagado     Float                     @default(0)
-  metodoPagoId    Int                       // 1 forma de pago (según requisito académico)
-  observaciones   String?
-  estado          Boolean                   @default(true)
-
-  // Relaciones
-  proveedor       Proveedores               @relation(fields: [proveedorId], references: [id])
-  metodoPago      MetodoPago                @relation(fields: [metodoPagoId], references: [id])
-  detalles        DetalleOrdenPago[]
+model DetalleOrdenPago {
+  id                   Int                  @id @default(autoincrement())
+  ordenPagoId          Int
+  comprobanteId        Int
+  montoPagado          Float
+  saldoPrevio          Float?
+  saldoRestante        Float?
+  ComprobanteProveedor ComprobanteProveedor @relation(fields: [comprobanteId], references: [id])
+  OrdenPago            OrdenPago            @relation(fields: [ordenPagoId], references: [id])
 }
 
-model DetalleOrdenPago {
-  id           Int                  @id @default(autoincrement())
-  ordenPagoId  Int
-  comprobanteId Int
-  montoPagado  Float                 // cuánto pagamos de ese comprobante en esta orden
-  saldoPrevio  Float?                // saldo antes de pagar
-  saldoRestante Float?               // saldo después de pagar
-
-  ordenPago    OrdenPago             @relation(fields: [ordenPagoId], references: [id])
-  comprobante  ComprobanteProveedor  @relation(fields: [comprobanteId], references: [id])
+model OrdenPago {
+  id               Int                @id @default(autoincrement())
+  proveedorId      Int
+  fecha            DateTime           @default(now())
+  nroInterno       String?
+  metodoPagoId     Int
+  observaciones    String?
+  estado           Boolean            @default(true)
+  totalPagado      Float              @default(0)
+  DetalleOrdenPago DetalleOrdenPago[]
+  MetodoPago       MetodoPago         @relation(fields: [metodoPagoId], references: [id])
+  Proveedores      Proveedores        @relation(fields: [proveedorId], references: [id])
 }
