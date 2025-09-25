@@ -110,3 +110,35 @@ export async function getOrdenesCompra(params: GetOrdenesCompraParams) {
     },
   };
 }
+
+export async function listProveedoresBasic() {
+  const rows = await prisma.proveedores.findMany({
+    where: { estado: true }, // solo activos; quitalo si querés todos
+    select: { id: true, nombre: true, nombreComercial: true, razonSocial: true, codigo: true },
+    orderBy: { nombre: "asc" },
+    take: 500, // tope sano; ajustá si hace falta
+  });
+
+  // Devuelve shape compatible con tu UI (Supplier-like)
+  return rows.map(r => ({
+    id: String(r.id),
+    name: r.nombre ?? r.nombreComercial ?? r.razonSocial ?? `Proveedor ${r.id}`,
+    code: r.codigo ?? "", // tu tipo Supplier exige 'code'
+  }));
+}
+
+export async function listDepositosBasic() {
+  const rows = await prisma.deposito.findMany({
+    where: { estado: true }, // idem activos
+    select: { id: true, nombre: true },
+    orderBy: { nombre: "asc" },
+    take: 500,
+  });
+
+  // Devolvemos { id, name } para que sea fácil mapear a string[] si querés
+  return rows.map(r => ({
+    id: String(r.id),
+    name: r.nombre,
+  }));
+}
+
