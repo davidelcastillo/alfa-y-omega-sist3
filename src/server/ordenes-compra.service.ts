@@ -1,4 +1,5 @@
 import { PrismaClient } from "@/generated/prisma";
+import type { PurchaseOrder } from "@/lib/compras/purchase";
 
 const prisma = new PrismaClient();
 
@@ -111,6 +112,9 @@ export async function getOrdenesCompra(params: GetOrdenesCompraParams) {
   };
 }
 
+
+//De aqui para abajo puesto por LUIS para poder ver proveedores y deposito
+
 export async function listProveedoresBasic() {
   const rows = await prisma.proveedores.findMany({
     where: { estado: true }, // solo activos; quitalo si querés todos
@@ -142,3 +146,63 @@ export async function listDepositosBasic() {
   }));
 }
 
+
+function fmt(d?: Date | null) {
+  if (!d) return "";
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+
+export async function getOrdenCompraDetalleUI(id: number): Promise<PurchaseOrder | null> {
+  const oc = await prisma.ordenCompra.findUnique({
+    where: { id },
+    select: {
+      id: true, fecha: true, hora: true, proveedorId: true, depositoId: true,
+      subTotal: true, otrosGastos: true, total: true, fechaEntrega: true,
+      estado: true, observaciones: true,
+      proveedor: { select: { id: true, nombre: true, razonSocial: true, codigo: true } },
+      detalleOrdenCompra: {
+        select: {
+          id: true, productoId: true, cantidad: true, precioUnitario: true,
+          producto: { select: { id: true, nombre: true } },
+        },
+      },
+    },
+  });
+  if (!oc) return null;
+
+  let depositoNombre: string | null = null;
+  if (oc.depositoId != null) {
+    const dep = await prisma.deposito.findUnique({ where: { id: oc.depositoId }, select: { nombre: true } });
+    depositoNombre = dep?.nombre ?? null;
+  }
+
+  const items = oc.detalleOrdenCompra.map((r) => ({
+    id: String(r.id),
+    productId: String(r.productoId),
+    productName: r.producto?.nombre ?? "",
+    quantity: Number(r.cantidad ?? 0),
+    unitPrice: Number(r.precioUnitario ?? 0),
+    totalPrice: Number((r.cantidad ?? 0) * (r.precioUnitario ?? 0)),
+  }));
+
+  return {
+    id: String(oc.id),
+    creationDate: fmt(oc.fecha),
+    creationTime: oc.hora ?? "",
+    supplier: {
+      id: String(oc.proveedorId),
+      name: oc.proveedor?.nombre ?? oc.proveedor?.razonSocial ?? "",
+      code: oc.proveedor?.codigo ?? "",
+    },
+    warehouse: depositoNombre ?? (oc.depositoId != null ? String(oc.depositoId) : "—"),
+    deliveryDate: fmt(oc.fechaEntrega),
+    status: oc.estado ? "Completa" : "Incompleta",
+    total: Number(oc.total ?? 0),
+    totalQuantity: items.reduce((s, it) => s + it.quantity, 0),
+    items,
+  };
+}

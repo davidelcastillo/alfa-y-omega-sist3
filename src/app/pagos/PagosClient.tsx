@@ -139,7 +139,7 @@ export default function PagosClient({ initialData, suppliers }: Props) {
       <PagosTable data={data} onView={onView} />
 
       {/* Modal (solo UI; opciones desde mocks/) */}
-      <PagosModal
+      <PagosModal    //aqui muchas cosas son para los mocks, se puede borrar tranquilamente
         open={modalOpen}
         onOpenChange={setModalOpen}
         onConfirm={onConfirmModal}

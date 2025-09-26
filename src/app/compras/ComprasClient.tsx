@@ -67,7 +67,7 @@ export default function ComprasClient({ initialOrders, proveedores, depositos, p
   // Navegación “Ver”
   function onView(id: string) {
     // TODO: reemplazar por router.push(`/compras/${id}`)
-    alert(`Ver detalle de ${id} (pendiente de /compras/[id])`);
+    window.location.href = `/compras/${id}/detalles`;
   }
 
   // Editar
