@@ -56,7 +56,14 @@ export async function GET(request: NextRequest) {
     // Obtener datos necesarios en paralelo
     const [ordenesCompra, tiposComprobante, metodosPago] = await Promise.all([
       prisma.ordenCompra.findMany({
-        where: ordenCompraId ? { id: Number(ordenCompraId) } : undefined,
+        where: {
+          ...(ordenCompraId ? { id: Number(ordenCompraId) } : {}),
+          // Solo traer OCs que no tengan comprobantes asociados y estén activas
+          comprobantes: {
+            none: {}
+          },
+          estado: true
+        },
         select: {
           id: true,
           nroOC: true,
@@ -169,19 +176,25 @@ export async function POST(request: NextRequest) {
     // Validar el payload con el schema y transformar
     // Los datos ya deberían venir en el formato correcto desde el frontend
     const transformedData = {
-      ordenCompra: input.ordenCompra,
-      proveedor: input.proveedor,
-      tipoComprobante: input.tipoComprobante,
-      deposito: input.deposito,
+      ordenCompra: { id: Number(input.ordenCompraId) },
+      proveedor: { id: Number(input.proveedorId) },
+      tipoComprobante: { id: Number(input.tipoComprobanteId) },
+      deposito: { id: Number(input.depositoId) },
       fecha: input.fecha,
       hora: input.hora,
       letra: input.letra,
       numeroSucursal: input.numeroSucursal,
       numero: input.numero,
-      metodoPago: input.metodoPago,
+      metodoPago: input.metodoPagoId ? { id: Number(input.metodoPagoId) } : null,
       observaciones: input.observaciones,
-      tipoMovimiento: input.tipoMovimiento,
-      items: input.items
+      tipoMovimiento: { id: 1 },
+      items: input.detalles.map(det => ({
+        productId: Number(det.productoId),
+        quantity: Number(det.cantidad),
+        unitPrice: Number(det.precioUnitario),
+        discount: det.descuento ? Number(det.descuento) : undefined,
+        observations: det.observaciones
+      }))
     };
 
     // Validar con el schema final

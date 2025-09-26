@@ -145,17 +145,15 @@ export default function ComprasTable({
                       <Eye className="w-4 h-4" />
                     </Button>
 
-                    {onEdit && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => onEdit(comprobante.id)}
-                        title="Editar"
-                        aria-label={`Editar ${comprobante.id}`}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => window.location.href = `/comprobante-proveedor/${comprobante.id}`}
+                      title="Ver detalles"
+                      aria-label={`Ver detalles de ${comprobante.id}`}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
 
                     {onDelete && (
                       <Button
