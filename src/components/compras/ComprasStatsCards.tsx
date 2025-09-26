@@ -10,7 +10,10 @@ type Props = {
 };
 
 function money(n: number) {
-  return (n ?? 0).toLocaleString(undefined, { minimumFractionDigits: 0 });
+   return new Intl.NumberFormat("es-AR", {
+     minimumFractionDigits: 2,
+     maximumFractionDigits: 2,
+   }).format(n ?? 0);
 }
 
 export default function ComprasStatsCards({ total, completas, incompletas, montoTotal }: Props) {
