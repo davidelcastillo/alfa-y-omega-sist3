@@ -2,7 +2,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest } from "next/server";
 import { ComprobanteInitQuerySchema, ComprobanteCreateSchema } from "@/lib/comprobante-proveedor/types";
-import { CreateSchema } from "@/server/comprobantes-proveedor.service";
+// import { CreateSchema } from "@/server/comprobantes-proveedor.service";
 import type { ZodError } from "zod";
 import { crearComprobanteProveedorConMovimiento } from "@/server/comprobantes-proveedor.service";
 

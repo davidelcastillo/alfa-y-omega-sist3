@@ -1,9 +1,5 @@
 'use client';
 
-// UI demo hasta conectar backend.
-// ❗Sin filtros funcionales, ni sorting, ni paginación. Sin mocks inline.
-// Las opciones del modal vienen desde mocks/ (importadas).
-
 import { useMemo, useState } from 'react';
 import PagosStatsCards from '@/components/pagos/PagosStatsCards';
 import PagosFilters, { PagosFiltersState } from '@/components/pagos/PagosFilters';
@@ -12,13 +8,6 @@ import PagosModal from '@/components/pagos/PagosModal';
 import Button from '@/components/ui/Button';
 import { Plus } from 'lucide-react';
 import type { SupplierPayment } from '@/mocks/pagos.mock';
-
-// ⚠️ Traé estos mocks desde mocks/pagos.mock.ts (crealos si no existen)
-import {
-  voucherTypeOptionsMock,    // Array<{ id:number; nombre:string }>
-  voucherNumberOptionsMock,  // Array<{ id:number; nombre:string }>
-  paymentMethodOptionsMock,  // Array<{ id:number; nombre:string }>
-} from '@/mocks/pagos.mock';
 
 type Props = {
   /** ⚠️ MOCK: viene de page.tsx; reemplazar allí cuando haya API */
@@ -56,36 +45,12 @@ export default function PagosClient({ initialData, suppliers }: Props) {
     [suppliers]
   );
 
-  // Modal (solo abrir/cerrar; sin crear mocks ni resolver datos)
+  // Estado del modal
   const [modalOpen, setModalOpen] = useState(false);
-
-  // Estados del modal (solo selección UI; sin lookup a proveedor/total)
-  const [voucherTypeId, setVoucherTypeId] = useState<number>(0);
-  const [voucherNumberId, setVoucherNumberId] = useState<number>(0);
-  const [paymentMethodId, setPaymentMethodId] = useState<number>(0);
-  const [observations, setObservations] = useState<string>('');
-
-  // Campos “resueltos” (se completarán cuando haya backend)
-  const resolvedSupplierName = undefined;
-  const resolvedSupplierCode = undefined;
-  const resolvedTotal = undefined;
-
-  // Header opcional del modal (solo decorativo)
-  const paymentIdRef = undefined;
 
   // Acciones
   const onOpenNew = () => {
-    // No crear ni mutar datos: solo abrir modal y limpiar selecciones
-    setVoucherTypeId(0);
-    setVoucherNumberId(0);
-    setPaymentMethodId(0);
-    setObservations('');
     setModalOpen(true);
-  };
-
-  const onConfirmModal = () => {
-    // Se deja para backend real
-    alert('(MOCK) Confirmar pago (deshabilitado hasta conectar backend)');
   };
 
   const onView = (id: string) => {
@@ -138,31 +103,14 @@ export default function PagosClient({ initialData, suppliers }: Props) {
       {/* Tabla (sin sort/paginación) */}
       <PagosTable data={data} onView={onView} />
 
-      {/* Modal (solo UI; opciones desde mocks/) */}
+      {/* Modal de nueva orden de pago */}
       <PagosModal
         open={modalOpen}
         onOpenChange={setModalOpen}
-        onConfirm={onConfirmModal}
-        paymentIdRef={paymentIdRef}
-        // Tipo de comprobante (desde mocks/)
-        voucherTypeOptions={voucherTypeOptionsMock}
-        voucherTypeId={voucherTypeId}
-        onChangeVoucherType={(opt) => setVoucherTypeId(opt?.id ?? 0)}
-        // N° de comprobante (desde mocks/)
-        voucherNumberOptions={voucherNumberOptionsMock}
-        voucherNumberId={voucherNumberId}
-        onChangeVoucherNumber={(opt) => setVoucherNumberId(opt?.id ?? 0)}
-        // Medio de pago (desde mocks/)
-        paymentMethodOptions={paymentMethodOptionsMock}
-        paymentMethodId={paymentMethodId}
-        onChangePaymentMethod={(opt) => setPaymentMethodId(opt?.id ?? 0)}
-        // Observaciones
-        observations={observations}
-        onChangeObservations={setObservations}
-        // Resueltos (readonly – los completa el backend)
-        resolvedSupplierName={resolvedSupplierName}
-        resolvedSupplierCode={resolvedSupplierCode}
-        resolvedTotal={resolvedTotal}
+        onSuccess={() => {
+          // Recargar la página para ver los cambios
+          window.location.reload();
+        }}
       />
     </main>
   );
