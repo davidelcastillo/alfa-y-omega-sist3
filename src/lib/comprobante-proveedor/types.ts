@@ -1,3 +1,4 @@
+//src/lib/comprobante-proveedor/types.ts
 import { z } from "zod";
 
 /* ------------ Listado ------------ */
@@ -39,6 +40,12 @@ export const ComprobanteInitQuerySchema = z.object({
 export type ComprobanteInitQuery = z.infer<typeof ComprobanteInitQuerySchema>;
 
 export const ComprobanteInitResponseSchema = z.object({
+  ordenesCompra: z.array(z.object({
+    id: z.number(),
+    nro: z.string().nullable(),
+    fecha: z.string(),
+    proveedor: z.object({ id: z.number(), nombre: z.string() })
+  })).optional(),
   oc: z.object({
     id: z.number(),
     nro: z.string().nullable().optional(),
@@ -52,7 +59,7 @@ export const ComprobanteInitResponseSchema = z.object({
       cantidad: z.number(),
       precioUnitario: z.number(),
     })),
-  }),
+  }).optional(),
   opciones: z.object({
     tiposComprobante: z.array(z.object({ id: z.number(), nombre: z.string() })),
     metodosPago: z.array(z.object({ id: z.number(), nombre: z.string() })),
@@ -62,30 +69,29 @@ export type ComprobanteInitResponse = z.infer<typeof ComprobanteInitResponseSche
 
 /* ------------ Alta (POST /nuevo) ------------ */
 export const ComprobanteDetalleCreateSchema = z.object({
-  productoId: z.coerce.number().int().positive(),
-  cantidad: z.coerce.number().int().positive(),
-  precioUnitario: z.coerce.number().positive(),
-  descuento: z.coerce.number().min(0).max(100).optional(),
-  observaciones: z.string().optional().nullable(),
+  productId: z.coerce.number().int().positive(),
+  quantity: z.coerce.number().positive(),
+  unitPrice: z.coerce.number().positive(),
+  discount: z.coerce.number().min(0).max(100).optional(),
+  observations: z.string().optional().nullable()
 });
-export type ComprobanteDetalleCreateDTO = z.infer<typeof ComprobanteDetalleCreateSchema>;
 
 export const ComprobanteCreateSchema = z.object({
-  ordenCompraId: z.coerce.number().int().positive(),
-  proveedorId: z.coerce.number().int().positive().optional(), // se toma de la OC si no viene
-  depositoId: z.coerce.number().int().positive().optional(),  // se toma de la OC si no viene
-  tipoComprobanteId: z.coerce.number().int().positive(),
-  tipoMovimientoId: z.coerce.number().int().positive().optional().nullable(),
-  metodoPagoId: z.coerce.number().int().positive().optional().nullable(),
+  ordenCompra: z.object({ id: z.coerce.number().int().positive() }),
+  proveedor: z.object({ id: z.coerce.number().int().positive() }),
+  tipoComprobante: z.object({ id: z.coerce.number().int().positive() }),
   fecha: z.string().refine(v => !Number.isNaN(Date.parse(v)), "fecha inválida (ISO)"),
   hora: z.string().optional().nullable(),
   letra: z.string().optional().nullable(),
   numeroSucursal: z.string().optional().nullable(),
   numero: z.string().optional().nullable(),
-  moneda: z.string().optional().nullable(),
+  metodoPago: z.object({ id: z.coerce.number().int().positive() }).nullable().optional(),
   observaciones: z.string().optional().nullable(),
-  detalles: z.array(ComprobanteDetalleCreateSchema).min(1),
+  deposito: z.object({ id: z.coerce.number().int().positive() }),
+  tipoMovimiento: z.object({ id: z.coerce.number().int().positive() }).nullable().optional(),
+  items: z.array(ComprobanteDetalleCreateSchema).min(1)
 });
+
 export type ComprobanteCreateDTO = z.infer<typeof ComprobanteCreateSchema>;
 
 export const ComprobanteCreatedSchema = z.object({

@@ -1,3 +1,4 @@
+//src/lib/comprobante-proveedor/api.ts
 import { z } from "zod";
 import {
   ComprobanteInitQuerySchema, ComprobanteInitResponseSchema,
@@ -22,12 +23,13 @@ export async function apiListComprobantes(params: ComprobanteListParams = {}): P
 }
 
 /** GET prefill de alta (trae OC, proveedor/deposito y opciones) */
-export async function apiGetComprobanteInit(args: { ordenCompraId: number }) {
-  const q = ComprobanteInitQuerySchema.parse(args);
-  const res = await fetch(CP_ROUTES.init(q.ordenCompraId), { cache: "no-store" });
+export async function apiGetComprobanteInit(args?: { ordenCompraId?: number }) {
+  const q = args?.ordenCompraId ? ComprobanteInitQuerySchema.parse(args) : undefined;
+  const url = q?.ordenCompraId ? CP_ROUTES.init(q.ordenCompraId) : '/api/comprobantes-proveedor/nuevo';
+  const res = await fetch(url, { cache: "no-store" });
   const json = await res.json();
   if (!res.ok || json?.ok === false) throw new Error(json?.error || "Error preparando alta de comprobante");
-  return z.object({ ok: z.boolean(), data: ComprobanteInitResponseSchema }).parse(json).data;
+  return z.object({ ok: z.boolean(), data: ComprobanteInitResponseSchema }).parse(json);
 }
 
 /** POST alta de comprobante (crea movimiento también) */

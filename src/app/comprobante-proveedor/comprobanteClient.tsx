@@ -1,161 +1,84 @@
-"use client";
+"use client"
 
-import { useMemo, useState } from "react";
-
-import ComprasFilters from "@/components/comprobante-proveedor/ComprobanteFilters";
-import ComprasTable from "@/components/comprobante-proveedor/ComprobanteTable";
-import ComprobanteStatsCards from "@/components/comprobante-proveedor/ComprobanteStatsCards";
-import ComprobanteModal from "@/components/comprobante-proveedor/ComprobanteModal";
-
-import { Button } from "@/components/ui/Button";
-import { Plus } from "lucide-react";
-
-import { applyFilters, applySort } from "@/lib/comprobante-proveedor/utils";
-import type {
-  ComprobanteProveedor,
-  DetalleComprobanteProveedor,
-  ComprobanteFiltersState,
-  Supplier,
-  Deposito,
-  Product,
-  TipoComprobante,
-  TipoMovimiento,
-  MetodoPago,
-  PurchaseOrder,
-  SortState,
-} from "@/lib/comprobante-proveedor/comprobante";
-
-import useComprobanteSort from "./hooks/useComprobanteSort";
-import usePagination from "./hooks/usePagination";
-import useModal from "./hooks/useModal";
-
-// 🚀 Importamos la action del server
-import { createComprobanteAction } from "./actions/comprobante";
+import { useMemo, useState } from "react"
+import ComprasFilters from "@/components/comprobante-proveedor/ComprobanteFilters"
+import ComprasTable from "@/components/comprobante-proveedor/ComprobanteTable"
+import ComprobanteStatsCards from "@/components/comprobante-proveedor/ComprobanteStatsCards"
+import ComprobanteModal from "@/components/comprobante-proveedor/ComprobanteModal"
+import { Button } from "@/components/ui/Button"
+import { Plus } from "lucide-react"
+import { applyFilters, applySort } from "@/lib/comprobante-proveedor/utils"
+import type { ComprobanteProveedor, ComprobanteFiltersState } from "@/lib/comprobante-proveedor/comprobante"
+import useComprobanteSort from "./hooks/useComprobanteSort"
+import usePagination from "./hooks/usePagination"
+import useModal from "./hooks/useModal"
+import { createComprobanteAction } from "./actions/comprobante"
+import { useRouter } from "next/navigation"
 
 type Props = {
-  initialComprobantes: ComprobanteProveedor[];
-  proveedores: Supplier[];
-  depositos: Deposito[];
-  productos: Product[];
-  tiposComprobante: TipoComprobante[];
-  tiposMovimiento: TipoMovimiento[];
-  metodosPagos: MetodoPago[];
-  ordenCompra: PurchaseOrder[];
-};
+  initialComprobantes: ComprobanteProveedor[]
+}
 
-export default function ComprobanteClient({
-  initialComprobantes,
-  proveedores,
-  depositos,
-  productos,
-  tiposComprobante,
-  tiposMovimiento,
-  metodosPagos,
-  ordenCompra,
-}: Props) {
-  // ===================== ESTADOS =====================
-  const [comprobantes, setComprobantes] = useState<ComprobanteProveedor[]>(initialComprobantes);
-  const [filters, setFilters] = useState<ComprobanteFiltersState>({});
-  const [editingId, setEditingId] = useState<string | null>(null);
+export default function ComprobanteClient({ initialComprobantes }: Props) {
+  const [comprobantes, setComprobantes] = useState<ComprobanteProveedor[]>(initialComprobantes)
+  const [filters, setFilters] = useState<ComprobanteFiltersState>({})
+  const [editingId, setEditingId] = useState<string | null>(null)
 
-  const { sort, setSort } = useComprobanteSort({ key: "fecha", dir: "desc" });
-  const { open, setOpen, openModal, closeModal } = useModal(false);
+  const { sort, setSort } = useComprobanteSort({ key: "fecha", dir: "desc" })
+  const { open, setOpen, openModal, closeModal } = useModal(false)
+  const router = useRouter()
 
-  // ===================== FILTROS + ORDEN =====================
-  const filtered = useMemo(() => applyFilters(comprobantes, filters), [comprobantes, filters]);
-  const sorted = useMemo(() => applySort(filtered, sort), [filtered, sort]);
-  const { page, pageItems, totalPages, next, prev, setPage, reset } = usePagination(sorted, 10);
+  // Filtros + orden
+  const filtered = useMemo(() => applyFilters(comprobantes, filters), [comprobantes, filters])
+  const sorted = useMemo(() => applySort(filtered, sort), [filtered, sort])
+  const { page, pageItems, totalPages, next, prev, setPage, reset } = usePagination(sorted, 10)
 
-  // ===================== STATS =====================
-  const montoTotal = useMemo(() => filtered.reduce((s, c) => s + c.total, 0), [filtered]);
-  const conSaldo = useMemo(() => filtered.filter((c) => c.saldo > 0).length, [filtered]);
-  const cancelados = useMemo(() => filtered.filter((c) => c.saldo === 0).length, [filtered]);
+  // Stats
+  const montoTotal = useMemo(() => filtered.reduce((s, c) => s + c.total, 0), [filtered])
+  const conSaldo = useMemo(() => filtered.filter((c) => c.saldo > 0).length, [filtered])
+  const cancelados = useMemo(() => filtered.filter((c) => c.saldo === 0).length, [filtered])
 
-  // ===================== HANDLERS =====================
+  // Handlers
   function onSearch(f: ComprobanteFiltersState) {
-    setFilters(f);
-    reset();
+    setFilters(f)
+    reset()
   }
 
   function onClear() {
-    setFilters({});
-    reset();
+    setFilters({})
+    reset()
   }
 
   function onView(id: string) {
-    alert(`Ver detalle de comprobante ${id}`);
+    router.push(`/comprobante-proveedor/${id}`)
   }
 
   function onEdit(id: string) {
-    setEditingId(id);
-    openModal();
+    setEditingId(id)
+    openModal()
   }
 
   function onOpenNew() {
-    setEditingId(null);
-    openModal();
+    setEditingId(null)
+    router.push("/comprobante-proveedor/nuevo")
   }
 
-  // ===================== CREAR / ACTUALIZAR =====================
-  async function handleSubmit(payload: {
-    proveedorId: string;
-    depositoId: string;
-    fecha: string;
-    items: DetalleComprobanteProveedor[];
-    totalCantidad: number;
-    totalMonto: number;
-    tipoMovimientoId: string;
-    tipoComprobanteId: string;
-    metodoPagoId: string;
-    ordenCompraId: string;
-    letra?: string | null;
-    numeroSucursal?: string | null;
-    numero?: string;
-    moneda?: string | null;
-    observaciones?: string | null;
-  }) {
-    setEditingId(null);
-    closeModal();
+  async function handleSubmit(payload: any) {
+    setEditingId(null)
+    closeModal()
 
     try {
-    // Convertir nulls a undefined
-    const cleanPayload = {
-      ...payload,
-      letra: payload.letra ?? undefined,
-      numeroSucursal: payload.numeroSucursal ?? undefined,
-      moneda: payload.moneda ?? undefined,
-      observaciones: payload.observaciones ?? undefined,
-    };
-
-    const newComprobante = await createComprobanteAction(cleanPayload);
-
-    setComprobantes((prev) => [newComprobante, ...prev]);
-    setPage(1);
-  } catch (err) {
-    console.error(err);
-    alert("Error al crear el comprobante");
-  }
+      const newComprobante = await createComprobanteAction(payload)
+      setComprobantes((prev) => [newComprobante, ...prev])
+      setPage(1)
+    } catch (err) {
+      console.error(err)
+      alert("Error al crear el comprobante")
+    }
   }
 
-  // ===================== OPCIONES PARA MODAL Y FILTROS =====================
-  const proveedoresOptions = proveedores.map((p) => ({ id: p.id, name: p.name }));
-  const depositosOptions = depositos.map((d) => ({ id: d.id, name: d.name }));
-  const tiposComprobanteOptions = tiposComprobante.map((t) => ({ id: t.id, name: t.name }));
-  const tiposMovimientoOptions = tiposMovimiento.map((t) => ({ id: t.id, name: t.name, saldo: t.saldo }));
-  const metodosPagoOptions = metodosPagos.map((m) => ({ id: m.id, name: m.name }));
-
-  // ===================== RENDER =====================
   return (
     <main className="w-full max-w-none mx-auto px-3 sm:px-4 lg:px-6 py-8 fade-in">
-      {/* Breadcrumb */}
-      <div className="flex items-center space-x-2 text-sm text-gray-600 mb-6">
-        <span>Inicio</span>
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-        </svg>
-        <span className="text-primary-pink font-medium">Comprobantes de Proveedor</span>
-      </div>
-
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-2 gap-4">
         <div>
@@ -181,16 +104,13 @@ export default function ComprobanteClient({
       <ComprobanteStatsCards total={filtered.length} conSaldo={conSaldo} cancelados={cancelados} montoTotal={montoTotal} />
 
       {/* Filtros */}
-      <ComprasFilters proveedores={proveedoresOptions} depositos={depositosOptions} onSearch={onSearch} onClear={onClear} />
+      <ComprasFilters  proveedores={comprobantes.map(c => c.proveedor).filter(Boolean)}
+  depositos={comprobantes.map(c => c.deposito).filter(Boolean)}
+  onSearch={onSearch}
+  onClear={onClear} />
 
       {/* Tabla */}
-      <ComprasTable
-        comprobantes={pageItems}
-        onView={onView}
-        onEdit={onEdit}
-        onSort={(s) => setSort(s)}
-        sortState={sort}
-      />
+      <ComprasTable comprobantes={pageItems} onView={onView} onEdit={onEdit} onSort={(s) => setSort(s)} sortState={sort} />
 
       {/* Paginación */}
       <div className="flex items-center justify-between text-sm text-gray-600 mt-2">
@@ -200,36 +120,6 @@ export default function ComprobanteClient({
           <Button variant="outline" onClick={next} disabled={page >= totalPages}>Siguiente</Button>
         </div>
       </div>
-
-      {/* Modal */}
-      <ComprobanteModal
-        open={open}
-        onOpenChange={setOpen}
-        proveedores={proveedoresOptions}
-        depositos={depositosOptions}
-        productos={productos}
-        tipoComprobantes={tiposComprobanteOptions}
-        tipoMovimientos={tiposMovimientoOptions}
-        metodoPagos={metodosPagoOptions}
-        ordenCompra={ordenCompra}
-        initial={
-          editingId
-            ? (() => {
-                const c = comprobantes.find((x) => x.id === editingId)!;
-                return {
-                  proveedorId: c.proveedor.id,
-                  depositoId: c.deposito.id,
-                  fecha: c.fecha.split("T")[0],
-                  numero: c.numero,
-                  tipoComprobanteId: c.tipoComprobante.id,
-                  metodoPagoId: c.metodoPago?.id ?? "",
-                  items: c.items,
-                };
-              })()
-            : undefined
-        }
-        onSubmit={handleSubmit}
-      />
     </main>
-  );
+  )
 }

@@ -1,200 +1,205 @@
-import { NextResponse } from 'next/server';
-import { z, ZodError } from 'zod';
-import { prisma } from '@/lib/prisma';
-import { crearComprobanteProveedorConMovimiento } from '@/server/comprobantes-proveedor.service';
+//src/app/api/comprobantes-proveedor/nuevo/route.ts
+import { prisma } from "@/lib/prisma";
+import { NextRequest } from "next/server";
+import { ComprobanteInitQuerySchema, ComprobanteCreateSchema } from "@/lib/comprobante-proveedor/types";
+import { CreateSchema } from "@/server/comprobantes-proveedor.service";
+import type { ZodError } from "zod";
+import { crearComprobanteProveedorConMovimiento } from "@/server/comprobantes-proveedor.service";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+interface DetalleOrdenCompra {
+  productoId: number;
+  cantidad: number;
+  precioUnitario: number;
+  producto: {
+    nombre: string;
+    unidad: {
+      nombre: string;
+    };
+  };
+}
 
-// ---------- GET: datos para el formulario ----------
-export async function GET(req: Request) {
+interface ComprobanteInitResponse {
+  ok: boolean;
+  data: {
+    ordenesCompra: Array<{
+      id: number;
+      nro: string | null;
+      fecha: string;
+      proveedor: { id: number; nombre: string; }
+    }>;
+    opciones: {
+      tiposComprobante: Array<{ id: number; nombre: string }>;
+      metodosPago: Array<{ id: number; nombre: string }>;
+    };
+    oc?: {
+      id: number;
+      nro: string | null;
+      fecha: string;
+      proveedor: { id: number; nombre: string };
+      deposito: { id: number; nombre: string } | null;
+      items: Array<{
+        productoId: number;
+        producto: string;
+        unidad: string;
+        cantidad: number;
+        precioUnitario: number;
+      }>;
+    };
+  };
+}
+
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const ocId = Number(searchParams.get('ordenCompraId') ?? 'NaN');
-    if (!Number.isFinite(ocId)) {
-      return NextResponse.json({ ok: false, error: 'ordenCompraId requerido' }, { status: 400 });
-    }
+    const searchParams = request.nextUrl.searchParams;
+    const ordenCompraId = searchParams.get('ordenCompraId');
 
-    // ❌ NO existe "deposito" como relación en OrdenCompra
-    // ✅ Pedimos depositoId y luego resolvemos el depósito aparte
-    const oc = await prisma.ordenCompra.findUnique({
-      where: { id: ocId },
-      select: {
-        id: true,
-        nroOC: true,
-        fecha: true,
-        proveedor: { select: { id: true, nombre: true } }, // esta relación sí existe
-        depositoId: true,
-        detalleOrdenCompra: {
-          select: {
-            productoId: true,
-            cantidad: true,
-            precioUnitario: true,
-            producto: {
-              select: {
-                id: true,
-                nombre: true,
-                unidad: { select: { nombre: true } },
-              },
-            },
+    // Obtener datos necesarios en paralelo
+    const [ordenesCompra, tiposComprobante, metodosPago] = await Promise.all([
+      prisma.ordenCompra.findMany({
+        where: ordenCompraId ? { id: Number(ordenCompraId) } : undefined,
+        select: {
+          id: true,
+          nroOC: true,
+          fecha: true,
+          depositoId: true,
+          proveedor: {
+            select: { id: true, nombre: true }
           },
+          detalleOrdenCompra: ordenCompraId ? {
+            include: {
+              producto: {
+                include: {
+                  unidad: true
+                }
+              }
+            }
+          } : false
         },
-      },
-    });
-
-    if (!oc) return NextResponse.json({ ok: false, error: 'Orden de compra inexistente' }, { status: 404 });
-    if (!oc.depositoId) return NextResponse.json({ ok: false, error: 'La OC no tiene depósito asignado' }, { status: 400 });
-
-    // Resolver depósito por id
-    const deposito = await prisma.deposito.findUnique({
-      where: { id: oc.depositoId },
-      select: { id: true, nombre: true },
-    });
-
-    const [tiposComprobante, metodosPago] = await Promise.all([
-      prisma.tipoComprobante.findMany({ select: { id: true, nombre: true }, orderBy: { nombre: 'asc' } }),
-      prisma.metodoPago.findMany({ select: { id: true, nombre: true }, orderBy: { nombre: 'asc' } }),
+        orderBy: { fecha: 'desc' }
+      }),
+      prisma.tipoComprobante.findMany({
+        select: { id: true, nombre: true }
+      }),
+      prisma.metodoPago.findMany({
+        select: { id: true, nombre: true }
+      })
     ]);
 
-    return NextResponse.json({
+    // Transformar datos para el formato esperado
+    const response: ComprobanteInitResponse = {
       ok: true,
       data: {
-        oc: {
+        ordenesCompra: ordenesCompra.map(oc => ({
           id: oc.id,
           nro: oc.nroOC,
-          fecha: oc.fecha,
-          proveedor: oc.proveedor,                 // read-only
-          deposito: deposito ? { id: deposito.id, nombre: deposito.nombre } : null, // read-only
-          items: oc.detalleOrdenCompra.map(d => ({
-            productoId: d.productoId,
-            producto: d.producto?.nombre ?? null,
-            unidad: d.producto?.unidad?.nombre ?? null,
-            cantidad: d.cantidad,
-            precioUnitario: d.precioUnitario,
-          })),
-        },
+          fecha: oc.fecha.toISOString(),
+          proveedor: oc.proveedor
+        })),
         opciones: {
           tiposComprobante,
-          metodosPago,
+          metodosPago
+        }
+      }
+    };
+
+    // Si se solicitó una OC específica, incluir sus detalles
+    if (ordenCompraId && ordenesCompra.length === 1) {
+      const oc = ordenesCompra[0];
+      const ocData = {
+        id: oc.id,
+        nro: oc.nroOC,
+        fecha: oc.fecha.toISOString(),
+        proveedor: {
+          id: oc.proveedor.id,
+          nombre: oc.proveedor.nombre
         },
-      },
-    });
-  } catch (err: unknown) {
-    console.error('GET /api/comprobantes-proveedor/nuevo', err);
-    return NextResponse.json(
-      { ok: false, error: 'Error al preparar alta de comprobante', details: (err as Error)?.message },
-      { status: 500 },
+        deposito: oc.depositoId ? {
+          id: oc.depositoId,
+          nombre: "Depósito Principal"
+        } : null,
+        items: (oc.detalleOrdenCompra as unknown as DetalleOrdenCompra[]).map(det => ({
+          productoId: det.productoId,
+          producto: det.producto.nombre,
+          unidad: det.producto.unidad.nombre,
+          cantidad: det.cantidad,
+          precioUnitario: det.precioUnitario
+        }))
+      };
+      response.data = { ...response.data, oc: ocData };
+    }
+
+    return Response.json(response);
+
+  } catch (error) {
+    console.error('Error en GET /api/comprobantes-proveedor/nuevo:', error);
+    return Response.json(
+      { error: "Error interno del servidor" },
+      { status: 500 }
     );
   }
 }
-// ---------- POST: alta (usa proveedor/deposito de la OC y valida items) ----------
-const detalleRawSchema = z
-  .object({
-    // puede venir como productId o productoId
-    productId: z.coerce.number().int().positive().optional(),
-    productoId: z.coerce.number().int().positive().optional(),
 
-    // cantidad: quantity o cantidad
-    quantity: z.coerce.number().int().positive().optional(),
-    cantidad: z.coerce.number().int().positive().optional(),
-
-    // precio unitario: unitPrice o precioUnitario
-    unitPrice: z.coerce.number().positive().optional(),
-    precioUnitario: z.coerce.number().positive().optional(),
-
-    // descuento / discount
-    discount: z.coerce.number().min(0).max(100).optional(),
-    descuento: z.coerce.number().min(0).max(100).optional(),
-
-    // observations / observaciones
-    observations: z.string().optional(),
-    observaciones: z.string().optional(),
-  })
-  // debe traer al menos id/cantidad/precio
-  .refine(
-    (d) => Boolean(d.productId ?? d.productoId) && Boolean(d.quantity ?? d.cantidad) && Boolean(d.unitPrice ?? d.precioUnitario),
-    { message: "Detalle inválido: productId/cantidad/unitPrice requeridos" }
-  )
-  .transform((d) => ({
-    productoId: Number(d.productoId ?? d.productId),
-    cantidad: Number(d.cantidad ?? d.quantity),
-    precioUnitario: Number(d.precioUnitario ?? d.unitPrice),
-    descuento: d.descuento ?? d.discount ?? 0,
-    observaciones: d.observaciones ?? d.observations ?? null,
-  }));
-
-// Schema para validar el body completo
-const bodySchema = z.object({
-  ordenCompraId: z.coerce.number().int().positive(),
-  // opcional: si tu frontend manda proveedorId lo respetamos; si no, lo tomamos desde la OC
-  proveedorId: z.coerce.number().int().positive().optional(),
-  depositoId: z.coerce.number().int().positive().optional(),
-
-  tipoComprobanteId: z.coerce.number().int().positive(),
-  // acepta number (coerce) o null/undefined
-  tipoMovimientoId: z.coerce.number().int().positive().optional().nullable(),
-  metodoPagoId: z.coerce.number().int().positive().optional().nullable(),
-
-  fecha: z.string().refine((v) => !Number.isNaN(Date.parse(v)), "fecha inválida (ISO)"),
-  hora: z.string().optional().nullable(),
-  letra: z.string().optional().nullable(),
-  numeroSucursal: z.string().optional().nullable(),
-  numero: z.string().optional().nullable(),
-  moneda: z.string().optional().nullable(),
-  observaciones: z.string().optional().nullable(),
-
-  detalles: z.array(detalleRawSchema).min(1, "Debe incluir al menos un detalle"),
-});
-
-export async function POST(req: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const json = await req.json();
-    console.log("POST /api/comprobantes-proveedor/nuevo body:", JSON.stringify(json, null, 2)); // temporal
+    const rawBody = await request.json();
+    
+    interface RawBody {
+      ordenCompraId: string | number;
+      proveedorId: string | number;
+      tipoComprobanteId: string | number;
+      depositoId: string | number;
+      fecha: string;
+      hora?: string;
+      letra?: string;
+      numeroSucursal?: string;
+      numero?: string;
+      metodoPagoId?: string | number;
+      observaciones?: string;
+      detalles: Array<{
+        productoId: string | number;
+        cantidad: string | number;
+        precioUnitario: string | number;
+        descuento?: string | number;
+        observaciones?: string;
+      }>;
+    }
 
-    const parsed = bodySchema.parse(json); // parsed.detalles ya viene normalizado por transform
-
-    // si no viene proveedorId o depositoId en el body, sacalo de la OC
-    const oc = await prisma.ordenCompra.findUnique({
-      where: { id: parsed.ordenCompraId },
-      select: { id: true, proveedorId: true, depositoId: true },
-    });
-    if (!oc) return NextResponse.json({ ok: false, error: "Orden de compra inexistente" }, { status: 404 });
-
-    const dto = {
-      ordenCompraId: parsed.ordenCompraId,
-      proveedorId: parsed.proveedorId ?? oc.proveedorId,
-      tipoComprobanteId: parsed.tipoComprobanteId,
-      fecha: parsed.fecha,
-      hora: parsed.hora ?? null,
-      letra: parsed.letra ?? null,
-      numeroSucursal: parsed.numeroSucursal ?? null,
-      numero: parsed.numero ?? null,
-      metodoPagoId: parsed.metodoPagoId ?? null,
-      observaciones: parsed.observaciones ?? null,
-      depositoId: parsed.depositoId ?? oc.depositoId ?? null,
-      tipoMovimientoId: parsed.tipoMovimientoId ?? null,
-      detalles: parsed.detalles.map((d: any) => ({
-        productoId: d.productoId,
-        cantidad: d.cantidad,
-        precioUnitario: d.precioUnitario,
-        descuento: d.descuento ?? null,
-        observaciones: d.observaciones ?? null,
-      })),
+    const input = rawBody as RawBody;
+    
+    // Validar el payload con el schema y transformar
+    // Los datos ya deberían venir en el formato correcto desde el frontend
+    const transformedData = {
+      ordenCompra: input.ordenCompra,
+      proveedor: input.proveedor,
+      tipoComprobante: input.tipoComprobante,
+      deposito: input.deposito,
+      fecha: input.fecha,
+      hora: input.hora,
+      letra: input.letra,
+      numeroSucursal: input.numeroSucursal,
+      numero: input.numero,
+      metodoPago: input.metodoPago,
+      observaciones: input.observaciones,
+      tipoMovimiento: input.tipoMovimiento,
+      items: input.items
     };
 
-    // Llamamos a tu servicio (que espera nombres en español)
-    const result = await crearComprobanteProveedorConMovimiento(dto as any);
-    return NextResponse.json({ ok: true, data: result }, { status: 201 });
-  } catch (err: unknown) {
-    if (err instanceof ZodError) {
-      console.error("Zod validation error:", JSON.stringify(err.issues, null, 2));
-      return NextResponse.json({ ok: false, error: "VALIDATION_ERROR", issues: err.issues }, { status: 422 });
-    }
-    const msg = (err as Error)?.message ?? "Internal Error";
-    if (/(inexistente|inactivo|no pertenece|ya existe|inv[aá]lid|dep[oó]sito)/i.test(msg)) {
-      return NextResponse.json({ ok: false, error: msg }, { status: 400 });
-    }
-    console.error("POST /api/comprobantes-proveedor/nuevo", err);
-    return NextResponse.json({ ok: false, error: "Internal Server Error" }, { status: 500 });
+    // Validar con el schema final
+    const validatedData = ComprobanteCreateSchema.parse(transformedData);
+
+    // Crear comprobante y movimiento con datos validados
+    const result = await crearComprobanteProveedorConMovimiento(validatedData);
+
+    return Response.json({ ok: true, data: result });
+
+  } catch (error: Error | ZodError | unknown) {
+    console.error('Error en POST /api/comprobantes-proveedor/nuevo:', error);
+    return Response.json(
+      { 
+        ok: false,
+        error: error instanceof Error ? error.message : "Error interno del servidor"
+      },
+      { status: 500 }
+    );
   }
 }

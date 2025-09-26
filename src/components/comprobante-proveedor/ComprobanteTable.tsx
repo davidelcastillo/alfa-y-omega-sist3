@@ -1,4 +1,4 @@
-// src/components/compras/ComprasTable.tsx
+// src/components/comprobante-proveedor/ComprobanteTable.tsx
 "use client";
 
 import Button from "@/components/ui/Button";
@@ -10,7 +10,7 @@ import {
   ChevronDown,
   ChevronsUpDown,
 } from "lucide-react";
-import type { ComprobanteProveedor } from "@/lib/comprobante-proveedor/comprobante";
+import type { ComprobanteListItem } from "@/lib/comprobante-proveedor/types";
 
 type SortKey = 
   | "id"
@@ -31,10 +31,10 @@ type SortKey =
 export type SortState = { key: SortKey; dir: "asc" | "desc" };
 
 type Props = {
-  comprobantes: ComprobanteProveedor[];
-  onView?: (id: string) => void;
-  onEdit?: (id: string) => void;
-  onDelete?: (id: string) => void;
+  comprobantes: ComprobanteListItem [];
+  onView?: (id: number) => void;
+  onEdit?: (id: number) => void;
+  onDelete?: (id: number) => void;
   onSort?: (s: SortState) => void;
   sortState?: SortState;
 };

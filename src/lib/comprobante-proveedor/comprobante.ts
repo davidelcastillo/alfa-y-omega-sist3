@@ -1,95 +1,95 @@
 // // src/lib/comprobante-proveedor/comprobante.ts
 
 
-// export type Supplier = {
-//   id: string;
-//   name: string;
-// };
+export type Supplier = {
+ id: string;
+   name: string;
+};
 
-// export type Product = {
-//   id: string;
-//   name: string;
-//   code: string;
-//   price: number;
-// };
+export type Product = {
+  id: string;
+  name: string;
+  code: string;
+  price: number;
+};
 
-// export type Deposito = {
-//   id: string;
-//   name: string;
-// };
+export type Deposito = {
+  id: string;
+  name: string;
+};
 
-// export type PurchaseOrderItem = {
-//   id: string;
-//   productId: string;
-//   productName: string;
-//   cantidad: number;
-//   precioUnitario: number;
-//   total: number;
-// };
+export type PurchaseOrderItem = {
+  id: string;
+  productId: string;
+  productName: string;
+  cantidad: number;
+  precioUnitario: number;
+  total: number;
+};
 
-// export type PurchaseOrder = {
-//   id: string;
-//   supplier: { id: string; name: string;};
-//   deposito: { id: string; name: string;};
-//   status: boolean;
-//   items: PurchaseOrderItem[];
-// };
+export type PurchaseOrder = {
+  id: string;
+  supplier: { id: string; name: string;};
+  deposito: { id: string; name: string;};
+  status: boolean;
+  items: PurchaseOrderItem[];
+};
 
-// export type TipoMovimiento = {
-//   id: string;
-//   name: string;
-//   saldo: boolean;
-// };
+export type TipoMovimiento = {
+  id: string;
+  name: string;
+  saldo: boolean;
+};
 
-// export type TipoComprobante = {
-//   id: string;
-//   name: string;
-// };
+export type TipoComprobante = {
+  id: string;
+  name: string;
+};
 
-// export type MetodoPago = {
-//   id: string;
-//   name: string;
-// };
+export type MetodoPago = {
+  id: string;
+  name: string;
+};
 
-// export type DetalleComprobanteProveedor = {
-//   id: string;
-//   productId: string;
-//   productName: string;
-//   quantity: number;
-//   unitPrice: number;
-//   totalPrice: number;
-//   discount?: number;
-//   observations?: string;
-// };
+export type DetalleComprobanteProveedor = {
+  id: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  discount?: number;
+  observations?: string;
+};
 
-// export type ComprobanteProveedor = {
-//   id: string;
-//   ordenCompra : PurchaseOrder;
-//   proveedor:  { id: string; name: string};
-//   deposito: { id: string; name: string};
+export type ComprobanteProveedor = {
+  id: string;
+  ordenCompra : PurchaseOrder;
+  proveedor:  { id: string; name: string};
+  deposito: { id: string; name: string};
 
-//   letra?: string | null;
-//   numeroSucursal?: string | null;
-//   numero: string;
-//   moneda?: string | null;
+  letra?: string | null;
+  numeroSucursal?: string | null;
+  numero: string;
+  moneda?: string | null;
 
-//   tipoComprobante: TipoComprobante;
+  tipoComprobante: TipoComprobante;
 
-//   fecha: string; // ISO string
-//   hora?: string | null;
+  fecha: string; // ISO string
+  hora?: string | null;
 
-//   total: number;
-//   saldo: number;
+  total: number;
+  saldo: number;
 
-//   metodoPago: MetodoPago;
+  metodoPago: MetodoPago;
 
-//   estado: boolean;
-//   observaciones?: string | null;
+  estado: boolean;
+  observaciones?: string | null;
 
-//   tipoMovimiento: TipoMovimiento;
+  tipoMovimiento: TipoMovimiento;
 
-//   items: DetalleComprobanteProveedor[];
-// };
+  items: DetalleComprobanteProveedor[];
+};
 
 // // // Filtros
  export type ComprobanteFiltersState = {
