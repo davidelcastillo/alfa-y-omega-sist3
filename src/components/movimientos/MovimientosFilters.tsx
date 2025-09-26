@@ -55,23 +55,23 @@ const MovimientosFilters: FC<Props> = ({
   onClear 
 }) => {
   const depositoOpts = useMemo(
-    () => depositos.map(d => ({ id: d.id, nombre: d.nombre })),
+    () => depositos.map(d => ({ id: String(d.id), name: d.nombre })),
     [depositos]
   );
 
   // Usar los tipos de movimiento de la API si están disponibles, sino usar la lista hardcodeada
   const tipoMovOpts = useMemo(() => {
     if (tiposMovimiento && tiposMovimiento.length > 0) {
-      return tiposMovimiento.map(t => ({ id: t.id, nombre: t.nombre }));
+      return tiposMovimiento.map(t => ({ id: String(t.id), name: t.nombre }));
     }
     // Fallback a la lista hardcodeada
-    return TM_OPTS.map((t, i) => ({ id: i + 1, nombre: t }));
+    return TM_OPTS.map((t, i) => ({ id: String(i + 1), name: t }));
   }, [tiposMovimiento]);
 
-  const depositoValueId = state.depositoId && Number(state.depositoId) > 0 ? Number(state.depositoId) : 0;
+  const depositoValueId = state.depositoId && Number(state.depositoId) > 0 ? String(state.depositoId) : '0';
   const tipoMovValueId = state.tipoMovimiento
-    ? (tipoMovOpts.find(o => o.nombre === state.tipoMovimiento)?.id ?? 0)
-    : 0;
+    ? (tipoMovOpts.find(o => o.name === state.tipoMovimiento)?.id ?? '0')
+    : '0';
 
   return (
     <div className="glass-effect rounded-2xl p-8 mb-8 card-hover">
@@ -110,20 +110,24 @@ const MovimientosFilters: FC<Props> = ({
         {/* Depósito */}
         <SearchableSelect
           label="Depósito"
-          options={[{ id: 0, nombre: 'Todos los depósitos' }, ...depositoOpts]}
+          options={[{ id: '0', name: 'Todos los depósitos' }, ...depositoOpts]}
           valueId={depositoValueId}
-          onChange={(opt) => onChange({ depositoId: opt && opt.id > 0 ? opt.id : '' })}
+          onChange={(opt) =>
+            onChange({
+              depositoId: opt && opt.id !== '0' ? Number(opt.id) : ''
+            })
+          }
           placeholder="Seleccionar depósito"
         />
 
         {/* Tipo de Movimiento */}
         <SearchableSelect
           label="Tipo de Movimiento"
-          options={[{ id: 0, nombre: 'Todos' }, ...tipoMovOpts]}
+          options={[{ id: '0', name: 'Todos' }, ...tipoMovOpts]}
           valueId={tipoMovValueId}
           onChange={(opt) =>
             onChange({
-              tipoMovimiento: !opt || opt.id === 0 ? '' : (opt.nombre as TipoMovimiento),
+              tipoMovimiento: !opt || opt.id === '0' ? '' : (opt.name as TipoMovimiento),
             })
           }
           placeholder="Seleccionar tipo"

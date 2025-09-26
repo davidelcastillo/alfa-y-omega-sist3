@@ -81,9 +81,9 @@ export default function PagosFilters({
         {/* Proveedor — SearchableSelect (usa tu API de props exacta) */}
         <SearchableSelect
           label="Proveedor"
-          options={proveedores} // ⚠️ MOCK: { id:number, nombre:string } — en prod, desde DB
-          valueId={Number(filters.proveedorId ?? 0)}
-          onChange={(opt) => update("proveedorId", opt?.id ?? 0)}
+          options={proveedores.map(p => ({ id: String(p.id), name: p.nombre }))} // adapt to Option[]
+          valueId={String(filters.proveedorId ?? 0)}
+          onChange={(opt) => update("proveedorId", opt ? Number(opt.id) : 0)}
           placeholder="Buscar proveedor… (DB)"
         />
 

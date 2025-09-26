@@ -1,7 +1,7 @@
 // src/components/movimientos/MovimientosModal.tsx
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
@@ -94,7 +94,7 @@ export default function MovimientosModal({
 
   // ---- Opciones para selects ----
   const depOptions = useMemo(
-    () => depositos.map((d) => ({ id: d.id, nombre: d.nombre })),
+    () => depositos.map((d) => ({ id: d.id, nombre: d.nombre })), // para <Select/> nativo
     [depositos]
   );
 
@@ -103,11 +103,12 @@ export default function MovimientosModal({
     return depId ? (productosPorDeposito[depId] ?? []) : [];
   }, [productosPorDeposito, deposito]);
 
-  const prodOptions = useMemo(
+  // ⚠️ SearchableSelect espera { id: string; name: string }
+  const prodUiOptions = useMemo(
     () =>
       productosDisponibles.map((p) => ({
-        id: p.id,
-        nombre: `${p.descripcion}${p.codigo ? ` (${p.codigo})` : ''}`,
+        id: String(p.id),
+        name: `${p.descripcion}${p.codigo ? ` (${p.codigo})` : ''}`,
       })),
     [productosDisponibles]
   );
@@ -115,7 +116,7 @@ export default function MovimientosModal({
   const isAjuste = tipoMovimiento === 'Ajuste de stock';
 
   // ---- Helpers de formulario ----
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setMovimiento((initial?.movimiento as MovimientoBasico) ?? 'Ingreso');
     setTipoMovimiento((initial?.tipoMovimiento as TipoMovimiento) ?? '');
     setTipoMovimientoId(initial?.tipoMovimientoId ?? 0);
@@ -132,7 +133,7 @@ export default function MovimientosModal({
         : [{ productoId: 0, cantidad: 1 }]
     );
     setAjusteSigno((initial?.ajusteSigno as 'positivo' | 'negativo') ?? 'positivo');
-  };
+  }, [initial]);
 
   const canSubmit = () => {
     const hasProducts =
@@ -183,7 +184,7 @@ export default function MovimientosModal({
   // ---- Efectos ----
   useEffect(() => {
     if (isOpen) resetForm();
-  }, [isOpen]);
+  }, [isOpen, resetForm]);
 
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -345,10 +346,11 @@ export default function MovimientosModal({
                   <div key={idx} className="product-row p-4 grid grid-cols-1 md:grid-cols-12 gap-3">
                     <div className="md:col-span-8">
                       <SearchableSelect
+                        key={`prod-${idx}-${row.productoId}`}
                         label="Producto"
-                        options={prodOptions}
-                        valueId={row.productoId}
-                        onChange={(opt) => patchRow(idx, { productoId: opt?.id ?? 0 })}
+                        options={[{ id: '0', name: 'Seleccionar producto' }, ...prodUiOptions]}
+                        valueId={String(row.productoId || 0)}
+                        onChange={(opt) => patchRow(idx, { productoId: opt ? Number(opt.id) : 0 })}
                         placeholder="Seleccionar producto"
                       />
                     </div>
