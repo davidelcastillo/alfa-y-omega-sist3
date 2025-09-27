@@ -110,7 +110,7 @@ export async function GET(req: Request) {
           proveedor: { select: { id: true, nombre: true } },
           tipoComprobante: { select: { id: true, nombre: true } },
           ordenCompra: { select: { id: true} },
-          deposito: { select: { id: true, nombre: true } }
+          Deposito: { select: { id: true, nombre: true } }
         },
       }),
     ]);
@@ -123,10 +123,12 @@ export async function GET(req: Request) {
       return {
         id: cp.id,
         nro_comprobante: nroFmt,
-        proveedor: { id: cp.proveedor.id, name: cp.proveedor.nombre },
+        proveedor: cp.proveedor
+        ? { id: cp.proveedor.id, name: cp.proveedor.nombre }
+        : null,
         tipo_comprobante: cp.tipoComprobante?.nombre ?? null,
         ordenCompra: cp.ordenCompra ? { id: cp.ordenCompra.id } : null,
-        deposito: cp.deposito ? { id: cp.deposito.id, name: cp.deposito.nombre } : null,
+        deposito: cp.Deposito ? { id: cp.Deposito.id, name: cp.Deposito.nombre } : null,
         total,
         pagado,
         pendiente,

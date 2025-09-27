@@ -130,7 +130,7 @@ export async function crearComprobanteProveedorConMovimiento(
       data: {
         ordenCompra: { connect: { id: NumOrdenCompra } },
         proveedor: { connect: { id: NumProveedor } },
-        deposito: { connect: { id: NumDeposito } },
+        Deposito: { connect: { id: NumDeposito } },
         tipoComprobante: { connect: { id: NumTipoComprobante } },
         metodoPago: validated.metodoPago 
           ? { connect: { id: Number(validated.metodoPago.id) } }

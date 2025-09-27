@@ -99,7 +99,7 @@ export const ComprobanteCreatedSchema = z.object({
     id: z.number(),
     ordenCompraId: z.number(),
     proveedorId: z.number(),
-    depositoId: z.number().nullable().optional(),
+    depositoId: z.number().int().positive(),
     tipoComprobanteId: z.number(),
     fecha: z.string(),
     hora: z.string().nullable().optional(),

@@ -164,60 +164,74 @@ export default function NuevoComprobantePage() {
     loadData();
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.ordenCompraId) {
-      toast.error('Debe seleccionar una orden de compra');
-      return;
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  if (!formData.ordenCompraId) {
+    toast.error('Debe seleccionar una orden de compra');
+    return;
+  }
+  if (!formData.tipoComprobanteId) {
+    toast.error('Debe seleccionar un tipo de comprobante');
+    return;
+  }
+  if (!formData.detalles.length) {
+    toast.error('No hay items para procesar');
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    // === PAYLOAD PLANO, COMO PIDE TU BACK ===
+    const payload: any = {
+      ordenCompraId: formData.ordenCompraId,
+      proveedorId: formData.proveedorId,
+      tipoComprobanteId: formData.tipoComprobanteId,
+      fecha: formData.fecha,
+      // hora es opcional; inclúyela si quieres:
+      // hora: formData.hora,
+      letra: formData.letra,
+      numeroSucursal: formData.numeroSucursal,
+      numero: formData.numero,
+      metodoPagoId: formData.metodoPagoId,
+      observaciones: formData.observaciones || null,
+      detalles: formData.detalles.map(det => ({
+        productoId: det.productoId,
+        cantidad: det.cantidad,
+        precioUnitario: det.precioUnitario,
+        // Campos opcionales:
+        ...(det.descuento ? { descuento: det.descuento } : {}),
+        ...(det.observaciones ? { observaciones: det.observaciones } : {}),
+      })),
+    };
+
+    // Solo envío depositoId si vale > 0 (si no, dejo que el back use el de la OC)
+    if (formData.depositoId && formData.depositoId > 0) {
+      payload.depositoId = formData.depositoId;
     }
 
-    if (!formData.tipoComprobanteId) {
-      toast.error('Debe seleccionar un tipo de comprobante');
-      return;
-    }
+    const res = await fetch("/api/comprobantes-proveedor/nuevo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
 
-    if (!formData.detalles.length) {
-      toast.error('No hay items para procesar');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      
-      // Transformar datos al formato esperado por la API
-      const transformedData = {
-        ordenCompra: { id: formData.ordenCompraId },
-        proveedor: { id: formData.proveedorId },
-        tipoComprobante: { id: formData.tipoComprobanteId },
-        deposito: { id: formData.depositoId },
-        fecha: formData.fecha,
-        hora: formData.hora,
-        letra: formData.letra,
-        numeroSucursal: formData.numeroSucursal,
-        numero: formData.numero,
-        metodoPago: { id: formData.metodoPagoId },
-        observaciones: formData.observaciones,
-        tipoMovimiento: { id: 1 }, // Ingreso por compra
-        items: formData.detalles.map(det => ({
-          productId: det.productoId,
-          quantity: det.cantidad,
-          unitPrice: det.precioUnitario,
-          discount: det.descuento,
-          observations: det.observaciones
-        }))
-      };
-
-      await apiCreateComprobante(transformedData);
+    const json = await res.json();
+    if (res.ok && json.ok) {
       toast.success('Comprobante creado exitosamente');
       router.push('/comprobante-proveedor');
-    } catch (error) {
-      console.error('Error creando comprobante:', error);
-      toast.error('Error al crear el comprobante');
-    } finally {
-      setLoading(false);
+    } else {
+      throw new Error(json?.error || "Error al crear el comprobante");
     }
-  };
+  } catch (error: any) {
+    console.error('Error creando comprobante:', error);
+    toast.error(error?.message || 'Error al crear el comprobante');
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   if (loading || !data) {
     return <div>Cargando...</div>;
