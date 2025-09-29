@@ -1,3 +1,4 @@
+// src/server/compras/compras.service.ts
 //Esta carpeta es para traer las llamadas a apis
 //Hoy usa mocks; mañana cambiás por fetch() a tu API sin tocar componentes.
 import "server-only";
@@ -42,37 +43,50 @@ export async function getPurchaseOrders(params: GetOCParams = {}): Promise<Purch
 
 /* ---------- Mapper DB/API -> UI ---------- */
 function mapApiToPurchaseOrder(row: any): PurchaseOrder {
-  const creationDate = formatDDMMYYYY(row.fecha_creacion);
+  // 🔁 MODIFICADO: la API envía `fecha` (ISO), no `fecha_creacion`
+  const creationDate = formatDDMMYYYY(row.fecha);
 
   return {
     id: String(row.id),
     creationDate,
-    creationTime: "",
+    creationTime: String(row.hora ?? ""), // 🟢 AGREGADO: hora si llega, sino vacío
+
+    // 🔁 MODIFICADO: proveedor llega como objeto { id, nombre }
     supplier: {
-      id: String(row.proveedorId ?? ""),   // 👈 ahora viene de la API
-      name: row.proveedor ?? "—",          // sigue viniendo como string
-      code: "",
-      email: "",
-      phone: "",
+      id: String(row.proveedor?.id ?? ""),     // 🔁 antes tomaba proveedorId
+      name: String(row.proveedor?.nombre ?? "—"), // 🔁 antes tomaba "proveedor" como string
+      code: "",                                 // (lo dejás vacío si no lo usás)
+      // email y phone estaban comentados en tu proyecto por compatibilidad de tipos
+      // email: "",
+      // phone: "",
     },
-    warehouse: String(row.depositoId ?? "—"),
+
+    // 🔁 MODIFICADO: ahora viene `warehouse` desde el service de órdenes (nombre del depósito)
+    warehouse: String(row.warehouse ?? "—"),
+
+    // Si no usás fecha de entrega real aún, dejalo vacío
     deliveryDate: "",
+
+    // 🔁 MODIFICADO: la API envía `estado: boolean`
     status: row.estado ? "Completa" : "Incompleta",
+
     total: Number(row.total ?? 0),
-    totalQuantity: 0,
-    items: [],
+
+    // Estos campos dependen de si los estás trayendo. Los dejamos coherentes con tu tipo.
+    totalQuantity: Number(row.totalQuantity ?? 0),
+    items: Array.isArray(row.items) ? row.items : [],
   };
 }
 
 function formatDDMMYYYY(d: string | Date) {
   const date = d instanceof Date ? d : new Date(d);
+  // Manejo defensivo por si d es null/undefined o inválido
+  if (isNaN(date.getTime())) return ""; // 🟢 AGREGADO: evita NaN/NaN/NaN
   const dd = String(date.getDate()).padStart(2, "0");
   const mm = String(date.getMonth() + 1).padStart(2, "0");
   const yyyy = date.getFullYear();
   return `${dd}/${mm}/${yyyy}`;
 }
-
-
 
 export async function getSuppliers(): Promise<Supplier[]> {
   //await sleep(50)

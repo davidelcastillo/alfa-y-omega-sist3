@@ -47,7 +47,7 @@ export async function getOrdenesCompra(params: GetOCParams) {
     ];
   }
 
-  const [total, rowsRaw] = await Promise.all([
+  const [total, rowsRaw, depositos] = await Promise.all([
     prisma.ordenCompra.count({ where }),
     prisma.ordenCompra.findMany({
       where,
@@ -60,21 +60,28 @@ export async function getOrdenesCompra(params: GetOCParams) {
         hora: true,
         nroOC: true,
         proveedor: { select: { id: true, nombre: true } }, // 👈 objeto
-        depositoId: true,
+        depositoId: true,                                   // 🟢 mantenemos solo el ID (no hay relación en schema)
         subTotal: true,
         otrosGastos: true,
         total: true,
         estado: true,
-        _count: { select: { detalleOrdenCompra: true } }, // 👈 presente
+        _count: { select: { detalleOrdenCompra: true } },   // 👈 presente
       },
     }),
+    prisma.deposito.findMany({ select: { id: true, nombre: true } }), // 🟢 AGREGADO: traemos depósitos para mapear id→nombre
   ]);
+
+  // 🟢 AGREGADO: mapa id → nombre de depósitos
+  const depositoMap = new Map(depositos.map((d) => [d.id, d.nombre]));
 
   // Normalización de tipos para el front:
   const rows = rowsRaw.map((r) => ({
     ...r,
     fecha: r.fecha instanceof Date ? r.fecha.toISOString() : String(r.fecha), // 👈 string ISO
+    warehouse: r.depositoId ? (depositoMap.get(r.depositoId) ?? "—") : "—",   // 🟢 AGREGADO: nombre del depósito listo para el front
   }));
+
+  console.log("🟡 Orden de compra recibida de la BD:", JSON.stringify(rowsRaw[0], null, 2));
 
   return {
     page,
