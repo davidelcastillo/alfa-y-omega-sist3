@@ -39,6 +39,8 @@ export async function POST(req: Request) {
     const body = await req.json();
     const dto = OrdenCompraCreateSchema.parse(body);
 
+    console.log("📦 Payload recibido en API:", dto); 
+
     // Checks de FK mínimas (útiles para el front)
     const prov = await prisma.proveedores.findUnique({
       where: { id: dto.proveedorId },

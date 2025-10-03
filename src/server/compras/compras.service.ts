@@ -3,8 +3,10 @@
 //Hoy usa mocks; mañana cambiás por fetch() a tu API sin tocar componentes.
 import "server-only";
 import { suppliersMock, productsMock } from "@/mocks/compras.mock"
-import type { PurchaseOrder, Supplier, Product } from "@/lib/compras/purchase"
+import type { PurchaseOrder, Supplier, Product, PurchaseOrderItem } from "@/lib/compras/purchase"
 //import { sleep } from "@/lib/compras/utils"
+import { prisma } from "@/lib/prisma";
+
 
 type GetOCParams = {
   page?: number;
@@ -88,12 +90,30 @@ function formatDDMMYYYY(d: string | Date) {
   return `${dd}/${mm}/${yyyy}`;
 }
 
-export async function getSuppliers(): Promise<Supplier[]> {
-  //await sleep(50)
-  return suppliersMock
+// === debajo de imports ===
+const SUPPLIERS_PATH = "/api/proveedores"; // ajusta si tu endpoint es otro
+const DEPOSITS_PATH  = "/api/depositos";   // este sí lo vi en tu estructura
+
+// ===================== Filtros (desde BD) =====================
+
+// 🟢 MODIFICADO: ahora leemos proveedores directo de la BD
+export async function getSuppliers() {
+  const rows = await prisma.proveedores.findMany({
+    select: { id: true, nombre: true, codigo: true },
+    orderBy: { nombre: "asc" },
+  });
+  return rows.map((r) => ({
+    id: String(r.id),
+    name: String(r.nombre ?? "—"),
+    code: String(r.codigo ?? ""),
+  }));
 }
 
-export async function getProducts(): Promise<Product[]> {
-  //await sleep(50)
-  return productsMock
+// 🟢 MODIFICADO: ahora leemos depósitos directo de la BD
+export async function getDeposits() {
+  const rows = await prisma.deposito.findMany({
+    select: { nombre: true },
+    orderBy: { nombre: "asc" },
+  });
+  return rows.map((d) => String(d.nombre)).filter(Boolean);
 }
