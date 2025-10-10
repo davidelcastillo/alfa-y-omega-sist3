@@ -8,40 +8,36 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ===============================================
-// MODELOS DE E-COMMERCE: GESTIÓN DE USUARIOS
-// ===============================================
-
 /// Gestiona los clientes y administradores del sistema.
 model Usuario {
-  id            Int           @id @default(autoincrement())
-  email         String        @unique
+  id            Int          @id @default(autoincrement())
+  email         String       @unique
   nombre        String
   apellido      String
   passwordHash  String
   telefono      String?
-  fechaRegistro DateTime      @default(now())
-  activo        Boolean       @default(true)
-  roles         UsuarioRol[]
+  fechaRegistro DateTime     @default(now())
+  activo        Boolean      @default(true)
+  carrito       Carrito?
   direcciones   Direccion[]
   pedidos       Pedido[]
-  carrito       Carrito?
+  roles         UsuarioRol[]
 }
 
 /// Define los roles en el sistema (ej: "CLIENTE", "ADMIN").
 model Rol {
-  id      Int          @id @default(autoincrement())
-  nombre  String       @unique // "CLIENTE", "ADMINISTRADOR", etc.
+  id       Int          @id @default(autoincrement())
+  nombre   String       @unique
   usuarios UsuarioRol[]
 }
 
 /// Tabla de unión para la relación muchos a muchos entre Usuario y Rol.
 model UsuarioRol {
-  usuarioId Int
-  rolId     Int
+  usuarioId  Int
+  rolId      Int
   asignadoEn DateTime @default(now())
-  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
-  rol       Rol      @relation(fields: [rolId], references: [id])
+  rol        Rol      @relation(fields: [rolId], references: [id])
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id])
 
   @@id([usuarioId, rolId])
 }
@@ -62,18 +58,14 @@ model Direccion {
   pedidos      Pedido[]
 }
 
-// ===============================================
-// MODELOS DE E-COMMERCE: PROCESO DE COMPRA
-// ===============================================
-
 /// Representa el carrito de compras de un usuario.
 model Carrito {
-  id        Int           @id @default(autoincrement())
-  usuarioId Int           @unique
-  usuario   Usuario       @relation(fields: [usuarioId], references: [id])
-  items     ItemCarrito[]
-  creadoEn  DateTime      @default(now())
-  actualizadoEn DateTime  @updatedAt
+  id            Int           @id @default(autoincrement())
+  usuarioId     Int           @unique
+  creadoEn      DateTime      @default(now())
+  actualizadoEn DateTime      @updatedAt
+  usuario       Usuario       @relation(fields: [usuarioId], references: [id])
+  items         ItemCarrito[]
 }
 
 /// Representa un item dentro del carrito de compras.
@@ -88,37 +80,36 @@ model ItemCarrito {
   @@unique([carritoId, productoId])
 }
 
-
 /// La orden de venta finalizada por un cliente.
 model Pedido {
-  id                Int             @id @default(autoincrement())
-  usuarioId         Int
-  direccionEnvioId  Int
-  fechaPedido       DateTime        @default(now())
-  estadoPedidoId    Int
-  subtotal          Float
-  costoEnvio        Float
-  total             Float
-  metodoEnvioId     Int
-  observaciones     String?
-  usuario           Usuario         @relation(fields: [usuarioId], references: [id])
-  direccionEnvio    Direccion       @relation(fields: [direccionEnvioId], references: [id])
-  estado            EstadoPedido    @relation(fields: [estadoPedidoId], references: [id])
-  metodoEnvio       MetodoEnvio     @relation(fields: [metodoEnvioId], references: [id])
-  items             DetallePedido[]
-  pagos             Pago[]
-  envio             Envio?
+  id               Int             @id @default(autoincrement())
+  usuarioId        Int
+  direccionEnvioId Int
+  fechaPedido      DateTime        @default(now())
+  estadoPedidoId   Int
+  subtotal         Float
+  costoEnvio       Float
+  total            Float
+  metodoEnvioId    Int
+  observaciones    String?
+  items            DetallePedido[]
+  envio            Envio?
+  pagos            Pago[]
+  direccionEnvio   Direccion       @relation(fields: [direccionEnvioId], references: [id])
+  estado           EstadoPedido    @relation(fields: [estadoPedidoId], references: [id])
+  metodoEnvio      MetodoEnvio     @relation(fields: [metodoEnvioId], references: [id])
+  usuario          Usuario         @relation(fields: [usuarioId], references: [id])
 }
 
 /// Detalle de los productos dentro de un pedido.
 model DetallePedido {
-  id                   Int      @id @default(autoincrement())
-  pedidoId             Int
-  productoId           Int
-  cantidad             Int
-  precioUnitarioAlComprar Float // Congela el precio al momento de la compra
-  pedido               Pedido   @relation(fields: [pedidoId], references: [id])
-  producto             Producto @relation(fields: [productoId], references: [id])
+  id                      Int      @id @default(autoincrement())
+  pedidoId                Int
+  productoId              Int
+  cantidad                Int
+  precioUnitarioAlComprar Float
+  pedido                  Pedido   @relation(fields: [pedidoId], references: [id])
+  producto                Producto @relation(fields: [productoId], references: [id])
 
   @@unique([pedidoId, productoId])
 }
@@ -126,56 +117,52 @@ model DetallePedido {
 /// Tabla de búsqueda para los posibles estados de un pedido.
 model EstadoPedido {
   id      Int      @id @default(autoincrement())
-  nombre  String   @unique // "PENDIENTE_PAGO", "ENVIADO", "ENTREGADO", etc.
+  nombre  String   @unique
   pedidos Pedido[]
 }
 
 /// Registra la información de la transacción de pago.
 model Pago {
-  id                  Int      @id @default(autoincrement())
-  pedidoId            Int
-  monto               Float
-  metodoPago          String // "MercadoPago", "Stripe", "Transferencia"
-  estado              String // "APROBADO", "RECHAZADO", "PENDIENTE"
-  transaccionIdProveedor String? // ID que devuelve la pasarela de pago
-  fechaPago           DateTime @default(now())
-  pedido              Pedido   @relation(fields: [pedidoId], references: [id])
+  id                     Int      @id @default(autoincrement())
+  pedidoId               Int
+  monto                  Float
+  metodoPago             String
+  estado                 String
+  transaccionIdProveedor String?
+  fechaPago              DateTime @default(now())
+  pedido                 Pedido   @relation(fields: [pedidoId], references: [id])
 }
 
 /// Gestiona la información de envío de un pedido.
 model Envio {
-  id                 Int         @id @default(autoincrement())
-  pedidoId           Int         @unique
-  metodoEnvioId      Int
-  codigoSeguimiento  String?
-  estado             String      // "PREPARANDO", "EN_CAMINO", "ENTREGADO"
-  fechaDespacho      DateTime?
+  id                   Int         @id @default(autoincrement())
+  pedidoId             Int         @unique
+  metodoEnvioId        Int
+  codigoSeguimiento    String?
+  estado               String
+  fechaDespacho        DateTime?
   fechaEntregaEstimada DateTime?
-  pedido             Pedido      @relation(fields: [pedidoId], references: [id])
-  metodoEnvio        MetodoEnvio @relation(fields: [metodoEnvioId], references: [id])
+  metodoEnvio          MetodoEnvio @relation(fields: [metodoEnvioId], references: [id])
+  pedido               Pedido      @relation(fields: [pedidoId], references: [id])
 }
 
 /// Almacena los métodos de envío disponibles.
 model MetodoEnvio {
   id      Int      @id @default(autoincrement())
-  nombre  String   @unique // "Correo Argentino", "Retiro en Sucursal"
+  nombre  String   @unique
   costo   Float
   activo  Boolean  @default(true)
-  pedidos Pedido[]
   envios  Envio[]
+  pedidos Pedido[]
 }
 
-// ===============================================
-// MODELOS DE INVENTARIO Y PROVEEDORES
-// ===============================================
-
 model Rubro {
-  id        Int        @id @default(autoincrement())
-  nombre    String
-  padreId      Int?
-  padre        Rubro? @relation("JerarquiaCategorias", fields: [padreId], references: [id])
-  subcategorias Rubro[]  @relation("JerarquiaCategorias")
-  productos Producto[]
+  id            Int        @id @default(autoincrement())
+  nombre        String
+  padreId       Int?
+  productos     Producto[]
+  padre         Rubro?     @relation("JerarquiaCategorias", fields: [padreId], references: [id])
+  subcategorias Rubro[]    @relation("JerarquiaCategorias")
 }
 
 model Unidad {
@@ -198,24 +185,21 @@ model Producto {
   marcaId                Int
   unidadId               Int
   estado                 Boolean                       @default(true)
-  // --- Campos específicos para E-commerce ---
-  precioVenta              Float?
-  sku                      String?                         @unique
-  publicado                Boolean                         @default(false)
-  slug                     String?                         @unique
-  destacado                Boolean                         @default(false)
-  // ------------------------------------------
+  destacado              Boolean                       @default(false)
+  precioVenta            Float?
+  publicado              Boolean                       @default(false)
+  sku                    String?                       @unique
+  slug                   String?                       @unique
   detalleComprobanteProv DetalleComprobanteProveedor[]
   detalleMovimiento      DetalleMovimiento[]
   detalleOrdenCompra     DetalleOrdenCompra[]
+  itemsPedido            DetallePedido[]
+  imagenes               ImagenProducto[]
+  itemsCarrito           ItemCarrito[]
   marca                  Marca                         @relation(fields: [marcaId], references: [id])
   rubro                  Rubro                         @relation(fields: [rubroId], references: [id])
   unidad                 Unidad                        @relation(fields: [unidadId], references: [id])
   stockProductos         StockPorDeposito[]
-  // --- Relaciones de E-commerce ---
-  imagenes                 ImagenProducto[]
-  itemsCarrito             ItemCarrito[]
-  itemsPedido              DetallePedido[]
 
   @@index([estado], map: "idx_producto_estado")
   @@index([nombre, rubroId], map: "idx_producto_nombre_rubro")
@@ -227,7 +211,7 @@ model ImagenProducto {
   id         Int      @id @default(autoincrement())
   productoId Int
   url        String
-  orden      Int      @default(0) // Para ordenar las imágenes en la galería
+  orden      Int      @default(0)
   producto   Producto @relation(fields: [productoId], references: [id])
 }
 

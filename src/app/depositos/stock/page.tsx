@@ -70,83 +70,85 @@ export default function StockPage() {
     async function loadData() {
       try {
         setLoading(true)
-        console.log("1. Iniciando carga de datos...")
-
-        // Usamos SIEMPRE la nueva API unificada
+        // 1) construir URL (igual que lo tenías)
         const url = initialDepositId !== ''
           ? `/api/gestion-stock?depositId=${initialDepositId}&page=1&pageSize=100&sort=nombre&dir=asc&status=all`
           : `/api/gestion-stock?page=1&pageSize=100&sort=nombre&dir=asc&status=all`
 
-        const res = await fetch(url)
-
+        const res = await fetch(url, { cache: 'no-store' })
         if (!res.ok) throw new Error(`Error HTTP ${res.status}`)
-        const json = await res.json()
 
-        console.log("2. Respuesta de la API recibida:", JSON.stringify(json, null, 2))
-
-        if (json.ok) {
-          const rows: any[] = json.data?.items || []
-
-          console.log("3. Filas extraídas para la tabla:", rows)
-
-          // El mapeo es único porque la API ya devuelve un formato consistente
-          const ui = rows.map((row: any) => ({
-            id: row.stockId,
-            depositId: row.depositoId,
-            productId: row.productoId,
-            depositNombre: row.depositoNombre ?? 'N/D',
-            depositUbicacion: row.depositoUbicacion ?? '',
-            productDescripcion: row.producto ?? 'N/D',
-            stockActual: row.stockActual,
-            stockMinimo: row.stockMinimo,
-            stockMaximo: row.stockMaximo ?? 0,
-            status: statusOf({
-              stockActual: row.stockActual,
-              stockMinimo: row.stockMinimo,
-              stockMaximo: row.stockMaximo ?? 0,
-            }),
-            progress: row.stockMaximo
-              ? Math.min((row.stockActual / row.stockMaximo) * 100, 100)
-              : 0,
-          }))
-
-          setStock(ui)
-
-          // Extraer depósitos únicos
-          const uniqueDeposits = Array.from(
-            new Map(
-              rows.map((row: any) => [
-                row.depositoId,
-                {
-                  id: row.depositoId,
-                  nombre: row.depositoNombre,
-                  ubicacion: row.depositoUbicacion || '',
-                },
-              ])
-            ).values()
-          ) as Deposito[]
-          setDeposits(uniqueDeposits)
-
-          // Extraer productos únicos
-          const uniqueProducts = Array.from(
-            new Map(
-              rows.map((row: any) => [
-                row.productoId,
-                { id: row.productoId, descripcion: row.producto, precioVenta: 0 },
-              ])
-            ).values()
-          ) as ProductoLite[]
-          setProducts(uniqueProducts)
+        // 2) parsear NUEVO shape
+        type ApiRow = {
+          id: number
+          depositoId: number
+          productoId: number
+          deposito: string
+          producto: string
+          sku: string | null
+          stock: number
+          stockMinimo: number
+          stockMaximo: number | null
+          status: 'atZero' | 'belowMin' | 'overMax' | 'ok'
         }
+        type ApiResponse = { page: number; pageSize: number; total: number; rows: ApiRow[] }
+
+        const json: ApiResponse = await res.json()
+        const rows = json.rows ?? []
+
+        // 3) mapear status API -> UI
+        const mapStatus = (s: ApiRow['status']): StockStatus =>
+          s === 'atZero' ? 'agotado' :
+            s === 'belowMin' ? 'bajo' :
+              s === 'overMax' ? 'alto' : 'normal'
+
+        // 4) mapear a tu UIStock
+        const ui: UIStock[] = rows.map(r => ({
+          id: r.id,
+          depositId: r.depositoId,
+          productId: r.productoId,
+          depositNombre: r.deposito,
+          depositUbicacion: '', // opcional: si luego devuelvo ubicacion desde la API lo rellenas acá
+          productDescripcion: r.producto,
+          stockActual: r.stock,
+          stockMinimo: r.stockMinimo,
+          stockMaximo: r.stockMaximo ?? 0,
+          status: mapStatus(r.status),
+          progress: r.stockMaximo ? Math.min((r.stock / r.stockMaximo) * 100, 100) : 0,
+        }))
+
+        setStock(ui)
+
+        // 5) listas únicas de depósitos y productos para los filtros
+        const uniqueDeposits = Array.from(
+          new Map(
+            rows.map(r => [
+              r.depositoId,
+              { id: r.depositoId, nombre: r.deposito, ubicacion: '' },
+            ])
+          ).values()
+        ) as Deposito[]
+        setDeposits(uniqueDeposits)
+
+        const uniqueProducts = Array.from(
+          new Map(
+            rows.map(r => [
+              r.productoId,
+              { id: r.productoId, descripcion: r.producto, precioVenta: 0 },
+            ])
+          ).values()
+        ) as ProductoLite[]
+        setProducts(uniqueProducts)
 
       } catch (err) {
         console.error("4. ¡ERROR! La carga de datos falló:", err)
-        // Fallback a datos mock
+        // Fallback a datos mock (como ya tenías)
         setDeposits(depositsMock)
         setProducts(productsLiteMock)
       } finally {
         setLoading(false)
       }
+
     }
 
     loadData()
@@ -155,7 +157,7 @@ export default function StockPage() {
   // ---- Filtro (reactivo) ----
   const filtered = useMemo(() => {
     if (loading) return []
-    
+
     // Reemplazá el byDeposit dentro de `filtered` por esto: ----------------------------------------------------
     const depositIdFilter = filters.depositId === '' ? null : Number(filters.depositId)
     const byDeposit = (s: UIStock) => !depositIdFilter || s.depositId === depositIdFilter
@@ -215,7 +217,7 @@ export default function StockPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
           </svg>
           <span className="text-primary-pink font-medium">
-            {initialDepositId !== '' 
+            {initialDepositId !== ''
               ? `Stock - ${deposits.find(d => d.id === initialDepositId)?.nombre || 'Depósito'}`
               : 'Stock por Depósito'
             }
@@ -226,13 +228,13 @@ export default function StockPage() {
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 space-y-4 lg:space-y-0">
           <div>
             <h2 className="text-4xl font-bold bg-gradient-to-r from-primary-pink to-primary-blue bg-clip-text text-transparent mb-2">
-              {initialDepositId !== '' 
+              {initialDepositId !== ''
                 ? `Stock - ${deposits.find(d => d.id === initialDepositId)?.nombre || 'Depósito'}`
                 : 'Gestión de Stock'
               }
             </h2>
             <p className="text-gray-600 text-lg">
-              {initialDepositId !== '' 
+              {initialDepositId !== ''
                 ? 'Inventario detallado del depósito seleccionado'
                 : 'Control completo del inventario por depósito'
               }
@@ -265,7 +267,7 @@ export default function StockPage() {
           products={products}
           value={filters}
           onChange={setFilters}
-          onApply={() => {}}
+          onApply={() => { }}
         />
 
         {/* Tabla + footer (edge-to-edge) */}
