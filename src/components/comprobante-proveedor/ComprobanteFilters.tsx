@@ -51,7 +51,7 @@ export default function ComprasFilters({ initial, proveedores, depositos, onSear
           onChange={(e) => update("fechaHasta", e.target.value)}
         />
         <Input
-          label="Número de Comprobante Proveedor"
+          label="N° de Comprobante Proveedor"
           placeholder="CP-001..."
           value={filters.numeroCP ?? ""}
           onChange={(e) => update("numeroCP", e.target.value)}
@@ -62,9 +62,15 @@ export default function ComprasFilters({ initial, proveedores, depositos, onSear
           onChange={(e) => update("proveedorId", e.target.value)}
         >
           <option value="">Todos</option>
-          {proveedores.map((p) => (
+          
+          {/*CAMBIO HECHO POR LUIS, SI ROMPE BORRAR*/}
+          {/*{proveedores.map((p) => (
             <option key={p.id} value={p.id}>{p.name}</option>
+          ))}*/}
+          {Array.from(new Map(proveedores.map(p => [p.id, p])).values()).map(p => (
+            <option key={`prov-${p.id}`} value={p.id}>{p.name}</option>
           ))}
+
         </Select>
         <Select
           label="Depósito"
@@ -72,9 +78,15 @@ export default function ComprasFilters({ initial, proveedores, depositos, onSear
           onChange={(e) => update("depositoId", e.target.value)}
         >
           <option value="">Todos</option>
-          {depositos.map((d) => (
+          
+          {/*CAMBIO HECHO POR LUIS, SI ROMPE BORRAR*/}
+          {/*{depositos.map((d) => (
             <option key={d.id} value={d.id}>{d.name}</option>
+          ))}*/}
+          {Array.from(new Map(depositos.map(d => [d.id, d])).values()).map(d => (
+            <option key={`dep-${d.id}`} value={d.id}>{d.name}</option>
           ))}
+          
         </Select>
       </div>
 

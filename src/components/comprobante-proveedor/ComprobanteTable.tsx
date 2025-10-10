@@ -4,17 +4,16 @@
 import Button from "@/components/ui/Button";
 import {
   Eye,
-  Pencil,
-  Trash2,
   ChevronUp,
   ChevronDown,
   ChevronsUpDown,
 } from "lucide-react";
 import type { ComprobanteListItem } from "@/lib/comprobante-proveedor/types";
+import { moneyAR } from "@/lib/format/money";
 
-type SortKey = 
+type SortKey =
   | "id"
-  | "ordenCompra"  
+  | "ordenCompra"
   | "fecha"
   | "hora"
   | "numero"
@@ -24,30 +23,24 @@ type SortKey =
   | "total"
   | "saldo"
   | "estado"
-  | "proveedor"   // ojo: acá después aclaramos que es por nombre
-  | "deposito"    // idem
+  | "proveedor"
+  | "deposito"
   | "tipoComprobante"
   | "tipoMovimiento";
 export type SortState = { key: SortKey; dir: "asc" | "desc" };
 
 type Props = {
-  comprobantes: ComprobanteListItem [];
+  comprobantes: ComprobanteListItem[];
   onView?: (id: number) => void;
-  onEdit?: (id: number) => void;
-  onDelete?: (id: number) => void;
+  //onEdit?: (id: number) => void;
+  //onDelete?: (id: number) => void;
   onSort?: (s: SortState) => void;
   sortState?: SortState;
 };
 
-function money(n: number) {
-  return (n ?? 0).toLocaleString(undefined, { minimumFractionDigits: 0 });
-}
-
 export default function ComprasTable({
   comprobantes,
   onView,
-  onEdit,
-  onDelete,
   onSort,
   sortState,
 }: Props) {
@@ -101,79 +94,64 @@ export default function ComprasTable({
           </thead>
 
           <tbody>
-            {comprobantes.map((comprobante, idx) => (
-              <tr key={comprobante.id} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                <td className="px-6 py-4 font-semibold text-blue-800">{comprobante.id}</td>
+            {comprobantes.map((comprobante, idx) => {
+              const ocId = comprobante.ordenCompra?.id ?? "-";
+              const proveedorNombre = comprobante.proveedor?.name ?? "-";
+              const depositoNombre = comprobante.deposito?.name ?? "-";
 
-                <td className="px-6 py-4 text-gray-700">
-                  <div>
-                    <div className="font-medium">{comprobante.fecha}</div>
-                  </div>
-                </td>
+              return (
+                <tr key={comprobante.id} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                  <td className="px-6 py-4 font-semibold text-blue-800 text-center">{comprobante.id}</td>
 
-                <td className="px-6 py-4">
-                  <div className="font-medium text-gray-900 truncate max-w-[18ch]">
-                    {comprobante.ordenCompra.id}
-                  </div>
-                </td>
+                  <td className="px-6 py-4 text-gray-700">
+                    <div>
+                      <div className="font-medium">{comprobante.fecha}</div>
+                    </div>
+                  </td>
 
-                <td className="px-6 py-4">
-                  <div className="font-medium text-gray-900 truncate max-w-[18ch]">
-                    {comprobante.proveedor.name}
-                  </div>
-                </td>
+                  <td className="px-6 py-4">
+                    <div className="font-medium text-gray-900 truncate max-w-[18ch] text-center">
+                      {ocId}
+                    </div>
+                  </td>
 
-                <td className="px-6 py-4 text-gray-700">{comprobante.deposito.name}</td>
+                  <td className="px-6 py-4">
+                    <div className="font-medium text-gray-900 truncate max-w-[18ch]">
+                      {proveedorNombre}
+                    </div>
+                  </td>
 
-                <td className="px-6 py-4 font-semibold text-gray-900">
-                  ${money(comprobante.total)}
-                </td>
+                  <td className="px-6 py-4 text-gray-700">{depositoNombre}</td>
 
-                 <td className="px-6 py-4 font-semibold text-gray-900">
-                  ${money(comprobante.saldo)}
-                </td>
+                  <td className="px-6 py-4 font-semibold text-gray-900 text-left">
+                    {moneyAR(comprobante.total)}
+                  </td>
 
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-1">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => onView?.(comprobante.id)}
-                      title="Ver"
-                      aria-label={`Ver ${comprobante.id}`}
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Button>
+                  <td className="px-6 py-4 font-semibold text-gray-900 text-left">
+                    {moneyAR(comprobante.saldo)}
+                  </td>
 
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => window.location.href = `/comprobante-proveedor/${comprobante.id}`}
-                      title="Ver detalles"
-                      aria-label={`Ver detalles de ${comprobante.id}`}
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-
-                    {onDelete && (
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-1">
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => onDelete(comprobante.id)}
-                        title="Eliminar"
-                        aria-label={`Eliminar ${comprobante.id}`}
+                        onClick={() => onView?.(comprobante.id)}
+                        title="Ver"
+                        aria-label={`Ver ${comprobante.id}`}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Eye className="w-4 h-4" />
                       </Button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
 
             {comprobantes.length === 0 && (
               <tr>
-                <td className="px-6 py-10 text-center text-gray-500" colSpan={7}>
+                {/* 8 columnas (7 + Acciones) */}
+                <td className="px-6 py-10 text-center text-gray-500" colSpan={8}>
                   No hay comprobantes que coincidan con los filtros.
                 </td>
               </tr>

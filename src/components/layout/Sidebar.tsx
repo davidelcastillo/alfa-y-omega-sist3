@@ -49,8 +49,8 @@ const items: MenuItem[] = [
     ),
     children: [
       { label: 'Órdenes de compra', href: '/compras' },
-      { label: 'NOSE', href: '#' }, //cambiar esto cuando se genere el diseño
-      { label: 'pagos', href: '/pagos' },
+      { label: 'Comprobantes de Proveedor', href: '/comprobante-proveedor' },
+      { label: 'Pagos a Proveedores', href: '/pagos' },
     ],
   },
   {
