@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
+// Validación de un ítem con Zod
 const ItemSchema = z.object({
   productoId: z.number().int().positive(),
   cantidad: z.number().int().positive(),
@@ -13,10 +14,13 @@ export const dynamic = "force-dynamic";
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }   // 👈 params ahora es Promise
 ) {
   try {
-    const ordenCompraId = Number(params.id);
+    // 👇 se resuelve con await
+    const { id } = await context.params;
+    const ordenCompraId = Number(id);
+
     if (!Number.isFinite(ordenCompraId)) {
       return NextResponse.json({ ok: false, error: "ID inválido" }, { status: 400 });
     }

@@ -7,6 +7,9 @@ import ComprasFilters from "@/components/compras/ComprasFilters";
 import ComprasTable from "@/components/compras/ComprasTable";
 import ComprasStatsCards from "@/components/compras/ComprasStatsCards";
 import ComprasModal from "@/components/compras/ComprasModal";
+import { useRouter } from "next/navigation"; 
+import { apiOCCreate, apiOCAddItem } from "@/lib/compras/api";
+import ComprasDetailModal from "@/components/compras/ComprasDetailModal";
 
 import { Button } from "@/components/ui/Button";
 import { Plus } from 'lucide-react';
@@ -52,6 +55,10 @@ export default function ComprasClient({ initialOrders, proveedores, depositos, p
   const incompletas = useMemo(() => filtered.filter((o) => o.status === "Incompleta").length, [filtered]);
   const montoTotal = useMemo(() => filtered.reduce((s, o) => s + o.total, 0), [filtered]);
 
+  // 🟢 Agregá acá los estados del modal de detalle
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailId, setDetailId] = useState<string | null>(null);
+
   // Handlers de Filtros
   function onSearch(f: ComprasFiltersState) {
     setFilters(f);
@@ -64,9 +71,10 @@ export default function ComprasClient({ initialOrders, proveedores, depositos, p
 
   // Navegación “Ver”
   function onView(id: string) {
-    // TODO: reemplazar por router.push(`/compras/${id}`)
-    alert(`Ver detalle de ${id} (pendiente de /compras/[id])`);
+    setDetailId(id);      // guardamos el id que queremos ver
+    setDetailOpen(true);  // abrimos el modal de detalle
   }
+
 
   // Editar
   function onEdit(id: string) {
@@ -74,19 +82,53 @@ export default function ComprasClient({ initialOrders, proveedores, depositos, p
     openModal();
   }
 
-
   // Crear / Actualizar (server actions)
   async function handleSubmit(payload: {
     proveedorId: string;
     deposito: string;
-    fechaEntrega: string; // yyyy-mm-dd
+    fechaEntrega: string;
     items: PurchaseOrderItem[];
     totalCantidad: number;
     totalMonto: number;
   }) {
-    setOpen(false);
-    setEditingId(null);
-    // TODO: disparar ToastNotificacion si querés
+    try {
+      // 1. Crear solo la cabecera
+      const ocHeaderDto = {
+        proveedorId: parseInt(payload.proveedorId),
+        depositoId: parseInt(payload.deposito),
+        fecha: new Date().toISOString(),
+        fechaEntrega: payload.fechaEntrega,
+        subTotal: payload.totalMonto,
+        total: payload.totalMonto,
+        estado: true,
+      };
+
+      const nuevaOC = await apiOCCreate(ocHeaderDto);
+
+      if (!nuevaOC?.id) {
+        throw new Error("La API no devolvió un ID para la nueva orden de compra.");
+      }
+
+      // 2. Agregar ítems a la orden creada
+      const itemPromises = payload.items.map((item) =>
+        apiOCAddItem(nuevaOC.id, {
+          productoId: parseInt(item.productId),
+          cantidad: item.quantity,
+          precioUnitario: item.unitPrice,
+        })
+      );
+
+      await Promise.all(itemPromises);
+
+      // 3. Todo ok → cerrar modal y refrescar
+      setOpen(false);
+      setEditingId(null);
+      alert("✅ Orden de compra registrada correctamente");
+      // opcional: router.refresh();
+    } catch (error) {
+      console.error("❌ Error al registrar la orden:", error);
+      alert("Error al registrar la orden de compra. Revisá la consola.");
+    }
   }
 
   function onOpenNew() {
@@ -96,6 +138,8 @@ export default function ComprasClient({ initialOrders, proveedores, depositos, p
 
   // Opciones para filtros y modal (shape esperado por tus components)
   const proveedoresOptions = proveedores.map((p) => ({ id: p.id, name: p.name }));
+  const depositosOptions = depositos.map((d, i) => ({ id: String(i + 1), name: d }));
+
 
   return (
     <main className="w-full max-w-none mx-auto px-3 sm:px-4 lg:px-6 py-8 fade-in">
@@ -157,7 +201,7 @@ export default function ComprasClient({ initialOrders, proveedores, depositos, p
         open={open}
         onOpenChange={setOpen}
         proveedores={proveedoresOptions}
-        depositos={depositos}
+        depositos={depositosOptions}
         productos={productos}
         initial={
           editingId
@@ -165,15 +209,24 @@ export default function ComprasClient({ initialOrders, proveedores, depositos, p
                 const o = orders.find((x) => x.id === editingId)!;
                 return {
                   proveedorId: o.supplier.id,
-                  deposito: o.warehouse,
+                  deposito: String(o.warehouse), 
                   fechaEntrega: toYYYYMMDD(o.deliveryDate),
                   items: o.items,
                 };
               })()
             : undefined
         }
+
         onSubmit={handleSubmit}
       />
+      
+      {/* 🟢 Nuevo: Modal de Detalle */}
+      <ComprasDetailModal
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        orderId={detailId}
+      />
+
   </main>  
 );
 }
