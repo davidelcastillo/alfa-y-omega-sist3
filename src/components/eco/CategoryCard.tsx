@@ -1,18 +1,19 @@
 // src/components/eco/CategoryCard.tsx
-import Link from "next/link"
-import type { CategoryMock } from "@/mocks/eco/categories"
+import Link from "next/link";
 
-export default function CategoryCard({ c }: { c: CategoryMock }) {
+type Category = { id: number; nombre: string; slug: string };
+
+export default function CategoryCard({ c }: { c: Category }) {
   return (
     <Link
-      href={`/eco/categoria/${c.slug}`}
+      href={`/eco/categoria/${c.slug}?rubroId=${c.id}`}
       className="glass rounded-2xl p-5 flex items-center justify-between hover:shadow-lg transition"
     >
       <div>
-        <h3 className="font-semibold">{c.name}</h3>
+        <h3 className="font-semibold">{c.nombre}</h3>
         <p className="text-xs text-gray-500">Ver productos</p>
       </div>
-      <span className="text-2xl">{c.icon ?? "🛒"}</span>
+      <span className="text-2xl">🛒</span>
     </Link>
-  )
+  );
 }
