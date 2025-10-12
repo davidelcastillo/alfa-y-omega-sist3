@@ -1,23 +1,23 @@
+// src/app/api/ordenes-pago/[id]/detalle/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type Params = { params: { id: string } };
+// 👇 params ahora es Promise y lo esperás
+type Ctx = { params: Promise<{ id: string }> };
 
-export async function GET(_req: Request, { params }: Params) {
+export async function GET(_req: Request, ctx: Ctx) {
   try {
-    const id = Number(params.id);
-    if (!Number.isFinite(id)) {
-      return NextResponse.json(
-        { ok: false, error: "ID inválido" },
-        { status: 400 }
-      );
+    const { id } = await ctx.params;              // <— esperar params
+    const nid = Number(id);
+    if (!Number.isFinite(nid)) {
+      return NextResponse.json({ ok: false, error: "ID inválido" }, { status: 400 });
     }
 
     const op = await prisma.ordenPago.findUnique({
-      where: { id },
+      where: { id: nid },
       select: {
         id: true,
         fecha: true,
@@ -27,25 +27,12 @@ export async function GET(_req: Request, { params }: Params) {
         totalPagado: true,
         MetodoPago: { select: { id: true, nombre: true } },
         Proveedores: {
-          // “datos completos de proveedor”
           select: {
-            id: true,
-            razonSocial: true,
-            nombre: true,
-            nombreComercial: true,
-            codigo: true,
-            genero: true,
-            categoriaFiscalId: true,
-            cuil: true,
-            pais: true,
-            provincia: true,
-            localidad: true,
-            barrio: true,
-            codigoPostal: true,
-            telefono: true,
-            paginaWeb: true,
-            correoElectronico: true,
-            estado: true,
+            id: true, razonSocial: true, nombre: true, nombreComercial: true,
+            codigo: true, genero: true, categoriaFiscalId: true, cuil: true,
+            pais: true, provincia: true, localidad: true, barrio: true,
+            codigoPostal: true, telefono: true, paginaWeb: true,
+            correoElectronico: true, estado: true,
           },
         },
         DetalleOrdenPago: {
@@ -54,20 +41,22 @@ export async function GET(_req: Request, { params }: Params) {
             saldoPrevio: true,
             saldoRestante: true,
             ComprobanteProveedor: {
-              // “datos completos de facturas/comprobantes”
               select: {
-                id: true,
-                fecha: true,
-                letra: true,
-                numeroSucursal: true,
-                numero: true,
-                total: true,
-                saldo: true,
-                estado: true,
+                id: true, fecha: true, letra: true, numeroSucursal: true, numero: true,
+                total: true, saldo: true, estado: true,
                 tipoComprobante: { select: { id: true, nombre: true } },
                 proveedor: { select: { id: true, nombre: true } },
                 Deposito: { select: { id: true, nombre: true } },
                 moneda: true,
+
+                // 👇 agregar ítems del comprobante para poder mostrar “productos”
+                detalleComprobante: {
+                  select: {
+                    cantidad: true,
+                    precioUnitario: true,
+                    producto: { select: { id: true, nombre: true } },
+                  },
+                },
               },
             },
           },
@@ -77,10 +66,7 @@ export async function GET(_req: Request, { params }: Params) {
     });
 
     if (!op) {
-      return NextResponse.json(
-        { ok: false, error: "Orden de pago inexistente" },
-        { status: 404 }
-      );
+      return NextResponse.json({ ok: false, error: "Orden de pago inexistente" }, { status: 404 });
     }
 
     const detalles = op.DetalleOrdenPago.map((d) => ({
@@ -107,17 +93,19 @@ export async function GET(_req: Request, { params }: Params) {
         deposito: d.ComprobanteProveedor.Deposito,
         proveedor: d.ComprobanteProveedor.proveedor,
         moneda: d.ComprobanteProveedor.moneda ?? null,
+
+        // 👇 aplanamos para el front
+        items: d.ComprobanteProveedor.detalleComprobante.map((it) => ({
+          id: it.producto.id,
+          nombre: it.producto.nombre,
+          cantidad: it.cantidad,
+          precioUnitario: Number(it.precioUnitario),
+        })),
       },
     }));
 
-    const totalAplicado = detalles.reduce(
-      (a, r) => a + r.aplicado.montoPagado,
-      0
-    );
-    const saldoRestanteTotal = detalles.reduce(
-      (a, r) => a + r.aplicado.saldoRestante,
-      0
-    );
+    const totalAplicado = detalles.reduce((a, r) => a + r.aplicado.montoPagado, 0);
+    const saldoRestanteTotal = detalles.reduce((a, r) => a + r.aplicado.saldoRestante, 0);
 
     return NextResponse.json({
       ok: true,
@@ -128,7 +116,7 @@ export async function GET(_req: Request, { params }: Params) {
         observaciones: op.observaciones,
         estado: op.estado,
         metodo_pago: op.MetodoPago,
-        proveedor: op.Proveedores, // completo
+        proveedor: op.Proveedores,
         totales: {
           total_pagado: Number(op.totalPagado ?? totalAplicado),
           comprobantes: detalles.length,
@@ -137,25 +125,16 @@ export async function GET(_req: Request, { params }: Params) {
         detalles,
       },
     });
-  } catch (err: unknown) {
+  } catch (err) {
     console.error("GET /api/ordenes-pago/[id]", err);
     return NextResponse.json(
-      {
-        ok: false,
-        error: "Error al obtener detalle de la orden de pago",
-        details: err instanceof Error ? err.message : String(err),
-      },
+      { ok: false, error: "Error al obtener detalle de la orden de pago" },
       { status: 500 }
     );
   }
 }
 
-/** A-0001-00001234 */
-function formatNro(
-  letra?: string | null,
-  suc?: string | null,
-  nro?: string | null
-) {
+function formatNro(letra?: string | null, suc?: string | null, nro?: string | null) {
   const L = (letra ?? "").trim();
   const S = (suc ?? "").toString().padStart(4, "0");
   const N = (nro ?? "").toString().padStart(8, "0");
