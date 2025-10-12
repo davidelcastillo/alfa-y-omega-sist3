@@ -1,3 +1,4 @@
+// src/lib/ordenes-pago/types.ts
 import { z } from "zod";
 
 /* ---------- Líneas / detalles ---------- */
@@ -56,16 +57,16 @@ export type OrdenPagoListParams = {
   fecha_hasta?: string;
   search?: string;
   sort?:
-    | "fecha"
-    | "-fecha"
-    | "total"
-    | "-total"
-    | "proveedor"
-    | "-proveedor"
-    | "metodoPago"
-    | "-metodoPago"
-    | "estado"
-    | "-estado";
+  | "fecha"
+  | "-fecha"
+  | "total"
+  | "-total"
+  | "proveedor"
+  | "-proveedor"
+  | "metodoPago"
+  | "-metodoPago"
+  | "estado"
+  | "-estado";
 };
 
 export type OrdenPagoListItem = {
@@ -132,6 +133,13 @@ export const ProveedorFullSchema = z.object({
   paginaWeb: z.string().nullable().optional(),
   correoElectronico: z.string().nullable().optional(),
   estado: z.boolean(),
+  items: z.array(z.object({
+    id: z.number(),
+    nombre: z.string(),
+    cantidad: z.number(),
+    precioUnitario: z.number(),
+  })).optional(),
+
 });
 
 export const OrdenPagoDetailSchema = z.object({

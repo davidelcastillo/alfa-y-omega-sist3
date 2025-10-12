@@ -1,3 +1,4 @@
+// src/app/api/ordenes-pago/route.ts
 // ordenes de pago - listado con filtros, paginación y totales
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
