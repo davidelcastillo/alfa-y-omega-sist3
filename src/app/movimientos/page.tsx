@@ -148,24 +148,16 @@ async function fetchTiposMovimientos(): Promise<TipoMovimientoDTO[]> {
 }
 
 // Mapeo de tipos de movimiento de la API a los tipos esperados
+const NORMALIZA_TIPO: Partial<Record<string, TipoMovimiento>> = {
+  'Egreso por Ajuste': 'Egreso por Ajuste',
+  'Egreso por Obsolencia': 'Egreso por Obsolencia',
+  'Egreso por Venta': 'Egreso por Venta',
+  'Ingreso por Ajuste': 'Ingreso por Ajuste',
+  'Ingreso por Compra': 'Ingreso por Compra',
+  'Ingreso por Devolución': 'Ingreso por Devolución',
+};
 const mapTipoMovimiento = (apiTipo: string): TipoMovimiento => {
-  switch (apiTipo) {
-    case 'Egreso por Ajuste':
-      return 'Egreso por Ajuste';
-    case 'Egreso por Obsolencia':
-      return 'Egreso por Obsolencia';
-    case 'Egreso por Venta':
-      return 'Egreso por Venta';
-    case 'Ingreso por Ajuste':
-      return 'Ingreso por Ajuste';
-    case 'Ingreso por Compra':
-      return 'Ingreso por Compra';
-    case 'Ingreso por Devolución':
-      return 'Ingreso por Devolución';
-    default:
-      console.warn(`Tipo de movimiento no reconocido: ${apiTipo}`);
-      return 'Ajuste de stock';
-  }
+  return NORMALIZA_TIPO[apiTipo] ?? (apiTipo as unknown as TipoMovimiento);
 };
 
 // Carga de movimientos desde API

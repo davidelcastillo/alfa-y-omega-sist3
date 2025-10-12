@@ -4,15 +4,18 @@ import { useMemo, useState } from "react"
 import ComprasFilters from "@/components/comprobante-proveedor/ComprobanteFilters"
 import ComprasTable from "@/components/comprobante-proveedor/ComprobanteTable"
 import ComprobanteStatsCards from "@/components/comprobante-proveedor/ComprobanteStatsCards"
-import ComprobanteModal from "@/components/comprobante-proveedor/ComprobanteModal"
+// ⬇️ Se elimina ComprobanteModal porque aquí no se edita/crea
+
 import { Button } from "@/components/ui/Button"
 import { Plus } from "lucide-react"
+
 import { applyFilters, applySort } from "@/lib/comprobante-proveedor/utils"
 import type { ComprobanteProveedor, ComprobanteFiltersState } from "@/lib/comprobante-proveedor/comprobante"
+import type { ComprobanteListItem } from "@/lib/comprobante-proveedor/types"
 import useComprobanteSort from "./hooks/useComprobanteSort"
 import usePagination from "./hooks/usePagination"
-import useModal from "./hooks/useModal"
-import { createComprobanteAction } from "./actions/comprobante"
+// ⬇️ Se elimina useModal
+import { createComprobanteAction } from "./actions/comprobante" // si no se usa, podés borrarlo también
 import { useRouter } from "next/navigation"
 
 type Props = {
@@ -22,10 +25,8 @@ type Props = {
 export default function ComprobanteClient({ initialComprobantes }: Props) {
   const [comprobantes, setComprobantes] = useState<ComprobanteProveedor[]>(initialComprobantes)
   const [filters, setFilters] = useState<ComprobanteFiltersState>({})
-  const [editingId, setEditingId] = useState<string | null>(null)
 
   const { sort, setSort } = useComprobanteSort({ key: "fecha", dir: "desc" })
-  const { open, setOpen, openModal, closeModal } = useModal(false)
   const router = useRouter()
 
   // Filtros + orden
@@ -34,9 +35,58 @@ export default function ComprobanteClient({ initialComprobantes }: Props) {
   const { page, pageItems, totalPages, next, prev, setPage, reset } = usePagination(sorted, 10)
 
   // Stats
-  const montoTotal = useMemo(() => filtered.reduce((s, c) => s + c.total, 0), [filtered])
-  const conSaldo = useMemo(() => filtered.filter((c) => c.saldo > 0).length, [filtered])
-  const cancelados = useMemo(() => filtered.filter((c) => c.saldo === 0).length, [filtered])
+  const montoTotal = useMemo(() => filtered.reduce((s, c) => s + (c.total ?? 0), 0), [filtered])
+  const conSaldo = useMemo(() => filtered.filter((c) => (c.saldo ?? 0) > 0).length, [filtered])
+  const cancelados = useMemo(() => filtered.filter((c) => (c.saldo ?? 0) === 0).length, [filtered])
+
+  // Mapper: ComprobanteProveedor -> ComprobanteListItem
+const listItems: ComprobanteListItem[] = useMemo(() => {
+  return pageItems.map((c) => {
+    const idNum = typeof c.id === "number" ? c.id : Number(c.id)
+    const total = Number(c.total ?? 0)
+    const saldo = Number(c.saldo ?? 0)
+    const pagado = Math.max(total - saldo, 0)
+    const pendiente = Math.max(saldo, 0)
+
+    // proveedor es obligatorio en ComprobanteListItem
+    const provId = c.proveedor?.id
+    const proveedor = provId != null
+      ? { id: typeof provId === "number" ? provId : Number(provId), name: c.proveedor!.name ?? "-" }
+      : { id: 0, name: "-" } // fallback
+
+    // deposito puede ser null
+    const depId = c.deposito?.id
+    const deposito = depId != null
+      ? { id: typeof depId === "number" ? depId : Number(depId), name: c.deposito!.name ?? "-" }
+      : null
+
+    // ordenCompra puede ser null
+    const ocId = (c as any).ordenCompra?.id
+    const ordenCompra = ocId != null
+      ? { id: typeof ocId === "number" ? ocId : Number(ocId) }
+      : null
+
+    // estado boolean requerido (intento usar el real; si no, lo derivo)
+    const estado: boolean = typeof (c as any).estado === "boolean"
+      ? (c as any).estado
+      : saldo === 0
+
+    return {
+      id: idNum,
+      nro_comprobante: (c as any).nro_comprobante ?? (c as any).numero ?? null,
+      proveedor,
+      tipo_comprobante: (c as any).tipo_comprobante ?? (c as any).tipo ?? null,
+      ordenCompra,
+      deposito,
+      total,
+      pagado,
+      pendiente,
+      saldo,
+      fecha: (c as any).fecha ?? null, // "YYYY-MM-DD" | null
+      estado,
+    }
+  })
+}, [pageItems])
 
   // Handlers
   function onSearch(f: ComprobanteFiltersState) {
@@ -49,33 +99,16 @@ export default function ComprobanteClient({ initialComprobantes }: Props) {
     reset()
   }
 
-  function onView(id: string) {
+  function onView(id: number) {
     router.push(`/comprobante-proveedor/${id}`)
   }
 
-  function onEdit(id: string) {
-    setEditingId(id)
-    openModal()
-  }
-
   function onOpenNew() {
-    setEditingId(null)
     router.push("/comprobante-proveedor/nuevo")
   }
 
-  async function handleSubmit(payload: any) {
-    setEditingId(null)
-    closeModal()
-
-    try {
-      const newComprobante = await createComprobanteAction(payload)
-      setComprobantes((prev) => [newComprobante, ...prev])
-      setPage(1)
-    } catch (err) {
-      console.error(err)
-      alert("Error al crear el comprobante")
-    }
-  }
+  // si no creás acá, podés borrar todo lo relacionado a createComprobanteAction y handleSubmit
+  // lo dejo fuera para no confundir
 
   return (
     <main className="w-full max-w-none mx-auto px-3 sm:px-4 lg:px-6 py-8 fade-in">
@@ -104,13 +137,32 @@ export default function ComprobanteClient({ initialComprobantes }: Props) {
       <ComprobanteStatsCards total={filtered.length} conSaldo={conSaldo} cancelados={cancelados} montoTotal={montoTotal} />
 
       {/* Filtros */}
-      <ComprasFilters  proveedores={comprobantes.map(c => c.proveedor).filter(Boolean)}
-  depositos={comprobantes.map(c => c.deposito).filter(Boolean)}
-  onSearch={onSearch}
-  onClear={onClear} />
+      <ComprasFilters
+        proveedores={useMemo(() => {
+          const map = new Map<string, { id: string; name: string }>()
+          comprobantes.forEach(c => {
+            if (c.proveedor?.id != null) map.set(String(c.proveedor.id), { id: String(c.proveedor.id), name: c.proveedor.name })
+          })
+          return Array.from(map.values())
+        }, [comprobantes])}
+        depositos={useMemo(() => {
+          const map = new Map<string, { id: string; name: string }>()
+          comprobantes.forEach(c => {
+            if (c.deposito?.id != null) map.set(String(c.deposito.id), { id: String(c.deposito.id), name: c.deposito.name })
+          })
+          return Array.from(map.values())
+        }, [comprobantes])}
+        onSearch={onSearch}
+        onClear={onClear}
+      />
 
       {/* Tabla */}
-      <ComprasTable comprobantes={pageItems} onView={onView} onEdit={onEdit} onSort={(s) => setSort(s)} sortState={sort} />
+      <ComprasTable
+        comprobantes={listItems}
+        onView={onView}
+        onSort={(s) => setSort(s)}
+        sortState={sort}
+      />
 
       {/* Paginación */}
       <div className="flex items-center justify-between text-sm text-gray-600 mt-2">

@@ -1,6 +1,6 @@
 
-import { CheckCircle2, XCircle, BadgeCheck, ClipboardList, CircleAlert, CircleDollarSign } from "lucide-react";
-
+import { CheckCircle2, ClipboardList, CircleAlert, CircleDollarSign } from "lucide-react";
+import { moneyAR } from "@/lib/format/money";
 
 type Props = {
   total: number;
@@ -9,9 +9,11 @@ type Props = {
   montoTotal: number;
 };
 
-function money(n: number) {
+{/* CAMBIOS HECHO POR LUIS, CUALQUIER COSA SACAR EL COMENTARIO */}
+/*function money(n: number) {
   return (n ?? 0).toLocaleString(undefined, { minimumFractionDigits: 0 });
-}
+}  ESTO LO REEMPLACE POR UNA API QUE NORMALIZA*/
+
 
 export default function ComprobanteStatsCards({ total, conSaldo, cancelados, montoTotal }: Props) {
   return (
@@ -25,7 +27,7 @@ export default function ComprobanteStatsCards({ total, conSaldo, cancelados, mon
       <Card label="Comprobantes Cancelados" value={cancelados} valueClass="text-yellow-600" gradient="from-yellow-400 to-yellow-600">
         <CircleAlert className="w-6 h-6 text-white" />
       </Card>
-      <Card label="Total del Monto" value={`$${money(montoTotal)}`} gradient="from-blue-400 to-blue-600">
+      <Card label="Total del Monto" value={moneyAR(montoTotal)} gradient="from-blue-400 to-blue-600">
         <CircleDollarSign className="w-6 h-6 text-white" />
       </Card>
     </div>

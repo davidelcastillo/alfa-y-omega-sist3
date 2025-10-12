@@ -107,7 +107,6 @@ export default function ProveedoresTable({
                   <td className="px-6 py-4">
                     <div className="text-sm font-semibold text-gray-900">
                       {displayName}
-                      {fantasy}
                     </div>
                     <div className="text-xs text-gray-500">
                       {s.nombreFantasia || ""}
