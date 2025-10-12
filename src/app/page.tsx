@@ -36,10 +36,30 @@ export default function HomePage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <Link href="/movimientos" className="glass-effect rounded-2xl p-6 card-hover">
             <h2 className="text-2xl font-semibold mb-2">Movimientos de stock</h2>
-            <p className="text-gray-600">nose</p>
+            <p className="text-gray-600">Historial completo de ingresos y egresos de inventario.</p>
           </Link>
           <Link href="/proveedores" className="glass-effect rounded-2xl p-6 card-hover">
             <h2 className="text-2xl font-semibold mb-2">Proveedores</h2>
+            <p className="text-gray-600">Administra y controla toda la información de tus proveedores.</p>
+          </Link>
+        </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <Link href="/compras" className="glass-effect rounded-2xl p-6 card-hover">
+            <h2 className="text-2xl font-semibold mb-2">Órdenes de compras</h2>
+            <p className="text-gray-600">nose</p>
+          </Link>
+          <Link href="/comprobante-proveedor" className="glass-effect rounded-2xl p-6 card-hover">
+            <h2 className="text-2xl font-semibold mb-2">Comprobantes de proveedor</h2>
+            <p className="text-gray-600">Administra y controla todos los comprobantes de proveedor.</p>
+          </Link>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <Link href="/pagos" className="glass-effect rounded-2xl p-6 card-hover">
+            <h2 className="text-2xl font-semibold mb-2">Pagos a proveedor</h2>
+            <p className="text-gray-600">Administra y controla todos los pagos a proveedores.</p>
+          </Link>
+          <Link href="/ventas" className="glass-effect rounded-2xl p-6 card-hover">
+            <h2 className="text-2xl font-semibold mb-2">Ventas</h2>
             <p className="text-gray-600">Nose.</p>
           </Link>
         </div>
