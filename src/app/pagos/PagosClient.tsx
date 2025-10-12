@@ -8,47 +8,132 @@ import PagosModal from '@/components/pagos/PagosModal';
 import Button from '@/components/ui/Button';
 import { Plus } from 'lucide-react';
 import type { SupplierPayment } from '@/mocks/pagos.mock';
+import { apiListOrdenesPago } from '@/lib/ordenes-pago/api';
 
 type Props = {
-  /** ⚠️ MOCK: viene de page.tsx; reemplazar allí cuando haya API */
   initialData: SupplierPayment[];
-  /** ⚠️ MOCK: viene de page.tsx; reemplazar allí cuando haya API */
   suppliers: { id: string; name: string }[];
 };
 
-// Filtros iniciales (solo UI; no filtra nada aún)
 const resetFilters: PagosFiltersState = {
   fechaDesde: '',
   fechaHasta: '',
   numeroFactura: '',
-  // SearchableSelect usa id numérico → temporal hasta DB real
   proveedorId: 0,
 };
 
 export default function PagosClient({ initialData, suppliers }: Props) {
-  // Estado local de filtros (solo para mostrar el componente; NO se aplica a la data)
   const [filters, setFilters] = useState<PagosFiltersState>(resetFilters);
+  const [data, setData] = useState<SupplierPayment[]>(initialData);
+  const [loading, setLoading] = useState(false);
 
-  // Data mostrada tal cual (sin filtrar/ordenar/paginar)
-  const data = initialData;
-
-  // Métricas básicas (sobre la data sin filtrar)
+  // Métricas básicas
   const totalPagos = data.length;
   const totalPagado = useMemo(
     () => data.reduce((s, p) => s + (p.payment ?? 0), 0),
     [data]
   );
 
-  // Opciones para el SearchableSelect de proveedores (numéricas para UI)
+  // Opciones para el SearchableSelect de proveedores
   const proveedoresOptions = useMemo(
-    () => suppliers.map((s, idx) => ({ id: idx + 1, nombre: s.name })),
+    () => suppliers.map((s) => ({ id: Number(s.id), nombre: s.name })),
     [suppliers]
   );
 
   // Estado del modal
   const [modalOpen, setModalOpen] = useState(false);
 
-  // Acciones
+  // Función para buscar con filtros
+  const handleSearch = async (filterState: PagosFiltersState) => {
+    setLoading(true);
+    try {
+      // Construir parámetros para la API
+      const params: any = {
+        limit: 100,
+        sort: '-fecha',
+      };
+
+      if (filterState.fechaDesde) {
+        params.fecha_desde = filterState.fechaDesde;
+      }
+      if (filterState.fechaHasta) {
+        params.fecha_hasta = filterState.fechaHasta;
+      }
+      if (filterState.numeroFactura && filterState.numeroFactura.trim()) {
+        params.search = filterState.numeroFactura.trim();
+      }
+      if (filterState.proveedorId && filterState.proveedorId > 0) {
+        params.proveedorId = filterState.proveedorId;
+      }
+
+      // Llamar a la API
+      const response = await apiListOrdenesPago(params);
+
+      // Mapear resultados al formato de la tabla
+      const mappedData: SupplierPayment[] = response.items.map((item) => {
+        const supplier = suppliers.find(s => s.id === item.proveedor.id.toString());
+        
+        let status: 'Pendiente de pago' | 'Pagado' | 'Vencido' = 'Pendiente de pago';
+        if (!item.estado) {
+          status = 'Vencido';
+        } else if (item.estado_pago === 'completo') {
+          status = 'Pagado';
+        }
+
+        const fecha = new Date(item.fecha);
+        const registrationDate = fecha.toISOString().replace('T', ' ').substring(0, 19);
+        const dateOnly = fecha.toISOString().split('T')[0];
+
+        return {
+          id: item.id.toString(),
+          paymentId: item.nro_interno || `PAG-${item.id.toString().padStart(3, '0')}`,
+          registrationDate,
+          invoiceCode: item.nro_interno || `OP-${item.id}`,
+          purchaseOrderNumber: `OC-${item.id.toString().padStart(3, '0')}`,
+          paymentDueDate: dateOnly,
+          dueDate: dateOnly,
+          supplier: {
+            id: item.proveedor.id.toString(),
+            name: item.proveedor.nombre,
+            code: supplier?.id || `PROV${item.proveedor.id.toString().padStart(3, '0')}`,
+          },
+          total: item.total_pagado,
+          payment: item.estado_pago === 'completo' ? item.total_pagado : 0,
+          balance: item.saldo_restante_total,
+          comment: `${item.comprobantes_afectados} comprobante(s) afectado(s)`,
+          status,
+          paymentCompleteDate: item.estado_pago === 'completo' ? dateOnly : undefined,
+          paymentMethod: (item.metodo_pago?.nombre as any) || 'Transferencia',
+          voucherType: 'FAC',
+          voucherNumber: item.nro_interno || `OP-${item.id}`,
+          products: [],
+          history: [
+            {
+              date: registrationDate.substring(0, 16),
+              action: 'Orden de pago registrada',
+              user: 'Sistema',
+            },
+          ],
+          partialPayments: [],
+        };
+      });
+
+      setData(mappedData);
+      setFilters(filterState);
+    } catch (error) {
+      console.error('Error al buscar pagos:', error);
+      alert('Error al buscar pagos. Por favor, intenta nuevamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Limpiar filtros
+  const handleClear = async () => {
+    setFilters(resetFilters);
+    await handleSearch(resetFilters);
+  };
+
   const onOpenNew = () => {
     setModalOpen(true);
   };
@@ -89,27 +174,34 @@ export default function PagosClient({ initialData, suppliers }: Props) {
         </div>
       </div>
 
-      {/* Stats (sin lógica de back) */}
+      {/* Stats */}
       <PagosStatsCards totalPagos={totalPagos} totalPagado={totalPagado} />
 
-      {/* Filtros (solo UI; no aplica filtros aún) */}
+      {/* Filtros con búsqueda real */}
       <PagosFilters
         initial={filters}
-        proveedores={proveedoresOptions}           // ⚠️ En prod: vendrá directo de DB
-        onSearch={() => { /* sin-op: se aplicará cuando haya backend */ }}
-        onClear={() => setFilters(resetFilters)}  // solo limpia UI
+        proveedores={proveedoresOptions}
+        onSearch={handleSearch}
+        onClear={handleClear}
       />
 
-      {/* Tabla (sin sort/paginación) */}
-      <PagosTable data={data} onView={onView} />
+      {/* Indicador de carga */}
+      {loading && (
+        <div className="text-center py-4 text-gray-600">
+          Cargando pagos...
+        </div>
+      )}
+
+      {/* Tabla */}
+      {!loading && <PagosTable data={data} onView={onView} />}
 
       {/* Modal de nueva orden de pago */}
       <PagosModal
         open={modalOpen}
         onOpenChange={setModalOpen}
         onSuccess={() => {
-          // Recargar la página para ver los cambios
-          window.location.reload();
+          // Recargar datos después de crear una orden
+          handleSearch(filters);
         }}
       />
     </main>
