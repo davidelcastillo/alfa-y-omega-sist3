@@ -6,39 +6,60 @@ import { hashPassword } from "@/lib/eco/usuarios/auth";
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { nombre, apellido, email, password } = RegisterBodySchema.parse(body);
+        const { nombre, apellido, email, password, telefono, direccion } =
+            RegisterBodySchema.parse(body);
 
         // email único
-        const exists = await prisma.usuario.findUnique({ where: { email }, select: { id: true } });
+        const exists = await prisma.usuario.findUnique({
+            where: { email },
+            select: { id: true },
+        });
         if (exists) {
-            return NextResponse.json({ error: "Ya existe un usuario con ese email" }, { status: 409 });
+            return NextResponse.json(
+                { error: "Ya existe un usuario con ese email" },
+                { status: 409 }
+            );
         }
 
         // asegurar rol CLIENTE
         let rol = await prisma.rol.findUnique({ where: { nombre: "CLIENTE" } });
-        if (!rol) {
-            rol = await prisma.rol.create({ data: { nombre: "CLIENTE" } });
-        }
+        if (!rol) rol = await prisma.rol.create({ data: { nombre: "CLIENTE" } });
 
-        // crear usuario
+        // crear usuario + dirección principal
         const passwordHash = await hashPassword(password);
         const user = await prisma.usuario.create({
             data: {
                 email,
                 nombre,
                 apellido,
+                telefono: telefono ?? null,
                 passwordHash,
                 activo: true,
-                roles: {
-                    create: [{ rolId: rol.id }], // UsuarioRol
+                roles: { create: [{ rolId: rol.id }] }, // UsuarioRol
+                direcciones: {
+                    create: [
+                        {
+                            calle: direccion.calle,
+                            numero: direccion.numero,
+                            pisoDepto: direccion.pisoDepto ?? null,
+                            codigoPostal: direccion.codigoPostal,
+                            ciudad: direccion.ciudad,
+                            provincia: direccion.provincia,
+                            pais: direccion.pais,
+                            esPrincipal: true,
+                        },
+                    ],
                 },
             },
             select: { id: true, email: true, nombre: true, apellido: true },
         });
 
         return NextResponse.json({ message: "Registro OK", user }, { status: 201 });
-    } catch (err: any) {
+    } catch (err) {
         console.error("[REGISTER]", err);
-        return NextResponse.json({ error: "Error en registro" }, { status: 400 });
+        return NextResponse.json(
+            { error: "Error en registro" },
+            { status: 400 }
+        );
     }
 }

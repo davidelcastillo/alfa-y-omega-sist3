@@ -159,17 +159,32 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
 
 /* ================== Registro ================== */
 function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
+  // datos personales
   const [nombre, setNombre] = useState("");
   const [apellido, setApellido] = useState("");
   const [email, setEmail] = useState("");
+  const [telefono, setTelefono] = useState("");
+
+  // password
   const [contrasena, setContrasena] = useState("");
   const [repetir, setRepetir] = useState("");
+
+  // dirección de envío
+  const [calle, setCalle] = useState("");
+  const [numero, setNumero] = useState("");
+  const [pisoDepto, setPisoDepto] = useState("");
+  const [codigoPostal, setCodigoPostal] = useState("");
+  const [ciudad, setCiudad] = useState("");
+  const [provincia, setProvincia] = useState("");
+  const [pais, setPais] = useState("Argentina");
+
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
     if (contrasena !== repetir) {
       setError("Las contraseñas no coinciden");
       return;
@@ -185,6 +200,16 @@ function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
           apellido,
           email,
           password: contrasena,
+          telefono: telefono || null,
+          direccion: {
+            calle,
+            numero,
+            pisoDepto: pisoDepto || null,
+            codigoPostal,
+            ciudad,
+            provincia,
+            pais,
+          },
         }),
       });
       const json = await res.json();
@@ -193,7 +218,7 @@ function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
         return;
       }
 
-      onSuccess();
+      onSuccess(); // tu lógica: vuelve al tab login y muestra alerta
     } catch {
       setError("No se pudo contactar al servidor");
     } finally {
@@ -204,71 +229,93 @@ function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
   return (
     <div id="registrarse" className="glass rounded-2xl p-6">
       <h1 className="text-xl font-bold mb-4">Registrarse</h1>
-      <form id="registroForm" onSubmit={handleSubmit} className="grid gap-4">
+
+      <form onSubmit={handleSubmit} className="grid gap-4">
+        {/* Datos personales */}
         <div className="fila-arriba grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="contenedor-input">
-            <label className="text-sm font-medium">
-              Nombre <span className="req">*</span>
-            </label>
-            <input
-              className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
-              type="text"
-              required
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-            />
+            <label className="text-sm font-medium">Nombre <span className="req">*</span></label>
+            <input className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
+              value={nombre} onChange={(e) => setNombre(e.target.value)} required />
           </div>
           <div className="contenedor-input">
-            <label className="text-sm font-medium">
-              Apellido <span className="req">*</span>
-            </label>
-            <input
-              className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
-              type="text"
-              required
-              value={apellido}
-              onChange={(e) => setApellido(e.target.value)}
-            />
+            <label className="text-sm font-medium">Apellido <span className="req">*</span></label>
+            <input className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
+              value={apellido} onChange={(e) => setApellido(e.target.value)} required />
           </div>
         </div>
 
         <div className="contenedor-input">
-          <label className="text-sm font-medium">
-            Email <span className="req">*</span>
-          </label>
-          <input
-            className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
+          <label className="text-sm font-medium">Email <span className="req">*</span></label>
+          <input type="email" className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
+            value={email} onChange={(e) => setEmail(e.target.value)} required />
         </div>
 
         <div className="contenedor-input">
-          <label className="text-sm font-medium">
-            Contraseña <span className="req">*</span>
-          </label>
-          <input
-            className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
-            type="password"
-            required
-            value={contrasena}
-            onChange={(e) => setContrasena(e.target.value)}
-          />
+          <label className="text-sm font-medium">Teléfono</label>
+          <input className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
+            value={telefono} onChange={(e) => setTelefono(e.target.value)} />
         </div>
 
+        {/* Password */}
         <div className="contenedor-input">
-          <label className="text-sm font-medium">
-            Repetir Contraseña <span className="req">*</span>
-          </label>
-          <input
-            className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
-            type="password"
-            required
-            value={repetir}
-            onChange={(e) => setRepetir(e.target.value)}
-          />
+          <label className="text-sm font-medium">Contraseña <span className="req">*</span></label>
+          <input type="password" className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
+            value={contrasena} onChange={(e) => setContrasena(e.target.value)} required />
+        </div>
+        <div className="contenedor-input">
+          <label className="text-sm font-medium">Repetir Contraseña <span className="req">*</span></label>
+          <input type="password" className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
+            value={repetir} onChange={(e) => setRepetir(e.target.value)} required />
+        </div>
+
+        {/* Dirección de envío */}
+        <div className="mt-4 border-t pt-4">
+          <h2 className="font-semibold mb-2">Dirección de envío</h2>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="contenedor-input">
+              <label className="text-sm font-medium">Calle <span className="req">*</span></label>
+              <input className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
+                value={calle} onChange={(e) => setCalle(e.target.value)} required />
+            </div>
+            <div className="contenedor-input">
+              <label className="text-sm font-medium">Número <span className="req">*</span></label>
+              <input className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
+                value={numero} onChange={(e) => setNumero(e.target.value)} required />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+            <div className="contenedor-input">
+              <label className="text-sm font-medium">Piso / Dpto</label>
+              <input className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
+                value={pisoDepto} onChange={(e) => setPisoDepto(e.target.value)} />
+            </div>
+            <div className="contenedor-input">
+              <label className="text-sm font-medium">Código Postal <span className="req">*</span></label>
+              <input className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
+                value={codigoPostal} onChange={(e) => setCodigoPostal(e.target.value)} required />
+            </div>
+            <div className="contenedor-input">
+              <label className="text-sm font-medium">Ciudad <span className="req">*</span></label>
+              <input className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
+                value={ciudad} onChange={(e) => setCiudad(e.target.value)} required />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+            <div className="contenedor-input">
+              <label className="text-sm font-medium">Provincia <span className="req">*</span></label>
+              <input className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
+                value={provincia} onChange={(e) => setProvincia(e.target.value)} required />
+            </div>
+            <div className="contenedor-input">
+              <label className="text-sm font-medium">País <span className="req">*</span></label>
+              <input className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
+                value={pais} onChange={(e) => setPais(e.target.value)} required />
+            </div>
+          </div>
         </div>
 
         {error && <div className="text-rose-600 text-sm">{error}</div>}
@@ -284,6 +331,7 @@ function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
     </div>
   );
 }
+
 
 /* ================== Resumen carrito ================== */
 function PendingSummary() {
@@ -312,7 +360,7 @@ export default function CuentaPage() {
   const router = useRouter();
   const [tab, setTab] = useState<"login" | "register">("login");
 
-  // ✅ Guard: verificar en el servidor (cookie) y NO en localStorage
+  // ✅ Guard: verificar en el servidor (cookie)
   useEffect(() => {
     let cancelled = false;
     (async () => {
