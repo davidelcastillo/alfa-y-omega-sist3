@@ -12,6 +12,7 @@ import {
   ChevronsUpDown,
 } from "lucide-react";
 import type { PurchaseOrder } from "@/lib/compras/purchase";
+import { moneyAR } from "@/lib/format/money";
 
 type SortKey = "id" | "creationDate" | "supplier" | "warehouse" | "total" | "status";
 export type SortState = { key: SortKey; dir: "asc" | "desc" };
@@ -106,7 +107,7 @@ export default function ComprasTable({
                 <td className="px-6 py-4 text-gray-700">{order.warehouse}</td>
 
                 <td className="px-6 py-4 font-semibold text-gray-900">
-                  ${money(order.total)}
+                  {moneyAR(order.total)}
                 </td>
 
                 <td className="px-6 py-4">
