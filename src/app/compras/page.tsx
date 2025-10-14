@@ -18,13 +18,11 @@ export default async function Page() {
   const productos = productsMock; // 🔁 MODIFICADO: mantenemos solo productos como mock (si querés)
 
   return (
-    <div className="p-2">
       <ComprasClient
         initialOrders={initialOrders}
         proveedores={proveedores}   
         depositos={depositos}   
         productos={productos}
       />
-    </div>
   );
 }

@@ -1,12 +1,7 @@
-// src/components/pagos/PagosStatsCards.tsx
-// Estilo y UX alineado a ComprasStatsCards (Card reutilizable)
-// • Pagos Completados = cantidad total de pagos
-// • Monto total pagado = suma de todos los payment
-// TODO: conectar API — pasar valores reales vía props
-
 "use client";
 
 import { CheckCircle2, CircleDollarSign } from "lucide-react";
+import { moneyAR } from "@/lib/format/money";
 
 type Props = {
   /** Cantidad total de pagos (registros) */
@@ -28,7 +23,7 @@ export default function PagosStatsCards({ totalPagos, totalPagado }: Props) {
 
       <Card
         label="Monto total pagado"
-        value={`$${money(totalPagado)}`}
+        value={moneyAR(totalPagado)}
         valueClass="text-green-700"
         gradient="from-blue-400 to-blue-600"
       >

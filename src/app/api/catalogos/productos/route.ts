@@ -16,6 +16,13 @@ export async function GET(req: NextRequest) {
       rubro: { select: { nombre: true } },
       marca: { select: { nombre: true } },
       unidad: { select: { nombre: true } },
+      /*si rompe algo borrar*/
+      imagenes: {
+        orderBy: { orden: "asc" },
+        take: 1,
+        select: { url: true }, // ← portada (Cloudinary secure_url)
+      },
+      /*si rompe algo borrar*/
     },
     orderBy: { nombre: "asc" },
     take: Math.min(Math.max(limit, 1), 100),
@@ -28,6 +35,7 @@ export async function GET(req: NextRequest) {
       rubro: r.rubro?.nombre ?? null,
       marca: r.marca?.nombre ?? null,
       unidad: r.unidad?.nombre ?? null,
+      imageUrl: r.imagenes[0]?.url ?? null, // ← NUEVO
     }))
   );
 }

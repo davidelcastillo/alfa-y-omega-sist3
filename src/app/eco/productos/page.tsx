@@ -10,6 +10,7 @@ type ApiProducto = {
   rubro: string | null
   marca: string | null
   unidad: string | null
+  imageUrl?: string | null // ← NUEVO
 }
 
 const slug = (s: string | null | undefined) =>
@@ -45,7 +46,7 @@ function toUiProduct(r: ApiProducto) {
     brandSlug: slug(brand),
     categorySlug: slug(category),
     slug: `${r.id}-${slugifyName(name)}`,
-    imageUrl: undefined,         // por ahora no hay imagen
+    imageUrl: r.imageUrl ?? undefined, // ← ahora viene del API
     price: undefined,            // por ahora sin precio -> “Consultar”
   }
 }

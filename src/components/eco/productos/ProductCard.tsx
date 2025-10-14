@@ -1,8 +1,11 @@
 // src/components/eco/productos/ProductCard.tsx
 "use client"
-import Link from "next/link"
 
-type UiProduct = {
+import Image from "next/image"
+import Link from "next/link"
+import { cldThumb } from "@/lib/eco/cloudinary"
+
+export type UiProduct = {
   id: number | string
   name: string
   brand?: string | null
@@ -14,19 +17,28 @@ type UiProduct = {
 export default function ProductCard({ p }: { p: UiProduct }) {
   async function add() {
     // Hook futuro: POST /api/eco/cart
-    // await fetch("/api/eco/cart", { method: "POST", body: JSON.stringify({ productId: p.id, qty: 1 }) })
   }
 
-  const imgSrc = p.imageUrl || "/placeholder.png"
+  const raw = p.imageUrl || "/placeholder.png"
+  const imgSrc = p.imageUrl ? cldThumb(raw) : raw
+
   const hasPrice = typeof p.price === "number" && !Number.isNaN(p.price)
   const priceText = hasPrice ? `$${Number(p.price).toLocaleString("es-AR")}` : "Consultar"
   const href = `/eco/producto/${p.slug ?? p.id}`
 
   return (
     <div className="glass rounded-2xl overflow-hidden">
-      <div className="relative h-40">
-        {/* si luego migrás a next/image, perfecto; por ahora <img/> está bien */}
-        <img src={imgSrc} alt={p.name} className="w-full h-full object-cover" />
+      {/* Contenedor de imagen con proporción fija */}
+      <div className="relative aspect-[4/3]">
+        <Image
+          src={imgSrc}
+          alt={p.name}
+          fill
+          className="object-cover"
+          // Móvil: pantalla completa, luego 33% en md, 25% en xl
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 33vw, 25vw"
+          priority={false}
+        />
       </div>
 
       <div className="p-4 space-y-1">
@@ -43,9 +55,7 @@ export default function ProductCard({ p }: { p: UiProduct }) {
             >
               Comprar
             </button>
-            {/*<Link href={href} className="text-sm px-3 py-1.5 rounded-lg border">
-              Ver
-            </Link>*/}
+            {/* <Link href={href} className="text-sm px-3 py-1.5 rounded-lg border">Ver</Link> */}
           </div>
         </div>
       </div>

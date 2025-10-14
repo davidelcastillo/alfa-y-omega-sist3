@@ -4,6 +4,8 @@
 import Button from "@/components/ui/Button";
 import { Eye, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import type { SupplierPayment } from "@/mocks/pagos.mock";
+import { moneyAR } from "@/lib/format/money";
+
 
 type SortKey = "paymentId" | "supplier" | "total" | "voucherNumber" | "paymentMethod";
 export type SortState = { key: SortKey; dir: "asc" | "desc" };
@@ -82,8 +84,8 @@ export default function PagosTable({ data, onView, onSort, sortState }: Props) {
                 </td>
 
                 {/* Total */}
-                <td className="px-6 py-4 font-semibold text-gray-900">
-                  ${money(p.total)}
+                <td className="px-6 py-4 font-semibold text-gray-900 text-left">
+                  {moneyAR(p.total)}
                 </td>
 
                 {/* N° Factura */}

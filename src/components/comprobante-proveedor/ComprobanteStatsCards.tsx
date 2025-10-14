@@ -9,12 +9,6 @@ type Props = {
   montoTotal: number;
 };
 
-{/* CAMBIOS HECHO POR LUIS, CUALQUIER COSA SACAR EL COMENTARIO */}
-/*function money(n: number) {
-  return (n ?? 0).toLocaleString(undefined, { minimumFractionDigits: 0 });
-}  ESTO LO REEMPLACE POR UNA API QUE NORMALIZA*/
-
-
 export default function ComprobanteStatsCards({ total, conSaldo, cancelados, montoTotal }: Props) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
