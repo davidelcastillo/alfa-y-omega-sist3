@@ -3,6 +3,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Autocomplete, useLoadScript } from "@react-google-maps/api";
+import { useMemo } from "react";
 
 /* ================== LocalStorage keys ya usados ================== */
 const LS_LOGGED = "loggedIn";
@@ -158,40 +160,94 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
 }
 
 /* ================== Registro ================== */
+/* ================== Registro ================== */
 function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
-  // datos personales
   const [nombre, setNombre] = useState("");
   const [apellido, setApellido] = useState("");
   const [email, setEmail] = useState("");
-  const [telefono, setTelefono] = useState("");
-
-  // password
+  const [telefono, setTelefono] = useState(""); // 👈 teléfono
   const [contrasena, setContrasena] = useState("");
   const [repetir, setRepetir] = useState("");
-
-  // dirección de envío
-  const [calle, setCalle] = useState("");
-  const [numero, setNumero] = useState("");
-  const [pisoDepto, setPisoDepto] = useState("");
-  const [codigoPostal, setCodigoPostal] = useState("");
-  const [ciudad, setCiudad] = useState("");
-  const [provincia, setProvincia] = useState("");
-  const [pais, setPais] = useState("Argentina");
-
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Dirección
+  const [query, setQuery] = useState(""); // input de búsqueda
+  const [direccion, setDireccion] = useState({
+    calle: "", numero: "", pisoDepto: "",
+    codigoPostal: "", ciudad: "", provincia: "", pais: "Argentina", placeId: "",
+  });
+
+  const autoRef = useState<HTMLInputElement | null>(null)[0] as any;
+  const setAutoRef = (el: HTMLInputElement | null) => {
+    (RegisterForm as any)._autoEl = el;
+  };
+
+  // Teléfono simple: + y 8–15 dígitos
+  const telNormalized = telefono.replace(/[^\d+]/g, "");
+  const telOk = /^\+?\d{8,15}$/.test(telNormalized);
+
+  // Password rules
+  const pwRules = {
+    len: contrasena.length >= 8,
+    lower: /[a-z]/.test(contrasena),
+    upper: /[A-Z]/.test(contrasena),
+    digit: /\d/.test(contrasena),
+    symbol: /[^A-Za-z0-9]/.test(contrasena),
+    match: contrasena && contrasena === repetir,
+  };
+  const pwValid = Object.values(pwRules).every(Boolean);
+
+  // Cargar Google y montar Autocomplete
+  useEffect(() => {
+    let ac: google.maps.places.Autocomplete | null = null;
+    let cancelled = false;
+
+    (async () => {
+      const { loadGoogleMaps, parsePlace } = await import("@/lib/eco/maps");
+      const g = await loadGoogleMaps();
+      const el = (RegisterForm as any)._autoEl as HTMLInputElement | null;
+      if (!g || !el) return;
+
+      ac = new g.maps.places.Autocomplete(el, {
+        fields: ["address_components", "place_id"],
+        types: ["address"],
+        componentRestrictions: { country: ["ar"] }, // limitar si querés
+      });
+
+      ac.addListener("place_changed", () => {
+        if (cancelled) return;
+        const place = ac!.getPlace();
+        const parsed = parsePlace(place);
+        setDireccion((d) => ({ ...d, ...parsed }));
+        // En el input visible mostramos calle + número si vino
+        const label = [parsed.calle, parsed.numero].filter(Boolean).join(" ");
+        setQuery(label || "");
+      });
+    })();
+
+    return () => { cancelled = true; };
+  }, []);
+
+  // Validación mínima de dirección (lo que tu API necesita)
+  const dirOk =
+    direccion.calle.trim() &&
+    direccion.numero.trim() &&
+    direccion.codigoPostal.trim() &&
+    direccion.ciudad.trim() &&
+    direccion.provincia.trim() &&
+    direccion.pais.trim();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
-    if (contrasena !== repetir) {
-      setError("Las contraseñas no coinciden");
-      return;
-    }
+    if (!telOk) { setError("Teléfono inválido"); return; }
+    if (!pwValid) { setError("La contraseña no cumple los requisitos"); return; }
+    if (!dirOk) { setError("Completá la dirección (calle, número, CP, ciudad, provincia, país)"); return; }
 
+    setLoading(true);
     try {
-      setLoading(true);
       const res = await fetch("/api/eco/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -199,17 +255,9 @@ function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
           nombre,
           apellido,
           email,
+          telefono: telNormalized,
           password: contrasena,
-          telefono: telefono || null,
-          direccion: {
-            calle,
-            numero,
-            pisoDepto: pisoDepto || null,
-            codigoPostal,
-            ciudad,
-            provincia,
-            pais,
-          },
+          direccion,
         }),
       });
       const json = await res.json();
@@ -217,8 +265,7 @@ function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
         setError(json?.error ?? "No se pudo registrar");
         return;
       }
-
-      onSuccess(); // tu lógica: vuelve al tab login y muestra alerta
+      onSuccess();
     } catch {
       setError("No se pudo contactar al servidor");
     } finally {
@@ -231,98 +278,151 @@ function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
       <h1 className="text-xl font-bold mb-4">Registrarse</h1>
 
       <form onSubmit={handleSubmit} className="grid gap-4">
-        {/* Datos personales */}
-        <div className="fila-arriba grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="contenedor-input">
-            <label className="text-sm font-medium">Nombre <span className="req">*</span></label>
+        {/* Nombre / Apellido */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="text-sm font-medium">Nombre *</label>
             <input className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
-              value={nombre} onChange={(e) => setNombre(e.target.value)} required />
+              value={nombre} onChange={e=>setNombre(e.target.value)} required />
           </div>
-          <div className="contenedor-input">
-            <label className="text-sm font-medium">Apellido <span className="req">*</span></label>
+          <div>
+            <label className="text-sm font-medium">Apellido *</label>
             <input className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
-              value={apellido} onChange={(e) => setApellido(e.target.value)} required />
+              value={apellido} onChange={e=>setApellido(e.target.value)} required />
           </div>
         </div>
 
-        <div className="contenedor-input">
-          <label className="text-sm font-medium">Email <span className="req">*</span></label>
+        {/* Email */}
+        <div>
+          <label className="text-sm font-medium">Email *</label>
           <input type="email" className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
-            value={email} onChange={(e) => setEmail(e.target.value)} required />
+            value={email} onChange={e=>setEmail(e.target.value)} required />
         </div>
 
-        <div className="contenedor-input">
-          <label className="text-sm font-medium">Teléfono</label>
+        {/* Teléfono */}
+        <div>
+          <label className="text-sm font-medium">Teléfono *</label>
+          <input
+            type="tel"
+            inputMode="tel"
+            placeholder="+5491122334455"
+            className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
+            value={telefono}
+            onChange={e=>setTelefono(e.target.value)}
+            required
+          />
+          {!telOk && telefono && (
+            <p className="text-xs text-amber-600 mt-1">Use + y 8–15 dígitos.</p>
+          )}
+        </div>
+
+        {/* Buscar dirección (Autocomplete) */}
+        <div>
+          <label className="text-sm font-medium">Buscar dirección *</label>
+          <input
+            ref={setAutoRef}
+            value={query}
+            onChange={(e)=>setQuery(e.target.value)}
+            placeholder="Escribí tu dirección y elegí de la lista…"
+            className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
+          />
+        </div>
+
+        {/* Campos de dirección (editables) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="text-sm font-medium">Calle *</label>
+            <input className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
+              value={direccion.calle}
+              onChange={e=>setDireccion(d=>({ ...d, calle: e.target.value }))}
+              required />
+          </div>
+          <div>
+            <label className="text-sm font-medium">Número *</label>
+            <input className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
+              value={direccion.numero}
+              onChange={e=>setDireccion(d=>({ ...d, numero: e.target.value }))}
+              required />
+          </div>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium">Piso/Depto</label>
           <input className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
-            value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+            value={direccion.pisoDepto ?? ""}
+            onChange={e=>setDireccion(d=>({ ...d, pisoDepto: e.target.value }))} />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label className="text-sm font-medium">Código Postal *</label>
+            <input className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
+              value={direccion.codigoPostal}
+              onChange={e=>setDireccion(d=>({ ...d, codigoPostal: e.target.value }))}
+              required />
+          </div>
+          <div>
+            <label className="text-sm font-medium">Ciudad *</label>
+            <input className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
+              value={direccion.ciudad}
+              onChange={e=>setDireccion(d=>({ ...d, ciudad: e.target.value }))}
+              required />
+          </div>
+          <div>
+            <label className="text-sm font-medium">Provincia *</label>
+            <input className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
+              value={direccion.provincia}
+              onChange={e=>setDireccion(d=>({ ...d, provincia: e.target.value }))}
+              required />
+          </div>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium">País *</label>
+          <input className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
+            value={direccion.pais}
+            onChange={e=>setDireccion(d=>({ ...d, pais: e.target.value }))} required />
         </div>
 
         {/* Password */}
-        <div className="contenedor-input">
-          <label className="text-sm font-medium">Contraseña <span className="req">*</span></label>
-          <input type="password" className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
-            value={contrasena} onChange={(e) => setContrasena(e.target.value)} required />
+        <div>
+          <label className="text-sm font-medium">Contraseña *</label>
+          <input
+            type="password"
+            className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
+            value={contrasena}
+            onChange={e=>setContrasena(e.target.value)}
+            required
+          />
+          <ul className="mt-2 text-xs grid grid-cols-2 gap-y-1 text-gray-600">
+            <li className={pwRules.len ? "text-emerald-600" : ""}>• 8+ caracteres</li>
+            <li className={pwRules.lower ? "text-emerald-600" : ""}>• minúscula</li>
+            <li className={pwRules.upper ? "text-emerald-600" : ""}>• mayúscula</li>
+            <li className={pwRules.digit ? "text-emerald-600" : ""}>• número</li>
+            <li className={pwRules.symbol ? "text-emerald-600" : ""}>• símbolo</li>
+          </ul>
         </div>
-        <div className="contenedor-input">
-          <label className="text-sm font-medium">Repetir Contraseña <span className="req">*</span></label>
-          <input type="password" className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
-            value={repetir} onChange={(e) => setRepetir(e.target.value)} required />
-        </div>
 
-        {/* Dirección de envío */}
-        <div className="mt-4 border-t pt-4">
-          <h2 className="font-semibold mb-2">Dirección de envío</h2>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="contenedor-input">
-              <label className="text-sm font-medium">Calle <span className="req">*</span></label>
-              <input className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
-                value={calle} onChange={(e) => setCalle(e.target.value)} required />
-            </div>
-            <div className="contenedor-input">
-              <label className="text-sm font-medium">Número <span className="req">*</span></label>
-              <input className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
-                value={numero} onChange={(e) => setNumero(e.target.value)} required />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
-            <div className="contenedor-input">
-              <label className="text-sm font-medium">Piso / Dpto</label>
-              <input className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
-                value={pisoDepto} onChange={(e) => setPisoDepto(e.target.value)} />
-            </div>
-            <div className="contenedor-input">
-              <label className="text-sm font-medium">Código Postal <span className="req">*</span></label>
-              <input className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
-                value={codigoPostal} onChange={(e) => setCodigoPostal(e.target.value)} required />
-            </div>
-            <div className="contenedor-input">
-              <label className="text-sm font-medium">Ciudad <span className="req">*</span></label>
-              <input className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
-                value={ciudad} onChange={(e) => setCiudad(e.target.value)} required />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-            <div className="contenedor-input">
-              <label className="text-sm font-medium">Provincia <span className="req">*</span></label>
-              <input className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
-                value={provincia} onChange={(e) => setProvincia(e.target.value)} required />
-            </div>
-            <div className="contenedor-input">
-              <label className="text-sm font-medium">País <span className="req">*</span></label>
-              <input className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
-                value={pais} onChange={(e) => setPais(e.target.value)} required />
-            </div>
-          </div>
+        {/* Repetir */}
+        <div>
+          <label className="text-sm font-medium">Repetir Contraseña *</label>
+          <input
+            type="password"
+            className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
+            value={repetir}
+            onChange={e=>setRepetir(e.target.value)}
+            required
+          />
+          {repetir && !pwRules.match && (
+            <p className="text-xs text-rose-600 mt-1">Las contraseñas no coinciden.</p>
+          )}
         </div>
 
         {error && <div className="text-rose-600 text-sm">{error}</div>}
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !pwValid || !telOk || !dirOk}
           className="button button-block rounded-xl btn-primary text-white px-4 py-2 font-medium"
         >
           {loading ? "Registrando..." : "Registrarse"}

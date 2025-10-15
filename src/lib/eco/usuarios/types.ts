@@ -20,18 +20,37 @@ export const AddressSchema = z.object({
     pais: z.string().min(2, "País requerido"),
 });
 
-/** Body del registro (agregamos teléfono y dirección) */
+/** Body del registro de usuario */
+export const DireccionSchema = z.object({
+    calle: z.string().min(1),
+    numero: z.string().min(1),
+    pisoDepto: z.string().optional().nullable(),
+    codigoPostal: z.string().min(1),
+    ciudad: z.string().min(1),
+    provincia: z.string().min(1),
+    pais: z.string().min(1),
+    placeId: z.string().optional().nullable(),
+});
+
 export const RegisterBodySchema = z.object({
     nombre: z.string().min(2),
     apellido: z.string().min(2),
     email: z.string().email(),
-    password: z.string().min(6),
-    telefono: z.string().optional().nullable(),
-    direccion: AddressSchema,
+    telefono: z
+        .string()
+        .trim()
+        .transform((v) => v.replace(/[^\d+]/g, "")) // normalizar
+        .refine((v) => /^\+?\d{8,15}$/.test(v), "Teléfono inválido"),
+    password: z
+        .string()
+        .min(8, "Mínimo 8 caracteres")
+        .regex(/[a-z]/, "Debe incluir minúsculas")
+        .regex(/[A-Z]/, "Debe incluir mayúsculas")
+        .regex(/\d/, "Debe incluir números")
+        .regex(/[^A-Za-z0-9]/, "Debe incluir símbolos"),
+    direccion: DireccionSchema,
 });
-
 export type RegisterBody = z.infer<typeof RegisterBodySchema>;
-
 export const UserPublicSchema = z.object({
     id: z.string(),
     email: z.string().email(),
