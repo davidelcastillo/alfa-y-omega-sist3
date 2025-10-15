@@ -1,11 +1,10 @@
-// src/app/eco/pagos/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
-// Si ya definiste CartItem en otro archivo, importalo.
-// Si no, dejá este tipo acá:
+/* ================== Tipos ================== */
 type CartItem = {
   id: number | string;
   name: string;
@@ -19,6 +18,7 @@ type CartItem = {
 const LS_KEY = "cartItems";
 const COUPON_LS = "cartCouponCode";
 
+/* ================== Utils ================== */
 const money = (n: number) =>
   n.toLocaleString("es-AR", { style: "currency", currency: "ARS" });
 
@@ -57,40 +57,54 @@ function CardPreview({
   const shownNumber =
     (number || "")
       .replace(/[^0-9]/g, "")
+      .slice(0, 16)
       .padEnd(16, "0")
       .match(/.{1,4}/g)
       ?.join(" ") || "0000 0000 0000 0000";
 
   const shownName = name || "Jane Appleseed";
-  const shownMonth = month || "00";
-  const shownYear = year || "00";
-  const shownCvc =
-    (cvc || "").replace(/[^0-9]/g, "").padEnd(3, "0").slice(0, 3) || "000";
+  const shownMonth = (month || "").padEnd(2, "0").slice(0, 2) || "00";
+  const shownYear = (year || "").padEnd(2, "0").slice(0, 2) || "00";
+  const shownCvc = (cvc || "").replace(/[^0-9]/g, "").padEnd(3, "0").slice(0, 3) || "000";
 
   return (
-    <div className="relative grid gap-4 sm:grid-cols-2">
+    <div className="card-area grid gap-6">
       {/* Frente */}
-      <div className="relative glass rounded-2xl overflow-hidden p-4 gradient-brand text-white min-h-[180px]">
-        <div className="absolute inset-0 opacity-10" />
-        <div className="flex flex-col h-full justify-end">
-          <div className="text-lg tracking-widest tabular-nums">
+      <div className="relative h-[200px] sm:h-[230px] md:h-[250px] w-[330px] sm:w-[360px] md:w-[400px] rounded-xl overflow-hidden shadow-lg">
+        <Image
+          src="/bg-card-front.png"
+          alt="Frente de la tarjeta"
+          fill
+          className="object-cover"
+          priority
+        />
+
+        {/* Datos abajo */}
+        <div className="absolute inset-x-0 bottom-4 px-5 text-white">
+          <p className="card-number text-lg sm:text-xl tracking-[0.25em] tabular-nums">
             {shownNumber}
-          </div>
-          <div className="flex items-center justify-between text-sm mt-2">
-            <span className="truncate pr-2">{shownName}</span>
-            <span>
+          </p>
+          <div className="card-name-date mt-2 flex items-center justify-between">
+            <p className="card-name text-sm sm:text-base truncate pr-2">{shownName}</p>
+            <p className="card-date text-sm sm:text-base">
               {shownMonth}/{shownYear}
-            </span>
+            </p>
           </div>
         </div>
       </div>
+
       {/* Dorso */}
-      <div className="relative glass rounded-2xl overflow-hidden p-4 min-h-[180px] bg-slate-900 text-white">
-        <div className="h-8 -mx-4 bg-slate-700/80" />
-        <div className="mt-6 text-right pr-2">
-          <span className="inline-block bg-white/90 text-slate-900 rounded px-2 py-1 tabular-nums">
+      <div className="relative h-[200px] sm:h-[230px] md:h-[250px] w-[330px] sm:w-[360px] md:w-[400px] rounded-xl overflow-hidden shadow-lg">
+        <Image
+          src="/bg-card-back.png"
+          alt="Dorso de la tarjeta"
+          fill
+          className="object-cover"
+        />
+        <div className="absolute right-8 top-[84px] sm:top-[96px] md:top-[108px]">
+          <p className="card-cvc inline-block bg-white/90 text-slate-900 rounded px-2 py-1 tabular-nums">
             {shownCvc}
-          </span>
+          </p>
         </div>
       </div>
     </div>
@@ -104,7 +118,7 @@ function PaymentForm({
   onCancel,
 }: {
   total: number;
-  onSuccess: () => Promise<void> | void;  // 👈 permitir async
+  onSuccess: () => Promise<void> | void;
   onCancel: () => void;
 }) {
   const [name, setName] = useState("");
@@ -115,7 +129,7 @@ function PaymentForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Formateo básico
+  // Formateo básico (Cleave-like)
   const onNumber = (v: string) =>
     setNumber(
       v.replace(/[^0-9]/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim()
@@ -136,38 +150,38 @@ function PaymentForm({
   }
 
   const onSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      const err = validate();
-      if (err) { setError(err); return; }
-      setError(null);
-      setSubmitting(true);
+    e.preventDefault();
+    const err = validate();
+    if (err) {
+      setError(err);
+      return;
+    }
+    setError(null);
+    setSubmitting(true);
 
-      try {
-        await new Promise((r) => setTimeout(r, 900)); // simulación
-        await onSuccess();                            // 👈 await
-      } catch (e: any) {
-        setError(e?.message || "Ocurrió un error");
-      } finally {
-        setSubmitting(false);
-      }
-    };
+    try {
+      // simulación de gateway
+      await new Promise((r) => setTimeout(r, 900));
+      await onSuccess();
+    } catch (e: any) {
+      setError(e?.message || "Ocurrió un error");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
-    <div className="grid gap-6 sm:grid-cols-2">
-      <CardPreview
-        number={number}
-        name={name}
-        month={month}
-        year={year}
-        cvc={cvc}
-      />
+    <div className="grid md:grid-cols-2 gap-10 items-start">
+      <div className="justify-self-center">
+        <CardPreview number={number} name={name} month={month} year={year} cvc={cvc} />
+      </div>
 
-      <form className="glass rounded-2xl p-5" onSubmit={onSubmit}>
-        <div className="grid gap-4">
-          <div>
-            <label className="text-sm font-medium">Titular de Tarjeta</label>
+      <form className="form-wrapper w-full max-w-md" onSubmit={onSubmit}>
+        <div className="form glass rounded-2xl p-6 md:p-7 space-y-5">
+          <div className="form-group">
+            <label className="label text-sm font-medium">Titular de Tarjeta</label>
             <input
-              className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
+              className="input mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
               placeholder="ej. Fulanito de Tal"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -175,68 +189,73 @@ function PaymentForm({
             />
           </div>
 
-          <div>
-            <label className="text-sm font-medium">Número de tarjeta</label>
+          <div className="form-group">
+            <label className="label text-sm font-medium">Número de tarjeta</label>
             <input
-              className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus tabular-nums"
-              placeholder="1234 5678 9123 0000"
+              className="input mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus tabular-nums"
+              placeholder="ej. 1234 5678 9123 0000"
               value={number}
               onChange={(e) => onNumber(e.target.value)}
               required
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium">Fecha exp. (MM/AA)</label>
-              <div className="grid grid-cols-2 gap-2">
+          <div className="form-group grid grid-cols-2 gap-4">
+            <div className="rows">
+              <label className="label text-sm font-medium">Fecha exp. (MM/AA)</label>
+              <div className="columns grid grid-cols-2 gap-2">
                 <input
-                  className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
+                  className="input mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
                   placeholder="MM"
                   value={month}
                   onChange={(e) => onMonth(e.target.value)}
+                  maxLength={2}
                   required
                 />
                 <input
-                  className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
+                  className="input mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
                   placeholder="AA"
                   value={year}
                   onChange={(e) => onYear(e.target.value)}
+                  maxLength={2}
                   required
                 />
               </div>
             </div>
-            <div>
-              <label className="text-sm font-medium">Cod. Seg.</label>
+
+            <div className="rows">
+              <label className="label text-sm font-medium">Cod. Seg.</label>
               <input
-                className="mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
-                placeholder="123"
+                className="input mt-1 w-full rounded-xl border px-3 py-2 text-sm input-focus"
+                placeholder="ej. 123"
                 value={cvc}
                 onChange={(e) => onCvc(e.target.value)}
+                maxLength={3}
                 required
               />
             </div>
           </div>
 
-          <div className="pt-2 text-sm">
-            <span className="text-slate-500">Total a pagar:</span>{" "}
-            <span className="font-semibold">{money(total)}</span>
+          <div className="form-group text-sm">
+            <label className="label text-slate-600">
+              Total a pagar: <span className="font-semibold">{money(total)}</span>
+            </label>
           </div>
 
           {error && <div className="text-rose-600 text-sm">{error}</div>}
 
-          <div className="grid grid-cols-2 gap-3 pt-2">
+          <div className="form-group grid grid-cols-2 gap-3 pt-1">
             <button
               type="button"
               onClick={onCancel}
-              className="rounded-xl border px-4 py-2 font-medium hover:bg-slate-50"
+              className="button rounded-xl border px-4 py-2 font-medium hover:bg-slate-50"
             >
               Volver
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-xl btn-primary text-white px-4 py-2 font-medium disabled:opacity-70"
+              className="button rounded-xl btn-primary text-white px-4 py-2 font-medium disabled:opacity-70"
             >
               {submitting ? "Procesando…" : "Confirmar"}
             </button>
@@ -250,20 +269,17 @@ function PaymentForm({
 /* ───────────────── ThankYou ───────────────── */
 function ThankYou({ onContinue }: { onContinue: () => void }) {
   return (
-    <div className="glass rounded-2xl p-10 text-center">
+    <div className="thank-you glass rounded-2xl p-10 text-center max-w-md mx-auto">
       <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-emerald-500/15 flex items-center justify-center">
         <svg viewBox="0 0 24 24" className="h-6 w-6 text-emerald-600">
-          <path
-            fill="currentColor"
-            d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"
-          />
+          <path fill="currentColor" d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z" />
         </svg>
       </div>
-      <h3 className="text-lg font-semibold">¡Gracias!</h3>
-      <p className="text-slate-600">Esperamos que disfrutes de tu compra.</p>
+      <h3 className="thank-you-title text-lg font-semibold">¡Gracias!</h3>
+      <p className="thank-you-text text-slate-600">Esperamos que disfrutes de tu compra.</p>
       <button
         onClick={onContinue}
-        className="mt-6 rounded-xl btn-primary text-white px-4 py-2 font-medium"
+        className="mt-6 button rounded-xl btn-primary text-white px-4 py-2 font-medium"
       >
         Ir a inicio
       </button>
@@ -284,12 +300,8 @@ export default function PagosPage() {
     const lsItems = readJSON<CartItem[]>(LS_KEY, []);
     const coup = (localStorage.getItem(COUPON_LS) ?? "").trim();
 
-    // Si vienen directo sin items, intentamos fallback legacy;
-    // si no hay, volvemos a carrito.
     if (!lsItems.length) {
-      const legacyTotal = parseFloat(
-        sessionStorage.getItem("discountedSubtotal") || "NaN"
-      );
+      const legacyTotal = parseFloat(sessionStorage.getItem("discountedSubtotal") || "NaN");
       if (!Number.isFinite(legacyTotal)) {
         router.replace("/eco/carrito");
         return;
@@ -302,21 +314,19 @@ export default function PagosPage() {
 
   const totals = useMemo(() => computeTotals(items, coupon), [items, coupon]);
 
-  const onSuccess = async () => {                 // 👈 ahora async
-    // TODO: reemplazar por valores reales seleccionados por el usuario
-    const direccionEnvioId = 1;                   // 👈 placeholder válido
-    const metodoEnvioId = 1;                      // 👈 placeholder válido
+  const onSuccess = async () => {
+    const direccionEnvioId = 1;
+    const metodoEnvioId = 1;
 
     const res = await fetch("/api/eco/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ direccionEnvioId, metodoEnvioId }), // 👈 sin comentarios
+      body: JSON.stringify({ direccionEnvioId, metodoEnvioId }),
       credentials: "include",
     });
     const json = await res.json();
     if (!json.ok) throw new Error(json.error || "No se pudo confirmar el pedido");
 
-    // limpiar carrito local siempre que el checkout haya sido OK
     try {
       localStorage.removeItem(LS_KEY);
       sessionStorage.removeItem("cartItems");
@@ -331,13 +341,15 @@ export default function PagosPage() {
   const goHome = () => router.push("/eco/inicio");
 
   return (
-    <main className="section py-8">
-      <h1 className="text-2xl font-bold tracking-tight mb-6">Pago</h1>
-      {done ? (
-        <ThankYou onContinue={goHome} />
-      ) : (
-        <PaymentForm total={totals.total} onSuccess={onSuccess} onCancel={onCancel} />
-      )}
+    <main className="wrapper min-h-[calc(100vh-5rem)] py-10">
+      <div className="mx-auto max-w-6xl px-4">
+        <h1 className="text-2xl font-bold tracking-tight mb-8">Pago</h1>
+        {done ? (
+          <ThankYou onContinue={goHome} />
+        ) : (
+          <PaymentForm total={totals.total} onSuccess={onSuccess} onCancel={onCancel} />
+        )}
+      </div>
     </main>
   );
 }
