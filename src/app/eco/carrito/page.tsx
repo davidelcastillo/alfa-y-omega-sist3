@@ -1,8 +1,7 @@
-// src/app/eco/carrito/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+// import { useRouter } from "next/navigation"; // Se elimina la dependencia de Next.js
 import Link from "next/link";
 // ──────────────────────────────────────────────────────────────────────────────
 // Tipos y helpers
@@ -152,13 +151,14 @@ function CartActions({ onCheckout, onContinue }: { onCheckout: () => void; onCon
 // Página Carrito (solo el contenedor principal; tu layout aporta header/footer)
 // ──────────────────────────────────────────────────────────────────────────────
 export default function CarritoPage() {
-  const router = useRouter();
+  // const router = useRouter(); // Se elimina la dependencia de Next.js
 
   const [items, setItems] = useState<CartItem[]>([]);
   const [coupon, setCoupon] = useState<string>("");
+  const [isHydrated, setIsHydrated] = useState(false); // Evita sobreescribir el LS al cargar
 
-  // Carga inicial (migra de sessionStorage si existe)
-  useEffect(() => {
+  // Función para recargar el estado desde localStorage
+  const loadCart = () => {
     if (typeof window === "undefined") return;
 
     const fromLS = readStore<CartItem[]>(LS_KEY, []);
@@ -173,13 +173,36 @@ export default function CarritoPage() {
 
     const savedCoupon = (localStorage.getItem(COUPON_LS) ?? "").trim();
     if (savedCoupon) setCoupon(savedCoupon);
+  };
+
+  // Carga inicial y escucha de cambios
+  useEffect(() => {
+    loadCart();
+    setIsHydrated(true); // Marca que la carga inicial desde LS ha terminado
+
+    // MEJORA: Escuchamos el evento personalizado 'cart:changed' para recargar.
+    window.addEventListener('cart:changed', loadCart);
+
+    // Limpiamos el listener cuando el componente se desmonta.
+    return () => {
+      window.removeEventListener('cart:changed', loadCart);
+    };
   }, []);
 
-  // Persistencia
+  // Persistencia de items
   useEffect(() => {
+    if (!isHydrated) return; // No guardar en LS hasta que se haya cargado el estado inicial
     if (typeof window === "undefined") return;
     localStorage.setItem(LS_KEY, JSON.stringify(items));
-  }, [items]);
+  }, [items, isHydrated]);
+  
+  // Persistencia del cupón
+  useEffect(() => {
+    if (!isHydrated) return; // No guardar en LS hasta que se haya cargado el estado inicial
+    if (typeof window !== "undefined") {
+      localStorage.setItem(COUPON_LS, coupon);
+    }
+  }, [coupon, isHydrated]);
 
   // Totales y contador
   const { count, subtotal, discount, total } = useMemo(() => {
@@ -219,14 +242,17 @@ export default function CarritoPage() {
 
   const onChangeCoupon = (v: string) => {
     setCoupon(v);
-    if (typeof window !== "undefined") localStorage.setItem(COUPON_LS, v);
   };
 
   // Navegación propia de tu app
-  const continuar = () => router.push("/eco/productos");
+  const continuar = () => {
+    window.location.href = "/eco/productos";
+  };
 
-  const comprarYa = () => router.push("/eco/login");
-  //const comprarYa = () => router.push("/eco/pagos"); // realmente deberia redirigir a cuenta para ver si esta registrado
+  const comprarYa = () => {
+    window.location.href = "/eco/login";
+  };
+  //const comprarYa = () => window.location.href = "/eco/pagos"; // realmente deberia redirigir a cuenta para ver si esta registrado
 
   return (
     <div className="section py-8">

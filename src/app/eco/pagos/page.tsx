@@ -104,7 +104,7 @@ function PaymentForm({
   onCancel,
 }: {
   total: number;
-  onSuccess: () => void;
+  onSuccess: () => Promise<void> | void;  // 👈 permitir async
   onCancel: () => void;
 }) {
   const [name, setName] = useState("");
@@ -136,25 +136,21 @@ function PaymentForm({
   }
 
   const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const err = validate();
-    if (err) {
-      setError(err);
-      return;
-    }
-    setError(null);
-    setSubmitting(true);
+      e.preventDefault();
+      const err = validate();
+      if (err) { setError(err); return; }
+      setError(null);
+      setSubmitting(true);
 
-    try {
-      // TODO: POST a /api/eco/pagos/checkout con { name, number, month, year, cvc, total }
-      await new Promise((r) => setTimeout(r, 900)); // simulación
-      onSuccess();
-    } catch (e: any) {
-      setError(e?.message || "Ocurrió un error");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+      try {
+        await new Promise((r) => setTimeout(r, 900)); // simulación
+        await onSuccess();                            // 👈 await
+      } catch (e: any) {
+        setError(e?.message || "Ocurrió un error");
+      } finally {
+        setSubmitting(false);
+      }
+    };
 
   return (
     <div className="grid gap-6 sm:grid-cols-2">
@@ -306,13 +302,26 @@ export default function PagosPage() {
 
   const totals = useMemo(() => computeTotals(items, coupon), [items, coupon]);
 
-  const onSuccess = () => {
-    // acá iría guardar Orden/Payment en tu API; luego limpiar el carrito
+  const onSuccess = async () => {                 // 👈 ahora async
+    // TODO: reemplazar por valores reales seleccionados por el usuario
+    const direccionEnvioId = 1;                   // 👈 placeholder válido
+    const metodoEnvioId = 1;                      // 👈 placeholder válido
+
+    const res = await fetch("/api/eco/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ direccionEnvioId, metodoEnvioId }), // 👈 sin comentarios
+      credentials: "include",
+    });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || "No se pudo confirmar el pedido");
+
+    // limpiar carrito local siempre que el checkout haya sido OK
     try {
       localStorage.removeItem(LS_KEY);
-      sessionStorage.removeItem("cartItems"); // legacy
-      sessionStorage.removeItem("cartTotalCount"); // legacy
-      sessionStorage.removeItem("discountedSubtotal"); // legacy
+      sessionStorage.removeItem("cartItems");
+      sessionStorage.removeItem("cartTotalCount");
+      sessionStorage.removeItem("discountedSubtotal");
     } finally {
       setDone(true);
     }

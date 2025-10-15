@@ -4,6 +4,8 @@
 import Image from "next/image"
 import Link from "next/link"
 import { cldThumb } from "@/lib/eco/cloudinary"
+import { addToCart } from "@/lib/eco/cart";
+
 
 export type UiProduct = {
   id: number | string
@@ -16,7 +18,30 @@ export type UiProduct = {
 
 export default function ProductCard({ p }: { p: UiProduct }) {
   async function add() {
-    // Hook futuro: POST /api/eco/cart
+  // 1) Guardar SIEMPRE en localStorage (UX inmediata)
+    addToCart({
+      id: p.id,
+      name: p.name,
+      image: p.imageUrl || "/placeholder.png",  // Carrito espera "image"
+      price: p.price ?? 0,
+      // description: p.brand ?? null, // opcional
+    });
+
+    // 2) Intentar sincronizar con backend si hay sesión (no bloquea la UI)
+    try {
+      const resp = await fetch("/api/eco/carrito/items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ productoId: Number(p.id), cantidad: 1 }),
+      });
+      // Si 401 → el user no está logueado: quedamos con LS y listo
+      if (!resp.ok && resp.status !== 401) {
+        console.warn("No se pudo sincronizar carrito en DB.");
+      }
+    } catch (e) {
+      console.warn("Fallo de red al sincronizar carrito. Queda en LS.", e);
+    }
   }
 
   const raw = p.imageUrl || "/placeholder.png"
