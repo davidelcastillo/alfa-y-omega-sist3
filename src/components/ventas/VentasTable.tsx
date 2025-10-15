@@ -43,7 +43,7 @@ export type SortState = { key: SortKey; dir: "asc" | "desc" };
 type VentasTableProps = {
   orders: Order[];
   onViewDetail?: (order: Order) => void;
-  onDoShipment?: (order: Order) => void;
+  //onDoShipment?: (order: Order) => void;
   // Opcionales para ordenar (matching ComprasTable UX)
   onSort?: (s: SortState) => void;
   sortState?: SortState;
@@ -52,7 +52,7 @@ type VentasTableProps = {
 export default function VentasTable({
   orders,
   onViewDetail,
-  onDoShipment,
+  //onDoShipment,
   onSort,
   sortState,
 }: VentasTableProps) {
@@ -148,7 +148,7 @@ export default function VentasTable({
                       <Eye className="w-4 h-4" />
                     </Button>
 
-                    {order.status === "Pendiente de enviar" && (
+                    {/*{order.status === "Pendiente de enviar" && (
                       <Button
                         size="sm"
                         variant="ghost"
@@ -158,7 +158,7 @@ export default function VentasTable({
                       >
                         <Truck className="w-4 h-4" />
                       </Button>
-                    )}
+                    )}*/}
                   </div>
                 </td>
               </tr>
