@@ -52,3 +52,25 @@ export type Stats = {
   pendingOrders: number;
   balance: number;
 };
+
+export type VentaDetail = {
+  id: string;
+  orderNumber: string;
+  registrationDate: string; // "YYYY-MM-DD HH:mm:ss"
+  orderDate: string;        // "YYYY-MM-DD"
+  orderTime: string;        // "HH:mm:ss"
+  customerName: string;
+  cardNumber: string;
+  status: "Enviado" | "Pendiente de enviar";
+  shippedDate?: string;
+  warehouse?: string;
+  total: number;
+  products: {
+    id: string;
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    subtotal: number;
+  }[];
+  history: { date: string; action: string; user: string }[];
+};

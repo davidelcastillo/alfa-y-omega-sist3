@@ -126,7 +126,7 @@ export default function VentasClient({ initialOrders, initialWarehouses }: Props
       <VentasTable
         orders={orders}
         onViewDetail={handleViewDetail}     // 👈 pasa la acción
-        onDoShipment={handleDoShipment}
+        //onDoShipment={handleDoShipment}
       />
 
       {/* Modal Envío */}

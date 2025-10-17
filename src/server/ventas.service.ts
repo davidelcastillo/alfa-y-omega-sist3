@@ -1,6 +1,6 @@
 // src/server/ventas.service.ts
-import { prisma } from "@/lib/prisma"; // Asegúrate que la ruta a tu cliente prisma sea correcta
-import type { FiltersState, Order, Warehouse } from "@/lib/ventas/types";
+import { prisma } from "@/lib/prisma";
+import type { FiltersState, Order, Warehouse, VentaDetail } from "@/lib/ventas/types";
 
 // Nota: La función getInitialVentasData puede que ya no sea necesaria
 // si cargas los datos por separado en tu frontend. La incluyo por completitud.
@@ -16,6 +16,7 @@ export async function getInitialVentasData(): Promise<{
   return { orders, warehouses };
 }
 
+{/*
 export async function listOrders(filters?: FiltersState): Promise<Order[]> {
   // Construimos la cláusula 'where' de Prisma dinámicamente a partir de los filtros
   const whereClause: any = {};
@@ -97,6 +98,72 @@ export async function listOrders(filters?: FiltersState): Promise<Order[]> {
     warehouse: pedido.envio ? 'Almacén Principal' : undefined, // Lógica de ejemplo
   }));
 }
+CAMBIO HECHO POR LUIS, ABAJO SE AGREGA LA MODIFICACION, BORRAR SI ROMPE, ES PARA EL DETALLE DEL PEDIDO*/}
+export async function listOrders(filters?: FiltersState): Promise<Order[]> {
+  const where: any = {};
+
+  if (filters?.from || filters?.to) {
+    where.fechaPedido = {};
+    if (filters.from) where.fechaPedido.gte = new Date(`${filters.from}T00:00:00`);
+    if (filters.to) where.fechaPedido.lte = new Date(`${filters.to}T23:59:59`);
+  }
+
+  if (filters?.orderNumber) {
+    const or: any[] = [];
+    or.push({ numeroPedido: { equals: filters.orderNumber } });
+    const num = Number(filters.orderNumber);
+    if (!Number.isNaN(num)) or.push({ id: num });
+    if (or.length > 0) where.OR = or;
+  }
+
+  if (filters?.status && (filters.status === "Enviado" || filters.status === "Pendiente de enviar")) {
+    where.estado = { nombre: filters.status };
+  }
+
+  const pedidos = await prisma.pedido.findMany({
+    where,
+    include: {
+      items: { include: { producto: true } },
+      envio: true,
+      pagos: true,
+      direccionEnvio: true,
+      estado: true,
+      metodoEnvio: true,
+      usuario: { select: { nombre: true, apellido: true } },
+    },
+    orderBy: { fechaPedido: "desc" },
+  });
+
+  return pedidos.map((p): Order => {
+    const iso = p.fechaPedido.toISOString();
+    const orderDate = iso.split("T")[0];
+    const orderTime = iso.split("T")[1].substring(0, 8);
+    const numeroPedido = (p as any)?.numeroPedido as string | null | undefined;
+
+    return {
+      id: String(p.id),
+      orderNumber: numeroPedido ?? String(p.id),
+      orderDate,
+      orderTime,
+      customerName: `${p.usuario?.nombre ?? ""} ${p.usuario?.apellido ?? ""}`.trim(),
+      totalProducts: p.items.reduce((sum, it) => sum + it.cantidad, 0),
+      cardNumber: "**** **** **** " + Math.floor(Math.random() * 9000 + 1000),
+      total: p.total,
+      status: (p.estado?.nombre ?? "Pendiente de enviar") as "Enviado" | "Pendiente de enviar",
+      shippedDate: p.envio?.fechaDespacho ? p.envio.fechaDespacho.toISOString().split("T")[0] : undefined,
+      products: p.items.map((it) => ({
+        id: String(it.producto.id),
+        name: it.producto.nombre,
+        quantity: it.cantidad,
+        unitPrice: it.precioUnitarioAlComprar,
+        subtotal: it.cantidad * it.precioUnitarioAlComprar,
+      })),
+      history: [],
+      warehouse: p.envio ? "Almacén Principal" : undefined,
+    };
+  });
+}
+
 
 // Esta función asume que tus 'Warehouses' corresponden a los 'Depositos' en Prisma.
 export async function listWarehouses(): Promise<Warehouse[]> {
@@ -121,4 +188,73 @@ export async function listWarehouses(): Promise<Warehouse[]> {
             price: stockItem.producto.precioVenta ?? 0,
         }))
     }));
+}
+
+export async function getOrderDetail(id: string | number): Promise<VentaDetail | null> {
+  const pedido = await prisma.pedido.findUnique({
+    where: { id: Number(id) },
+    include: {
+      items: { include: { producto: true } }, // DetallePedido + Producto
+      envio: true,                             // Envio (fechaDespacho, etc.)
+      pagos: true,                             // si querés mostrar pagos en el detalle luego
+      direccionEnvio: true,
+      estado: true,                            // EstadoPedido (nombre)
+      metodoEnvio: true,
+      usuario: { select: { nombre: true, apellido: true } },
+    },
+  });
+
+  if (!pedido) return null;
+
+  // Fechas formateadas
+  const iso = pedido.fechaPedido.toISOString();     // 2025-10-17T13:45:12.000Z
+  const orderDate = iso.split("T")[0];              // YYYY-MM-DD
+  const orderTime = iso.split("T")[1].substring(0, 8); // HH:mm:ss
+  const registrationDate = `${orderDate} ${orderTime}`;
+
+  // Estado -> union literal del front
+  const status = (pedido.estado?.nombre ?? "Pendiente de enviar") as
+    | "Enviado"
+    | "Pendiente de enviar";
+
+  // Shipped date si existe
+  const shippedDate = pedido.envio?.fechaDespacho
+    ? pedido.envio.fechaDespacho.toISOString().split("T")[0]
+    : undefined;
+
+  // Warehouse: si más adelante relacionás Envio->Deposito, mapealo aquí
+  const warehouse = pedido.envio ? "Almacén Principal" : undefined;
+
+  return {
+    id: String(pedido.id),
+    /*orderNumber: pedido.numeroPedido ?? String(pedido.id), // usa numeroPedido si está cargado*/
+    orderNumber: (pedido as any)?.numeroPedido ?? String(pedido.id),
+    registrationDate,
+    orderDate,
+    orderTime,
+    customerName: `${pedido.usuario?.nombre ?? ""} ${pedido.usuario?.apellido ?? ""}`.trim(),
+    cardNumber: "**** **** **** " + Math.floor(Math.random() * 9000 + 1000), // no hay tarjeta en el schema
+    status,
+    shippedDate,
+    warehouse,
+    total: pedido.total,
+    products: pedido.items.map((it) => ({
+      id: String(it.producto.id),
+      name: it.producto.nombre,
+      quantity: it.cantidad,
+      unitPrice: it.precioUnitarioAlComprar,
+      subtotal: it.cantidad * it.precioUnitarioAlComprar,
+    })),
+    // Si luego tenés una tabla de historial real, mapéala aquí.
+    history: [
+      { date: registrationDate, action: "Pedido creado", user: "Sistema" },
+      ...(shippedDate
+        ? [{
+            date: `${shippedDate} ${orderTime}`,
+            action: "Pedido enviado",
+            user: "Logística",
+          }]
+        : []),
+    ],
+  };
 }
