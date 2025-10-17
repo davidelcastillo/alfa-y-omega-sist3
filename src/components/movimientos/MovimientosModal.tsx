@@ -91,6 +91,8 @@ export default function MovimientosModal({
   const [ajusteSigno, setAjusteSigno] = useState<'positivo' | 'negativo'>(
     (initial?.ajusteSigno as 'positivo' | 'negativo') ?? 'positivo'
   );
+  const [numeroComprobanteBusqueda, setNumeroComprobanteBusqueda] = useState('');
+  const [isBuscando, setIsBuscando] = useState(false);
 
   // ---- Opciones para selects ----
   const depOptions = useMemo(
@@ -149,6 +151,41 @@ export default function MovimientosModal({
 
   const addRow = () => setItems((prev) => [...prev, { productoId: 0, cantidad: 1 }]);
   const removeRow = (idx: number) => setItems((prev) => prev.filter((_, i) => i !== idx));
+
+  const handleBuscarPedido = async () => {
+    if (!numeroComprobanteBusqueda) return;
+    setIsBuscando(true);
+    try {
+      const response = await fetch(`/api/pedidos/${numeroComprobanteBusqueda.trim()}`);
+      if (!response.ok) {
+        throw new Error(`Error en la API: ${response.statusText}`);
+      }
+      const pedido = await response.json();
+
+      if (pedido && pedido.items && pedido.items.length > 0) {
+        // Autocompletar formulario
+        setTipoMovimientoId(6); // Egreso por Venta (ID desde la BD)
+        setDeposito(2); // Deposito Norte
+        // Se establece el estado 'numero', que se usa para el campo 'numeroComprobante' en el payload del submit.
+        // Esto asocia el movimiento de stock con el número de pedido de venta.
+        setNumero(numeroComprobanteBusqueda.trim());
+
+        // Mapear items del pedido a items del movimiento
+        const nuevosItems = pedido.items.map((item: any) => ({
+          productoId: item.productoId,
+          cantidad: item.cantidad,
+        }));
+        setItems(nuevosItems);
+      } else {
+        console.log('Pedido no encontrado o sin items.');
+        // No se hace nada en la UI, permitiendo al usuario continuar manualmente
+      }
+    } catch (error) {
+      console.error('Error al buscar el pedido:', error);
+    } finally {
+      setIsBuscando(false);
+    }
+  };
 
   const handleSubmit = () => {
     if (!canSubmit()) return;
@@ -232,13 +269,18 @@ export default function MovimientosModal({
         <div className="flex-auto overflow-y-auto p-8 space-y-8">
           {/* Número + Tipo de movimiento */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Input
-              label="Número de remito"
-              placeholder="Ingrese N° de remito"
-              value={numero}
-              onChange={(e) => setNumero(e.target.value)}
-              className="input-focus"
-            />
+            <div className="flex items-end space-x-2">
+              <Input
+                label="Número de comprobante"
+                placeholder="Ingrese número o busque pedido"
+                value={numeroComprobanteBusqueda}
+                onChange={(e) => setNumeroComprobanteBusqueda(e.target.value)}
+                className="input-focus flex-grow"
+              />
+              <Button onClick={handleBuscarPedido} disabled={isBuscando || !numeroComprobanteBusqueda}>
+                {isBuscando ? 'Buscando...' : 'Buscar'}
+              </Button>
+            </div>
 
             <div className="md:col-span-2">
               <Select
