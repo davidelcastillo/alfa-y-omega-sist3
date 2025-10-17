@@ -50,7 +50,7 @@ export async function GET(req: Request) {
         const hasta = new Date(query.hasta);
 
         // ===== Ingresos: Pedidos con estado "ENVIADO" =====
-        const estadoEnviado = await prisma.estadoPedido.findUnique({ where: { nombre: "ENVIADO" } });
+        const estadoEnviado = await prisma.estadoPedido.findUnique({ where: { nombre: "Enviado" } });
         if (!estadoEnviado) throw new Error("El estado de pedido 'ENVIADO' no existe.");
 
         const pedidos = await prisma.pedido.findMany({
