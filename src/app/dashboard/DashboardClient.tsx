@@ -17,6 +17,7 @@ import type {
 import KpiCard from "@/components/dashboard/KpiCard";
 import ProductosMasVendidosChart from "@/components/dashboard/ProductosMasVendidosChart";
 import AlertaStockTable from "@/components/dashboard/AlertaStockTable";
+import ChartBlock from "@/components/dashboard/ChartBlock";
 import { DollarSign, ShoppingCart, UserPlus, TrendingDown } from "lucide-react";
 
 type Props = {
@@ -143,9 +144,16 @@ export default function DashboardClient({
                     </div>
 
                     {/* Gráficos y Tablas */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                         <ProductosMasVendidosChart data={productosMasVendidos} />
                         <AlertaStockTable data={alertaStock} />
+                    </div>
+
+                    {/* Gráficos por período */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <ChartBlock title="Ingresos por Período" data={resumen?.series ?? []} dataKey="ingresos" />
+                        <ChartBlock title="Egresos por Período" data={resumen?.series ?? []} dataKey="egresos" />
+                        <ChartBlock title="Resultado por Período" data={resumen?.series ?? []} dataKey="resultado" />
                     </div>
                 </>
             )}
