@@ -1,42 +1,30 @@
-import { DashboardResumenSchema, type DashboardResumen, DashboardResumenQuerySchema } from "./types";
+import {
+    DashboardResumen,
+    Granularidad,
+    ProductoMasVendido,
+    AlertaStock,
+} from "./types";
 
-async function getBaseUrl() {
-    if (typeof window !== "undefined") return "";
-    try {
-        const { headers } = await import("next/headers");
-        const h = await headers();
-        const proto = h.get("x-forwarded-proto") ?? "http";
-        const host = h.get("x-forwarded-host") ?? h.get("host");
-        if (host) return `${proto}://${host}`;
-    } catch { }
-    if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
-    if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-    return "http://localhost:3000";
-}
+const handleResponse = async (res: Response) => {
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error);
+    return json.data;
+};
 
-function qs(params: Record<string, unknown>) {
-    const sp = new URLSearchParams();
-    Object.entries(params).forEach(([k, v]) => {
-        if (v !== undefined && v !== null && v !== "") sp.set(k, String(v));
-    });
-    const s = sp.toString();
-    return s ? `?${s}` : "";
-}
+export const apiGetDashboardResumen = async (
+    q: { desde: string; hasta: string; gran: Granularidad }
+): Promise<DashboardResumen> => {
+    const params = new URLSearchParams(q);
+    const res = await fetch(`/api/dashboard/resumen?${params.toString()}`);
+    return handleResponse(res);
+};
 
-async function fetchJson<T>(url: string): Promise<T> {
-    const res = await fetch(url, { cache: "no-store" });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(`HTTP ${res.status} ${url}`);
-    return json as T;
-}
+export const apiGetProductosMasVendidos = async (): Promise<ProductoMasVendido[]> => {
+    const res = await fetch("/api/dashboard/productos-mas-vendidos");
+    return handleResponse(res);
+};
 
-export async function apiGetDashboardResumen(params: {
-    desde: string; hasta: string; gran: "dia" | "mes";
-}): Promise<DashboardResumen> {
-    const q = DashboardResumenQuerySchema.parse(params);
-    const base = await getBaseUrl();
-    const url = `${base}/api/dashboard/resumen${qs(q)}`;
-    const json = await fetchJson<{ ok: boolean; data: unknown }>(url);
-    if (!json.ok) throw new Error("Error en resumen");
-    return DashboardResumenSchema.parse(json.data);
-}
+export const apiGetAlertaStock = async (): Promise<AlertaStock[]> => {
+    const res = await fetch("/api/dashboard/alerta-stock");
+    return handleResponse(res);
+};
