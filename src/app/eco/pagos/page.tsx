@@ -72,7 +72,8 @@ function CardPreview({
       {/* Frente */}
       <div className="relative h-[200px] sm:h-[230px] md:h-[250px] w-[330px] sm:w-[360px] md:w-[400px] rounded-xl overflow-hidden shadow-lg">
         <Image
-          src="/bg-card-front.png"
+          //src="/bg-card-front.png"
+          src="https://res.cloudinary.com/dqulznz36/image/upload/f_auto,q_auto/v1760704598/bg-card-front_fn91im.png"
           alt="Frente de la tarjeta"
           fill
           className="object-cover"
@@ -96,7 +97,8 @@ function CardPreview({
       {/* Dorso */}
       <div className="relative h-[200px] sm:h-[230px] md:h-[250px] w-[330px] sm:w-[360px] md:w-[400px] rounded-xl overflow-hidden shadow-lg">
         <Image
-          src="/bg-card-back.png"
+          //src="/bg-card-back.png"
+          src="https://res.cloudinary.com/dqulznz36/image/upload/v1760704598/bg-card-back_ek6kbn.png"
           alt="Dorso de la tarjeta"
           fill
           className="object-cover"
