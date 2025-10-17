@@ -13,6 +13,7 @@ type CreateMovimientoDTO = {
   numeroComprobante?: string | null;
   comentario?: string | null; // <- en el schema está con mayúscula
   detalles: DetalleDTO[];
+  pedidoId?: number;
 };
 
 export async function createMovimiento(data: CreateMovimientoDTO) {
@@ -95,7 +96,15 @@ export async function createMovimiento(data: CreateMovimientoDTO) {
       });
     }
 
-    // 5) Devolver resumen
+    // 5) Si vino un pedidoId, actualizar su estado a "Despachado/Entregado"
+    if (data.pedidoId) {
+      await tx.pedido.update({
+        where: { id: data.pedidoId },
+        data: { estadoPedidoId: 18 }, // 18 = "Despachado/Entregado"
+      });
+    }
+
+    // 6) Devolver resumen
     return tx.movimientoStock.findUnique({
       where: { id: movimiento.id },
       include: {

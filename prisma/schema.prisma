@@ -92,6 +92,7 @@ model Pedido {
   total            Float
   metodoEnvioId    Int
   observaciones    String?
+  numeroPedido     String?         
   items            DetallePedido[]
   envio            Envio?
   pagos            Pago[]

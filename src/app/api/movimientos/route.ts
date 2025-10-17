@@ -21,6 +21,7 @@ const createSchema = z.object({
   numeroComprobante: z.string().min(1).optional(),
   comentario: z.string().optional(), // <- coincide con el schema
   detalles: z.array(detalleSchema).min(1, 'Debe incluir al menos un detalle'),
+  pedidoId: z.coerce.number().int().positive().optional(),
 });
 
 // --------- POST: Crear movimiento ----------
