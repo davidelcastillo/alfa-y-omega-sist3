@@ -34,7 +34,7 @@ function readJSON<T>(key: string, fb: T): T {
 
 function computeTotals(items: CartItem[], coupon: string) {
   const subtotal = items.reduce((a, it) => a + it.price * it.quantity, 0);
-  const factor = coupon.trim().toLowerCase() === "lenguaje" ? 0.8 : 1;
+  const factor = coupon.trim().toLowerCase() === "sistemas" ? 0.8 : 1;
   const total = subtotal * factor;
   const discount = subtotal - total;
   return { subtotal, discount, total };

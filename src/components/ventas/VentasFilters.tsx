@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+// Ya no necesitamos useState ni useEffect aquí
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
@@ -13,53 +13,37 @@ export type FiltersState = {
 };
 
 type VentasFiltersProps = {
-  value?: FiltersState;
-  defaultValue?: FiltersState;
+  value: FiltersState; // Hacemos `value` obligatorio para un componente controlado
   loading?: boolean;
-  onChange?: (next: FiltersState) => void;
+  onChange: (next: FiltersState) => void; // Hacemos `onChange` obligatorio
   onSearch?: (by: FiltersState) => void;
   onClear?: () => void;
 };
 
 export default function VentasFilters({
   value,
-  defaultValue,
   loading,
   onChange,
   onSearch,
   onClear,
 }: VentasFiltersProps) {
-  const [filters, setFilters] = useState<FiltersState>({
-    from: value?.from ?? defaultValue?.from ?? "",
-    to: value?.to ?? defaultValue?.to ?? "",
-    orderNumber: value?.orderNumber ?? defaultValue?.orderNumber ?? "",
-    status: value?.status ?? defaultValue?.status ?? "",
-  });
+  // 1. Eliminamos el estado interno (useState) y el efecto de sincronización (useEffect).
+  // El componente ahora es "tonto" y solo refleja las props que recibe.
 
-  // Sincroniza con cambios externos en `value`
-  useEffect(() => {
-    if (!value) return;
-    setFilters({
-      from: value.from ?? "",
-      to: value.to ?? "",
-      orderNumber: value.orderNumber ?? "",
-      status: value.status ?? "",
-    });
-  }, [value?.from, value?.to, value?.orderNumber, value?.status]);
-
+  // 2. Simplificamos la función `update`.
+  // Ahora, en lugar de manejar un estado interno, construye el nuevo estado
+  // a partir del `value` actual y lo notifica al padre a través de `onChange`.
   function update<K extends keyof FiltersState>(k: K, v: FiltersState[K]) {
-    setFilters((prev) => {
-      const next = { ...prev, [k]: v };
-      onChange?.(next);
-      return next;
-    });
+    // Creamos una copia del estado actual (que viene por props) y modificamos la clave necesaria.
+    const nextState = { ...value, [k]: v };
+    onChange(nextState); // Notificamos al padre del nuevo estado completo.
   }
 
+  // 3. Simplificamos `handleClear`.
+  // Simplemente llamamos a la función onClear que viene del padre.
+  // El padre es responsable de resetear el estado.
   function handleClear() {
-    const reset: FiltersState = { from: "", to: "", orderNumber: "", status: "" };
-    setFilters(reset);
     onClear?.();
-    onChange?.(reset);
   }
 
   return (
@@ -67,27 +51,28 @@ export default function VentasFilters({
       <h3 className="text-xl font-semibold text-blue-800 mb-6">Filtros de Búsqueda</h3>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* 4. Los inputs ahora usan `value` directamente desde las props */}
         <Input
           label="Fecha desde"
           type="date"
-          value={filters.from ?? ""}
+          value={value.from ?? ""}
           onChange={(e) => update("from", e.target.value)}
         />
         <Input
           label="Fecha hasta"
           type="date"
-          value={filters.to ?? ""}
+          value={value.to ?? ""}
           onChange={(e) => update("to", e.target.value)}
         />
         <Input
           label="Número de pedido"
           placeholder="Ej: PED-001"
-          value={filters.orderNumber ?? ""}
+          value={value.orderNumber ?? ""}
           onChange={(e) => update("orderNumber", e.target.value)}
         />
         <Select
           label="Estado"
-          value={filters.status ?? ""}
+          value={value.status ?? ""}
           onChange={(e) => update("status", e.target.value as FiltersState["status"])}
         >
           <option value="">Todos los estados</option>
@@ -100,10 +85,11 @@ export default function VentasFilters({
         <Button variant="outline" onClick={handleClear} disabled={!!loading}>
           Limpiar Filtros
         </Button>
-        <Button variant="azul" onClick={() => onSearch?.(filters)} disabled={!!loading}>
+        <Button variant="azul" onClick={() => onSearch?.(value)} disabled={!!loading}>
           Buscar Pedidos
         </Button>
       </div>
     </div>
   );
 }
+
