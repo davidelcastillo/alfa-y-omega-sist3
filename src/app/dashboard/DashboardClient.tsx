@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { apiGetDashboardResumen } from "@/lib/dashboard/api";
 import type {
     DashboardResumen,
@@ -56,20 +57,25 @@ export default function DashboardClient({
     );
 
     return (
-        <div className="w-full max-w-none mx-auto px-3 sm:px-4 lg:px-6 py-8">
-            {/* Header */}
+        <>
+            {/* Breadcrumb */}
             <div className="flex items-center space-x-2 text-sm text-gray-600 mb-6">
                 <span>Inicio</span>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
                 </svg>
-                <span className="text-primary-blue font-medium">Dashboard</span>
+                <span className="text-primary-pink font-medium">Dashboard</span>
             </div>
 
-            <h2 className="text-4xl font-bold bg-gradient-to-r from-primary-blue to-primary-pink bg-clip-text text-transparent mb-2">
-                Resumen del Corralón
-            </h2>
-            <p className="text-gray-600 mb-6">Ingresos, egresos y resultado por período</p>
+            {/* Header de la sección */}
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-2 gap-4">
+                <div>
+                    <h2 className="text-4xl font-bold bg-gradient-to-r from-pink-500 to-blue-600 bg-clip-text text-transparent mb-2">
+                        Resumen del Corralón
+                    </h2>
+                    <p className="text-gray-600 text-lg">Ingresos, egresos y resultado por período</p>
+                </div>
+            </div>
 
             {/* Filtros */}
             <div className="bg-white border rounded-xl p-4 mb-6 grid grid-cols-1 sm:grid-cols-4 gap-3">
@@ -103,13 +109,13 @@ export default function DashboardClient({
                     </select>
                 </div>
                 <div className="flex items-end">
-                    <button
+                    <Button
                         disabled={loading}
                         onClick={load}
-                        className="w-full rounded-lg px-3 py-2 text-white bg-indigo-600 hover:bg-indigo-700"
+                        className="w-full"
                     >
                         {loading ? "Cargando..." : "Aplicar"}
-                    </button>
+                    </Button>
                 </div>
             </div>
 
@@ -124,7 +130,7 @@ export default function DashboardClient({
             <ChartBlock title="Ingresos" data={series} dataKey="ingresos" />
             <ChartBlock title="Egresos" data={series} dataKey="egresos" />
             <ChartBlock title="Resultado" data={series} dataKey="resultado" />
-        </div>
+        </>
     );
 }
 
@@ -132,7 +138,7 @@ function Card({ title, value }: { title: string; value: number }) {
     const $$ = (n: number) =>
         n.toLocaleString("es-AR", { style: "currency", currency: "ARS" });
     return (
-        <div className="bg-white border rounded-xl p-4">
+        <div className="bg-white border rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
             <div className="text-sm text-gray-500">{title}</div>
             <div className="text-2xl font-semibold mt-1">{$$(value)}</div>
         </div>
