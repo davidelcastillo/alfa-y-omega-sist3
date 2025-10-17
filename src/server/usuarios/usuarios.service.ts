@@ -1,6 +1,6 @@
 // src/server/usuarios/usuarios.service.ts
 import { PrismaClient, Usuario } from "@/generated/prisma";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
