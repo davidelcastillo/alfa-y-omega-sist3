@@ -49,13 +49,16 @@ export async function GET(req: Request) {
         const desde = new Date(query.desde);
         const hasta = new Date(query.hasta);
 
-        // ===== Ingresos: Pagos de clientes aprobados =====
-        const pagos = await prisma.pago.findMany({
+        // ===== Ingresos: Pedidos con estado "ENVIADO" =====
+        const estadoEnviado = await prisma.estadoPedido.findUnique({ where: { nombre: "Enviado" } });
+        if (!estadoEnviado) throw new Error("El estado de pedido 'ENVIADO' no existe.");
+
+        const pedidos = await prisma.pedido.findMany({
             where: {
-                estado: "APROBADO",
-                fechaPago: { gte: desde, lte: endOfDay(hasta) },
+                estadoPedidoId: estadoEnviado.id,
+                fechaPedido: { gte: desde, lte: endOfDay(hasta) },
             },
-            select: { monto: true, fechaPago: true },
+            select: { total: true, fechaPedido: true },
         });
 
         // ===== Egresos: Órdenes de pago a proveedores =====
@@ -64,15 +67,23 @@ export async function GET(req: Request) {
             select: { totalPagado: true, fecha: true },
         });
 
+        // ===== Nuevos Clientes =====
+        const nuevosClientes = await prisma.usuario.count({
+            where: { fechaRegistro: { gte: desde, lte: endOfDay(hasta) } }
+        });
+
+        // ===== Pedidos Totales en el período =====
+        const pedidosTotales = pedidos.length;
+
         const buckets = walkBuckets(desde, hasta, query.gran);
         const map: Record<string, { ingresos: number; egresos: number }> = {};
         for (const k of buckets) map[k] = { ingresos: 0, egresos: 0 };
 
         // agrego ingresos
-        for (const p of pagos) {
-            const k = fmtKey(new Date(p.fechaPago), query.gran);
+        for (const p of pedidos) {
+            const k = fmtKey(new Date(p.fechaPedido), query.gran);
             if (!map[k]) map[k] = { ingresos: 0, egresos: 0 };
-            map[k].ingresos += Number(p.monto ?? 0);
+            map[k].ingresos += Number(p.total ?? 0);
         }
         // agrego egresos
         for (const o of ops) {
@@ -104,7 +115,11 @@ export async function GET(req: Request) {
                 desde: query.desde,
                 hasta: query.hasta,
                 gran: query.gran,
-                totales,
+                totales: {
+                    ...totales,
+                    nuevosClientes,
+                    pedidosTotales,
+                },
                 series,
             },
         });

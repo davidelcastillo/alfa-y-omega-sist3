@@ -320,7 +320,8 @@ export default function PagosPage() {
     const direccionEnvioId = 1;
     const metodoEnvioId = 1;
 
-    const res = await fetch("/api/eco/checkout", {
+    // Llamada a la nueva API de pedidos
+    const res = await fetch("/api/eco/pedidos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ direccionEnvioId, metodoEnvioId }),
@@ -331,9 +332,12 @@ export default function PagosPage() {
 
     try {
       localStorage.removeItem(LS_KEY);
+      localStorage.removeItem(COUPON_LS);
       sessionStorage.removeItem("cartItems");
       sessionStorage.removeItem("cartTotalCount");
       sessionStorage.removeItem("discountedSubtotal");
+      // Disparar evento para actualizar el header
+      window.dispatchEvent(new CustomEvent("cart-updated"));
     } finally {
       setDone(true);
     }
