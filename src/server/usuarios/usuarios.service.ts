@@ -42,21 +42,30 @@ export async function createUser(data: Omit<UserWithRole, 'id' | 'fechaRegistro'
 
     return await prisma.usuario.create({
         data: createData,
+        include: {
+            roles: {
+                include: {
+                    rol: true,
+                },
+            },
+        },
     });
 }
 
 export async function updateUser(id: number, data: Partial<Omit<UserWithRole, 'id' | 'fechaRegistro' | 'passwordHash' | 'roles'>> & { rolId?: number }): Promise<User> {
-    const { rolId, ...userData } = data;
+    const { rolId, password, ...userData } = data;
 
     const updateData: Prisma.UsuarioUpdateInput = {
         ...userData
     };
 
-    if (rolId) {
-        await prisma.usuarioRol.deleteMany({
-            where: { usuarioId: id }
-        });
+    if (password) {
+        const salt = await bcrypt.genSalt(10);
+        updateData.passwordHash = await bcrypt.hash(password, salt);
+    }
 
+    if (rolId) {
+        await prisma.usuarioRol.deleteMany({ where: { usuarioId: id } });
         updateData.roles = {
             create: {
                 rolId: Number(rolId)
@@ -67,12 +76,31 @@ export async function updateUser(id: number, data: Partial<Omit<UserWithRole, 'i
     return await prisma.usuario.update({
         where: { id },
         data: updateData,
+        include: {
+            roles: {
+                include: {
+                    rol: true,
+                },
+            },
+        },
     });
 }
 
 export async function deleteUser(id: number): Promise<User> {
+    const user = await prisma.usuario.findUnique({ where: { id } });
+    if (!user) {
+        throw new Error("Usuario no encontrado");
+    }
+
     return await prisma.usuario.update({
         where: { id },
-        data: { activo: false },
+        data: { activo: !user.activo },
+        include: {
+            roles: {
+                include: {
+                    rol: true,
+                },
+            },
+        },
     });
 }

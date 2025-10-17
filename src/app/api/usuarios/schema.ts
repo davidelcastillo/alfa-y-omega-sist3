@@ -6,7 +6,7 @@ export const createUserSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
   telefono: z.string().optional().nullable(),
-  rolId: z.number().int().positive(),
+  rolId: z.coerce.number().int().positive(),
   activo: z.boolean().optional(),
 });
 

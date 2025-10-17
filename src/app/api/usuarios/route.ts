@@ -1,21 +1,30 @@
-// src/app/api/usuarios/route.ts
-import { NextResponse } from "next/server";
-import { getUsers, createUser } from "@/server/usuarios/usuarios.service";
+import { NextResponse } from 'next/server';
+import { getUsers, createUser } from '@/server/usuarios/usuarios.service';
+import { createUserSchema } from './schema';
+import { ZodError } from 'zod';
 
 export async function GET() {
-    const users = await getUsers();
-    return NextResponse.json(users);
+    try {
+        const users = await getUsers();
+        return NextResponse.json({ ok: true, data: users });
+    } catch (error) {
+        const msg = (error as Error)?.message ?? 'Internal Error';
+        return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+    }
 }
 
-import { createUserSchema } from "./schema";
-
-export async function POST(request: Request) {
-    try {
-        const data = await request.json();
-        const validatedData = createUserSchema.parse(data);
-        const newUser = await createUser(validatedData);
-        return NextResponse.json(newUser, { status: 201 });
-    } catch (error) {
-        return NextResponse.json(error, { status: 400 });
+export async function POST(req: Request) {
+  try {
+    const json = await req.json();
+    const data = createUserSchema.parse(json);
+    const nuevo = await createUser(data);
+    return NextResponse.json({ ok: true, data: nuevo }, { status: 201 });
+  } catch (err: unknown) {
+    if (err instanceof ZodError) {
+      return NextResponse.json({ ok: false, error: err.issues }, { status: 422 });
     }
+    const msg = (err as Error)?.message ?? 'Internal Error';
+    const status = /no existe/i.test(msg) ? 400 : 500;
+    return NextResponse.json({ ok: false, error: msg }, { status });
+  }
 }
