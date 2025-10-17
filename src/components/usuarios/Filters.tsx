@@ -1,117 +1,100 @@
 // src/components/usuarios/Filters.tsx
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { Rol } from '@/generated/prisma'
+import { useEffect, useState } from "react";
+import type { Rol } from "@/generated/prisma";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
+import Select from "@/components/ui/Select";
 
 export type UserFilters = {
-  search: string
-  rolId: string
-  estado: string
-}
+  search: string;
+  rolId: string;   // guardamos como string para el <select>
+  estado: string;  // "Activo" | "Inactivo" | ""
+};
 
 type Props = {
-  roles: Rol[]
-  value: UserFilters
-  onChange: (filters: UserFilters) => void
-}
+  roles: Rol[];
+  value: UserFilters;
+  onChange: (filters: UserFilters) => void;
+};
 
 export default function Filters({ roles, value, onChange }: Props) {
-  const [filters, setFilters] = useState<UserFilters>(value)
+  const [filters, setFilters] = useState<UserFilters>(value);
 
+  // Sincroniza con cambios externos en `value`
   useEffect(() => {
-    setFilters(value)
-  }, [value])
+    setFilters(value);
+  }, [value]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target
-    setFilters(prev => ({ ...prev, [name]: value }))
+  function update<K extends keyof UserFilters>(k: K, v: UserFilters[K]) {
+    setFilters(prev => {
+      const next = { ...prev, [k]: v };
+      return next;
+    });
   }
 
-  const handleApply = () => {
-    onChange(filters)
+  function handleApply() {
+    onChange(filters);
   }
 
-  const handleClear = () => {
-    const cleared = { search: '', rolId: '', estado: '' }
-    setFilters(cleared)
-    onChange(cleared)
+  function handleClear() {
+    const cleared: UserFilters = { search: "", rolId: "", estado: "" };
+    setFilters(cleared);
+    onChange(cleared);
   }
 
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-lg mb-8 border border-gray-100">
+    <div className="glass-effect rounded-2xl p-8 mb-8 card-hover bg-white/95 backdrop-blur-sm border border-white/20">
+      <h3 className="text-xl font-semibold text-blue-800 mb-6">Filtros de Usuarios</h3>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Búsqueda */}
-        <div>
-          <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
-            Buscar
-          </label>
-          <input
-            type="text"
-            id="search"
-            name="search"
-            value={filters.search}
-            onChange={handleChange}
-            placeholder="Nombre, email..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-blue focus:border-transparent transition-shadow"
-          />
-        </div>
+        <Input
+          label="Buscar"
+          id="search"
+          name="search"
+          placeholder="Nombre, email..."
+          value={filters.search}
+          onChange={(e) => update("search", e.target.value)}
+        />
 
-        {/* Filtro por Rol */}
-        <div>
-          <label htmlFor="rolId" className="block text-sm font-medium text-gray-700 mb-1">
-            Rol
-          </label>
-          <select
-            id="rolId"
-            name="rolId"
-            value={filters.rolId}
-            onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-blue focus:border-transparent transition-shadow"
-          >
-            <option value="">Todos</option>
-            {roles.map(rol => (
-              <option key={rol.id} value={rol.id}>
-                {rol.nombre}
-              </option>
-            ))}
-          </select>
-        </div>
+        <Select
+          label="Rol"
+          id="rolId"
+          name="rolId"
+          value={filters.rolId}
+          onChange={(e) => update("rolId", e.target.value)}
+        >
+          <option value="">Todos</option>
+          {roles.map((rol) => (
+            <option key={rol.id} value={String(rol.id)}>
+              {rol.nombre}
+            </option>
+          ))}
+        </Select>
 
-        {/* Filtro por Estado */}
-        <div>
-          <label htmlFor="estado" className="block text-sm font-medium text-gray-700 mb-1">
-            Estado
-          </label>
-          <select
-            id="estado"
-            name="estado"
-            value={filters.estado}
-            onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-blue focus:border-transparent transition-shadow"
-          >
-            <option value="">Todos</option>
-            <option value="Activo">Activo</option>
-            <option value="Inactivo">Inactivo</option>
-          </select>
-        </div>
+        <Select
+          label="Estado"
+          id="estado"
+          name="estado"
+          value={filters.estado}
+          onChange={(e) => update("estado", e.target.value)}
+        >
+          <option value="">Todos</option>
+          <option value="Activo">Activo</option>
+          <option value="Inactivo">Inactivo</option>
+        </Select>
 
         {/* Botones */}
-        <div className="flex items-end gap-4">
-          <button
-            onClick={handleApply}
-            className="w-full btn-primary text-white px-6 py-2 rounded-xl font-semibold text-base"
-          >
-            Aplicar
-          </button>
-          <button
-            onClick={handleClear}
-            className="w-full px-6 py-2 border-2 border-gray-200 rounded-xl hover:bg-gray-50 transition-colors font-medium text-base"
-          >
+        <div className="flex items-end gap-3">
+          <Button variant="outline" className="w-1/2" onClick={handleClear}>
             Limpiar
-          </button>
+          </Button>
+          <Button variant="azul" className="w-1/2" onClick={handleApply}>
+            Aplicar
+          </Button>
         </div>
       </div>
     </div>
-  )
+  );
 }

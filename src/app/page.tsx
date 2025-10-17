@@ -1,70 +1,95 @@
+// 1. SOLUCIÓN: Directiva para que el buscador (useState) funcione
+'use client'
+
+import { useState } from 'react'
 import Link from 'next/link'
 import AppShell from '@/components/layout/AppShell'
+import {
+  Boxes, Warehouse, MoveRight, Truck, ShoppingCart,
+  ReceiptText, CreditCard, Users2, BarChart3,
+  Search,
+  // 2. NUEVO: Ícono para el botón de E-commerce
+  Store
+} from "lucide-react";
+
+const modules = [
+  // ... (la lista de módulos no cambia, la omito por brevedad)
+  { href: '/productos', icon: Boxes, title: 'Productos', description: 'Gestión de catálogo, precios y estado.' },
+  { href: '/depositos', icon: Warehouse, title: 'Depósitos', description: 'Administración de depósitos y capacidades.' },
+  { href: '/movimientos', icon: MoveRight, title: 'Movimientos de stock', description: 'Historial completo de ingresos y egresos.' },
+  { href: '/proveedores', icon: Truck, title: 'Proveedores', description: 'Administra la información de tus proveedores.' },
+  { href: '/compras', icon: ShoppingCart, title: 'Órdenes de compras', description: 'Administra y controla todas las órdenes de compra.' },
+  { href: '/comprobante-proveedor', icon: ReceiptText, title: 'Comprobantes de proveedor', description: 'Controla los comprobantes de proveedor.' },
+  { href: '/pagos', icon: CreditCard, title: 'Pagos a proveedor', description: 'Administra y controla todos los pagos.' },
+  { href: '/ventas', icon: ShoppingCart, title: 'Ventas', description: 'Gestiona y controla todos los pedidos de ventas.' },
+  { href: '/usuarios', icon: Users2, title: 'Gestión de Usuarios', description: 'Administra y controla los usuarios del sistema.' },
+  { href: '/dashboard', icon: BarChart3, title: 'Resumen del Corralón', description: 'Ingresos, egresos y resultado por período.' },
+];
 
 export default function HomePage() {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredModules = modules.filter(module =>
+    module.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    module.description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <AppShell>
-    <main className="w-full max-w-none mx-auto px-3 sm:px-4 lg:px-6 py-8 fade-in">
-      {/* Breadcrumb */}
-      <div className="flex items-center space-x-2 text-sm text-gray-600 mb-6">
-        <span>Inicio</span>
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-        </svg>
-      </div>
-      {/* Action Bar */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 space-y-4 lg:space-y-0">
-        <div>
-          <h2 className="text-4xl font-bold bg-gradient-to-r from-primary-pink to-primary-blue bg-clip-text text-transparent mb-2">
-            Bienvenido al ERP
-          </h2>
-          <p className="text-gray-600 text-lg">Elegí un módulo para comenzar:</p>
-        </div> 
-      </div>
-      
-      <div className="space-y-5">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6" >
-          <Link href="/productos" className="glass-effect rounded-2xl p-6 card-hover">
-            <h2 className="text-2xl font-semibold mb-2">Productos</h2>
-            <p className="text-gray-600">Gestión de catálogo, precios y estado.</p>
-          </Link>
-          <Link href="/depositos" className="glass-effect rounded-2xl p-6 card-hover">
-            <h2 className="text-2xl font-semibold mb-2">Depósitos</h2>
-            <p className="text-gray-600">Administración de depósitos y capacidades.</p>
+      <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 fade-in">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-primary-pink to-primary-blue bg-clip-text text-transparent mb-3">
+            Bienvenido al Sistema de Gestión
+          </h1>
+          <p className="text-gray-600 text-lg">Seleccioná un módulo o visitá nuestra tienda online.</p>
+        </div>
+
+        {/* 3. NUEVO: Botón de E-commerce */}
+        <div className="flex justify-center mb-10">
+          <Link
+            href="/eco/inicio"
+            className="inline-flex items-center gap-x-3 bg-gradient-to-r from-primary-pink to-primary-blue text-white font-bold text-lg py-3 px-8 rounded-full shadow-lg hover:scale-105 transform transition-transform duration-300 ease-in-out"
+          >
+            <Store className="h-6 w-6" />
+            <span>Ir al E-commerce</span>
           </Link>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <Link href="/movimientos" className="glass-effect rounded-2xl p-6 card-hover">
-            <h2 className="text-2xl font-semibold mb-2">Movimientos de stock</h2>
-            <p className="text-gray-600">Historial completo de ingresos y egresos de inventario.</p>
-          </Link>
-          <Link href="/proveedores" className="glass-effect rounded-2xl p-6 card-hover">
-            <h2 className="text-2xl font-semibold mb-2">Proveedores</h2>
-            <p className="text-gray-600">Administra y controla toda la información de tus proveedores.</p>
-          </Link>
+
+        {/* Input del buscador */}
+        <div className="mb-10 max-w-lg mx-auto">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              placeholder="Buscar un módulo..."
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-primary-blue focus:border-primary-blue"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <Link href="/compras" className="glass-effect rounded-2xl p-6 card-hover">
-            <h2 className="text-2xl font-semibold mb-2">Órdenes de compras</h2>
-            <p className="text-gray-600">Administra y controla todas las órdenes de compra.</p>
-          </Link>
-          <Link href="/comprobante-proveedor" className="glass-effect rounded-2xl p-6 card-hover">
-            <h2 className="text-2xl font-semibold mb-2">Comprobantes de proveedor</h2>
-            <p className="text-gray-600">Administra y controla todos los comprobantes de proveedor.</p>
-          </Link>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <Link href="/pagos" className="glass-effect rounded-2xl p-6 card-hover">
-            <h2 className="text-2xl font-semibold mb-2">Pagos a proveedor</h2>
-            <p className="text-gray-600">Administra y controla todos los pagos a proveedores.</p>
-          </Link>
-          <Link href="/ventas" className="glass-effect rounded-2xl p-6 card-hover">
-            <h2 className="text-2xl font-semibold mb-2">Ventas</h2>
-            <p className="text-gray-600">Gestiona y controla todos los pedidos de ventas.</p>
-          </Link>
-        </div>
-      </div>
-    </main>
+
+        {/* Grid de Módulos (ahora usa `filteredModules`) */}
+        {filteredModules.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredModules.map((module) => (
+              <Link href={module.href} key={module.href} className="glass-effect rounded-2xl p-6 card-hover flex flex-col items-start text-left">
+                <div className="bg-blue-100 text-primary-blue rounded-lg p-3 mb-4">
+                  <module.icon className="w-8 h-8" />
+                </div>
+                <h2 className="text-xl font-semibold mb-2 text-gray-800">{module.title}</h2>
+                <p className="text-gray-600 text-sm flex-grow">{module.description}</p>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-10">
+            <p className="text-gray-500 text-lg">No se encontraron módulos que coincidan con tu búsqueda.</p>
+          </div>
+        )}
+      </main>
     </AppShell>
   )
 }

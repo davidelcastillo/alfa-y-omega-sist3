@@ -1,5 +1,6 @@
 'use client'
 
+import React from "react";
 import { useMemo, useState, useEffect } from 'react'
 import { UserWithRole } from '@/server/usuarios/usuarios.service'
 import { Rol } from '@/generated/prisma'
@@ -8,6 +9,7 @@ import Filters, { type UserFilters } from '@/components/usuarios/Filters'
 import UsuarioModal, { Inputs as UserSubmit } from './UsuarioModal'
 import { Button } from '@/components/ui/Button'
 import { Plus } from 'lucide-react'
+import { SquarePen, UserCheck, UserX } from "lucide-react";
 
 const PAGE_SIZE = 10;
 
@@ -128,64 +130,135 @@ export default function UsuariosClient({ users: initialUsers, roles }: { users: 
             <StatsCards users={users} />
             <Filters roles={roles} value={filters} onChange={setFilters} />
 
-            <div className="bg-white border rounded-xl p-4">
-                <table className="w-full text-left">
-                    <thead>
-                        <tr className="border-b">
-                            <th className="p-4">Nombre</th>
-                            <th className="p-4">Email</th>
-                            <th className="p-4">Teléfono</th>
-                            <th className="p-4">Rol</th>
-                            <th className="p-4">Activo</th>
-                            <th className="p-4">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {paginatedUsers.map((user) => (
-                            <tr key={user.id} className="border-b">
-                                <td className="p-4">{user.nombre} {user.apellido}</td>
-                                <td className="p-4">{user.email}</td>
-                                <td className="p-4">{user.telefono}</td>
-                                <td className="p-4">{user.roles && user.roles[0]?.rol.nombre || "Sin rol"}</td>
-                                <td className="p-4">{user.activo ? "Sí" : "No"}</td>
-                                <td className="p-4 flex gap-2">
-                                    <Button variant="outline" size="sm" onClick={() => handleEdit(user)}>
-                                        Editar
-                                    </Button>
-                                    <Button variant="destructive" size="sm" onClick={() => handleDelete(user.id)}>
-                                        {user.activo ? "Desactivar" : "Activar"}
-                                    </Button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+            {/* === Tabla de Usuarios, estilo ComprasTable === */}
+            <div className="glass-effect rounded-2xl overflow-hidden card-hover border">
+            <div className="bg-gradient-to-r from-primary-pink to-light-pink p-6">
+                <h3 className="text-xl font-bold text-white">Lista de Usuarios</h3>
             </div>
 
-            <div className="flex flex-col md:flex-row justify-between items-center mt-8 gap-4">
-                <p className="text-gray-600 font-medium">
-                    Mostrando <span className="font-bold text-primary-pink">{(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, filteredUsers.length)}</span> de <span className="font-bold text-primary-pink">{filteredUsers.length}</span> usuarios
-                </p>
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => setPage(p => Math.max(1, p - 1))}
-                        disabled={page <= 1}
-                        className={`px-6 py-3 border-2 rounded-xl font-medium transition-colors ${page <= 1 ? 'border-gray-200 text-gray-400 cursor-not-allowed' : 'border-gray-200 hover:bg-gray-50'}`}
-                    >
-                        Anterior
-                    </button>
-                    <span className="text-sm text-gray-700 px-2">
-                        Página <span className="font-semibold">{page}</span> de <span className="font-semibold">{totalPages}</span>
-                    </span>
-                    <button
-                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                        disabled={page >= totalPages}
-                        className={`px-6 py-3 border-2 rounded-xl font-medium transition-colors ${page >= totalPages ? 'border-gray-200 text-gray-400 cursor-not-allowed' : 'border-gray-200 hover:bg-gray-50'}`}
-                    >
-                        Siguiente
-                    </button>
-                </div>
+            <div className="overflow-x-auto">
+                <table className="w-full">
+                <thead className="bg-gray-50">
+                    <tr>
+                    <th scope="col" className="px-6 py-4 text-left text-sm font-bold text-blue-800">Nombre</th>
+                    <th scope="col" className="px-6 py-4 text-left text-sm font-bold text-blue-800">Email</th>
+                    <th scope="col" className="px-6 py-4 text-left text-sm font-bold text-blue-800">Teléfono</th>
+                    <th scope="col" className="px-6 py-4 text-left text-sm font-bold text-blue-800">Rol</th>
+                    <th scope="col" className="px-6 py-4 text-left text-sm font-bold text-blue-800">Estado</th>
+                    <th scope="col" className="px-6 py-4 text-left text-sm font-bold text-blue-800">Acciones</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {paginatedUsers.map((user: any, idx: number) => (
+                    <tr key={user.id} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                        <td className="px-6 py-4 text-gray-900 font-medium">
+                        {user.nombre} {user.apellido}
+                        </td>
+                        <td className="px-6 py-4 text-gray-700">{user.email}</td>
+                        <td className="px-6 py-4 text-gray-700">{user.telefono || "-"}</td>
+                        <td className="px-6 py-4 text-gray-700">
+                        {user.roles?.[0]?.rol?.nombre ?? "Sin rol"}
+                        </td>
+                        <td className="px-6 py-4">
+                        {user.activo ? (
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
+                            Activo
+                            </span>
+                        ) : (
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
+                            Inactivo
+                            </span>
+                        )}
+                        </td>
+                        <td className="px-6 py-4">
+                            <div className="flex space-x-3">
+                                {/* Editar */}
+                                <button
+                                type="button"
+                                onClick={() => handleEdit(user)}
+                                title="Editar usuario"
+                                aria-label={`Editar ${user.nombre} ${user.apellido}`}
+                                className="text-primary-blue hover:text-dark-blue transition-colors p-2 rounded-lg hover:bg-light-pink"
+                                >
+                                <SquarePen className="w-5 h-5" aria-hidden />
+                                </button>
+
+                                {/* Activar / Desactivar */}
+                                {user.activo ? (
+                                <button
+                                    type="button"
+                                    onClick={() => handleDelete(user.id)}
+                                    title="Desactivar usuario"
+                                    aria-label={`Desactivar ${user.nombre} ${user.apellido}`}
+                                    className="text-red-500 hover:text-red-700 transition-colors p-2 rounded-lg hover:bg-red-50"
+                                >
+                                    <UserX className="w-5 h-5" aria-hidden />
+                                </button>
+                                ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => handleDelete(user.id)}
+                                    title="Activar usuario"
+                                    aria-label={`Activar ${user.nombre} ${user.apellido}`}
+                                    className="text-green-600 hover:text-green-700 transition-colors p-2 rounded-lg hover:bg-green-50"
+                                >
+                                    <UserCheck className="w-5 h-5" aria-hidden />
+                                </button>
+                                )}
+                            </div>
+                    </td>
+
+                    </tr>
+                    ))}
+
+                    {paginatedUsers.length === 0 && (
+                    <tr>
+                        <td className="px-6 py-10 text-center text-gray-500" colSpan={6}>
+                        No hay usuarios que coincidan con los filtros.
+                        </td>
+                    </tr>
+                    )}
+                </tbody>
+                </table>
             </div>
+            </div>
+
+            {/* === Paginación, alineada a la estética === */}
+            <div className="flex flex-col md:flex-row justify-between items-center mt-8 gap-4">
+            <p className="text-gray-600 font-medium">
+                Mostrando{" "}
+                <span className="font-bold text-primary-pink">
+                {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, filteredUsers.length)}
+                </span>{" "}
+                de{" "}
+                <span className="font-bold text-primary-pink">{filteredUsers.length}</span> usuarios
+            </p>
+
+            <div className="flex items-center gap-2">
+                <Button
+                variant="outline"
+                onClick={() => setPage((p: number) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                >
+                Anterior
+                </Button>
+
+                <span className="text-sm text-gray-700 px-2">
+                Página <span className="font-semibold">{page}</span> de{" "}
+                <span className="font-semibold">{totalPages}</span>
+                </span>
+
+                <Button
+                variant="outline"
+                onClick={() => setPage((p: number) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                >
+                Siguiente
+                </Button>
+            </div>
+            </div>
+
 
             <UsuarioModal
                 open={isModalOpen}
