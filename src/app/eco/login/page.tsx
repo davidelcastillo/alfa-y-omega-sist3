@@ -3,7 +3,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Autocomplete, useLoadScript } from "@react-google-maps/api";
+import { useLoadScript } from "@react-google-maps/api";
+import { parsePlace } from "@/lib/eco/maps";
 import { useMemo } from "react";
 
 /* ================== LocalStorage keys ya usados ================== */
@@ -160,7 +161,6 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
 }
 
 /* ================== Registro ================== */
-/* ================== Registro ================== */
 function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
   const [nombre, setNombre] = useState("");
   const [apellido, setApellido] = useState("");
@@ -198,36 +198,36 @@ function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
   };
   const pwValid = Object.values(pwRules).every(Boolean);
 
-  // Cargar Google y montar Autocomplete
+  const { isLoaded } = useLoadScript({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
+    libraries: ["places"],
+  });
   useEffect(() => {
-    let ac: google.maps.places.Autocomplete | null = null;
-    let cancelled = false;
+  if (!isLoaded) return;
 
-    (async () => {
-      const { loadGoogleMaps, parsePlace } = await import("@/lib/eco/maps");
-      const g = await loadGoogleMaps();
-      const el = (RegisterForm as any)._autoEl as HTMLInputElement | null;
-      if (!g || !el) return;
+    const el = (RegisterForm as any)._autoEl as HTMLInputElement | null;
+    if (!el || !globalThis.google?.maps?.places) return;
 
-      ac = new g.maps.places.Autocomplete(el, {
-        fields: ["address_components", "place_id"],
-        types: ["address"],
-        componentRestrictions: { country: ["ar"] }, // limitar si querés
-      });
+    const ac = new google.maps.places.Autocomplete(el, {
+      fields: ["address_components", "place_id"],
+      types: ["address"],
+      componentRestrictions: { country: ["ar"] },
+    });
 
-      ac.addListener("place_changed", () => {
-        if (cancelled) return;
-        const place = ac!.getPlace();
-        const parsed = parsePlace(place);
-        setDireccion((d) => ({ ...d, ...parsed }));
-        // En el input visible mostramos calle + número si vino
-        const label = [parsed.calle, parsed.numero].filter(Boolean).join(" ");
-        setQuery(label || "");
-      });
-    })();
+    const handlePlace = () => {
+      const place = ac.getPlace();
+      const parsed = parsePlace(place);
+      setDireccion((d) => ({ ...d, ...parsed }));
+      const label = [parsed.calle, parsed.numero].filter(Boolean).join(" ");
+      setQuery(label || "");
+    };
 
-    return () => { cancelled = true; };
-  }, []);
+    ac.addListener("place_changed", handlePlace);
+    return () => {
+      google.maps.event.clearInstanceListeners(ac);
+    };
+  }, [isLoaded]);
+
 
   // Validación mínima de dirección (lo que tu API necesita)
   const dirOk =

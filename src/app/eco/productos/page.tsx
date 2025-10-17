@@ -10,7 +10,8 @@ type ApiProducto = {
   rubro: string | null
   marca: string | null
   unidad: string | null
-  imageUrl?: string | null // ← NUEVO
+  imageUrl?: string | null
+  precioVenta?: number | null   // 👈 AÑADIDO
 }
 
 const slug = (s: string | null | undefined) =>
@@ -39,15 +40,15 @@ function toUiProduct(r: ApiProducto) {
   return {
     id: r.id,
     name,
-    brand,                       // string | undefined
-    category,                    // string | undefined
-    unit,                        // string | undefined
+    brand,
+    category,
+    unit,
     description: [category, brand].filter(Boolean).join(" • "),
     brandSlug: slug(brand),
     categorySlug: slug(category),
     slug: `${r.id}-${slugifyName(name)}`,
-    imageUrl: r.imageUrl ?? undefined, // ← ahora viene del API
-    price: undefined,            // por ahora sin precio -> “Consultar”
+    imageUrl: r.imageUrl ?? undefined,
+    price: r.precioVenta ?? undefined,   // 👈 AHORA VIENE EL PRECIO
   }
 }
 
@@ -56,13 +57,11 @@ export const dynamic = "force-dynamic"
 export default async function ProductosPage({ searchParams }: Props) {
   const { q = "", brand = "", category = "", unit = "" } = searchParams
 
-  // Base absoluta (dev/prod)
   const h = await headers()
   const proto = h.get("x-forwarded-proto") ?? "http"
   const host  = h.get("x-forwarded-host") ?? h.get("host")
   const base  = `${proto}://${host}`
 
-  // Fetch real a tu API
   const url = new URL("/api/catalogos/productos", base)
   if (q.trim()) url.searchParams.set("search", q.trim())
   url.searchParams.set("limit", "100")
@@ -73,7 +72,6 @@ export default async function ProductosPage({ searchParams }: Props) {
   const rows: ApiProducto[] = await res.json()
   const all = rows.map(toUiProduct)
 
-  // Filtros in-memory
   const qn = q.trim().toLowerCase()
   const filtered = all.filter(p => {
     const matchesQ =

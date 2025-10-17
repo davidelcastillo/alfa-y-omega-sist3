@@ -13,6 +13,9 @@ export async function GET(req: NextRequest) {
     select: {
       id: true,
       nombre: true,
+      /* Si rompe algo borrar */
+      precioVenta: true,
+      /* Si rompe algo borrar */
       rubro: { select: { nombre: true } },
       marca: { select: { nombre: true } },
       unidad: { select: { nombre: true } },
@@ -35,7 +38,9 @@ export async function GET(req: NextRequest) {
       rubro: r.rubro?.nombre ?? null,
       marca: r.marca?.nombre ?? null,
       unidad: r.unidad?.nombre ?? null,
-      imageUrl: r.imagenes[0]?.url ?? null, // ← NUEVO
+      /*si rompe algo borrar, son para el ecommerce*/
+      imageUrl: r.imagenes[0]?.url ?? null,
+      precioVenta: r.precioVenta ?? null,
     }))
   );
 }
