@@ -38,6 +38,7 @@ export type MovimientoPayload = {
   comentario?: string;
   productos: Array<{ productoId: number; cantidad: number }>;
   ajusteSigno?: 'positivo' | 'negativo';
+  pedidoId?: number;
 };
 
 type Props = {
@@ -93,6 +94,7 @@ export default function MovimientosModal({
   );
   const [numeroComprobanteBusqueda, setNumeroComprobanteBusqueda] = useState('');
   const [isBuscando, setIsBuscando] = useState(false);
+  const [pedidoId, setPedidoId] = useState<number | null>(null);
 
   // ---- Opciones para selects ----
   const depOptions = useMemo(
@@ -155,6 +157,7 @@ export default function MovimientosModal({
   const handleBuscarPedido = async () => {
     if (!numeroComprobanteBusqueda) return;
     setIsBuscando(true);
+    setPedidoId(0); // Limpiar ID de pedido anterior en cada búsqueda
     try {
       const response = await fetch(`/api/pedidos/${numeroComprobanteBusqueda.trim()}`);
       if (!response.ok) {
@@ -164,6 +167,7 @@ export default function MovimientosModal({
 
       if (pedido && pedido.items && pedido.items.length > 0) {
         // Autocompletar formulario
+        setPedidoId(pedido.id); // Guardar el ID del pedido
         setTipoMovimientoId(6); // Egreso por Venta (ID desde la BD)
         setDeposito(2); // Deposito Norte
         // Se establece el estado 'numero', que se usa para el campo 'numeroComprobante' en el payload del submit.
@@ -211,6 +215,7 @@ export default function MovimientosModal({
         return { productoId: Number(it.productoId), cantidad: qty };
       }),
       ajusteSigno: isAjuste ? ajusteSigno : undefined,
+      pedidoId: pedidoId ?? undefined,
     };
 
     onSubmit(payload);
@@ -272,7 +277,7 @@ export default function MovimientosModal({
             <div className="flex items-end space-x-2">
               <Input
                 label="Número de comprobante"
-                placeholder="Ingrese número o busque pedido"
+                placeholder="Buscar Pedido (ej: PD-123)"
                 value={numeroComprobanteBusqueda}
                 onChange={(e) => setNumeroComprobanteBusqueda(e.target.value)}
                 className="input-focus flex-grow"
