@@ -29,15 +29,15 @@ export async function POST(req: Request) {
       if (!carrito || carrito.items.length === 0) throw new Error("Carrito vacío");
 
       const [estadoPedido, tipoMovimiento, tipoComprobante, metodoEnvio] = await Promise.all([
-        tx.estadoPedido.findFirst({ where: { nombre: "PAGADO" }, select: { id: true } }),
+        tx.estadoPedido.findFirst({ where: { nombre: "En Preparación" }, select: { id: true } }),
         tx.tipoMovimiento.findFirst({ where: { nombre: "EGRESO" }, select: { id: true } }),
         tx.tipoComprobante.findFirst({ where: { nombre: "VENTA" }, select: { id: true } }),
         tx.metodoEnvio.findUnique({ where: { id: metodoEnvioId } }),
       ]);
 
-      if (!estadoPedido) throw new Error("Estado de pedido 'PAGADO' no encontrado");
-      if (!tipoMovimiento) throw new Error("Tipo de movimiento 'EGRESO' no encontrado");
-      if (!tipoComprobante) throw new Error("Tipo de comprobante 'VENTA' no encontrado");
+      if (!estadoPedido) throw new Error("Estado de pedido 'En Preparación' no encontrado");
+      
+     
       if (!metodoEnvio) throw new Error("Método de envío no encontrado");
 
       const itemsCalc = carrito.items.map((i) => ({
@@ -69,49 +69,9 @@ export async function POST(req: Request) {
         },
       });
 
-      // 2) egresar stock por depósitos (greedy)
-      for (const it of itemsCalc) {
-        let restante = it.cantidad;
+      
 
-        const stocks = await tx.stockPorDeposito.findMany({
-          where: { productoId: it.productoId, stockActual: { gt: 0 } },
-          orderBy: { depositoId: "asc" },
-        });
-
-        for (const s of stocks) {
-          if (restante <= 0) break;
-          const egresar = Math.min(restante, s.stockActual);
-
-          const upd = await tx.stockPorDeposito.updateMany({
-            where: { id: s.id, stockActual: { gte: egresar } },
-            data: { stockActual: { decrement: egresar } },
-          });
-          if (upd.count === 0) continue;
-
-          const mov = await tx.movimientoStock.create({
-            data: {
-              depositoId: s.depositoId,
-              tipoMovimientoId: tipoMovimiento.id,
-              tipoComprobanteId: tipoComprobante.id,
-              numeroComprobante: String(pedido.id),
-              comentario: "Venta e-commerce",
-            },
-          });
-          await tx.detalleMovimiento.create({
-            data: {
-              movimientoId: mov.id,
-              productoId: it.productoId,
-              cantidad: egresar,
-            },
-          });
-
-          restante -= egresar;
-        }
-        if (restante > 0)
-          throw new Error(`Stock insuficiente para producto ${it.productoId}`);
-      }
-
-      // 3) limpiar carrito
+      // 2) limpiar carrito
       await tx.itemCarrito.deleteMany({ where: { carritoId: carrito.id } });
 
       return { pedidoId: pedido.id, total };
