@@ -2,19 +2,21 @@
 "use client";
 
 import { useState } from "react";
-import { User } from "@/server/usuarios/usuarios.service";
+import { UserWithRole } from "@/server/usuarios/usuarios.service";
 import { Button } from "@/components/ui/Button";
 import { Plus } from "lucide-react";
-import UsuarioModal from "./UsuarioModal";
+import UsuarioModal, { Inputs as UserSubmit } from "./UsuarioModal";
+import { Rol } from "@/generated/prisma";
 
 type Props = {
-    users: User[];
+    users: UserWithRole[];
+    roles: Rol[];
 };
 
-export default function UsuariosClient({ users: initialUsers }: Props) {
+export default function UsuariosClient({ users: initialUsers, roles }: Props) {
     const [users, setUsers] = useState(initialUsers);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingUser, setEditingUser] = useState<User | null>(null);
+    const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
 
     const openModal = () => setIsModalOpen(true);
     const closeModal = () => {
@@ -27,12 +29,12 @@ export default function UsuariosClient({ users: initialUsers }: Props) {
         openModal();
     };
 
-    const handleEdit = (user: User) => {
+    const handleEdit = (user: UserWithRole) => {
         setEditingUser(user);
         openModal();
     };
 
-    const handleSubmit = async (data: any) => {
+    const handleSubmit = async (data: UserSubmit) => {
         try {
             if (editingUser) {
                 const updatedUser = await fetch(`/api/usuarios/${editingUser.id}`, {
@@ -56,12 +58,14 @@ export default function UsuariosClient({ users: initialUsers }: Props) {
     };
 
     const handleDelete = async (id: number) => {
-        if (confirm("¿Estás seguro de que quieres eliminar este usuario?")) {
+        if (confirm("¿Estás seguro de que quieres desactivar este usuario?")) {
             try {
-                await fetch(`/api/usuarios/${id}`, { method: "DELETE" });
-                setUsers(users.filter(u => u.id !== id));
+                const updatedUser = await fetch(`/api/usuarios/${id}`, {
+                    method: "DELETE",
+                }).then(res => res.json());
+                setUsers(users.map(u => u.id === updatedUser.id ? updatedUser : u));
             } catch (error) {
-                console.error("Error al eliminar el usuario", error);
+                console.error("Error al desactivar el usuario", error);
             }
         }
     };
@@ -106,6 +110,7 @@ export default function UsuariosClient({ users: initialUsers }: Props) {
                             <th className="p-4">Nombre</th>
                             <th className="p-4">Email</th>
                             <th className="p-4">Teléfono</th>
+                            <th className="p-4">Rol</th>
                             <th className="p-4">Activo</th>
                             <th className="p-4">Acciones</th>
                         </tr>
@@ -116,13 +121,14 @@ export default function UsuariosClient({ users: initialUsers }: Props) {
                                 <td className="p-4">{user.nombre} {user.apellido}</td>
                                 <td className="p-4">{user.email}</td>
                                 <td className="p-4">{user.telefono}</td>
+                                <td className="p-4">{user.roles[0]?.rol.nombre || "Sin rol"}</td>
                                 <td className="p-4">{user.activo ? "Sí" : "No"}</td>
                                 <td className="p-4 flex gap-2">
                                     <Button variant="outline" size="sm" onClick={() => handleEdit(user)}>
                                         Editar
                                     </Button>
                                     <Button variant="destructive" size="sm" onClick={() => handleDelete(user.id)}>
-                                        Eliminar
+                                        {user.activo ? "Desactivar" : "Activar"}
                                     </Button>
                                 </td>
                             </tr>
@@ -136,6 +142,7 @@ export default function UsuariosClient({ users: initialUsers }: Props) {
                 onClose={closeModal}
                 onSubmit={handleSubmit}
                 user={editingUser}
+                roles={roles}
             />
         </>
     );

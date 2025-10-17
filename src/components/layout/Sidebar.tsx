@@ -72,6 +72,15 @@ const items: MenuItem[] = [
     ),
   },
   {
+    label: 'Usuarios',
+    href: '/usuarios',
+    icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M15 21a6 6 0 00-9-5.197m0 0A5.975 5.975 0 0112 15c4.242 0 7.68-2.5 9-6"/>
+        </svg>
+    )
+  },
+  {
     label: 'Reportes',
     href: '#',
     icon: (

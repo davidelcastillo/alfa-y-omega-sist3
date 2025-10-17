@@ -7,8 +7,15 @@ export async function GET() {
     return NextResponse.json(users);
 }
 
+import { createUserSchema } from "./schema";
+
 export async function POST(request: Request) {
-    const data = await request.json();
-    const newUser = await createUser(data);
-    return NextResponse.json(newUser, { status: 201 });
+    try {
+        const data = await request.json();
+        const validatedData = createUserSchema.parse(data);
+        const newUser = await createUser(validatedData);
+        return NextResponse.json(newUser, { status: 201 });
+    } catch (error) {
+        return NextResponse.json(error, { status: 400 });
+    }
 }

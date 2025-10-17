@@ -1,33 +1,67 @@
 // src/server/usuarios/usuarios.service.ts
-import { PrismaClient, Usuario } from "@/generated/prisma";
+import { PrismaClient, Usuario, Rol, Prisma } from "@/generated/prisma";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
-export type User = Usuario;
+export type UserWithRole = Usuario & { roles: { rol: Rol }[] };
 
-export async function getUsers(): Promise<User[]> {
-    return await prisma.usuario.findMany();
-}
-
-export async function createUser(data: Omit<User, 'id' | 'fechaRegistro' | 'passwordHash'> & { password?: string }): Promise<User> {
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(data.password || "123456", salt);
-    return await prisma.usuario.create({
-        data: {
-            ...data,
-            passwordHash,
+export async function getUsers(): Promise<UserWithRole[]> {
+    return await prisma.usuario.findMany({
+        include: {
+            roles: {
+                include: {
+                    rol: true,
+                },
+            },
         },
     });
 }
 
-export async function updateUser(id: number, data: Partial<Omit<User, 'id' | 'fechaRegistro' | 'passwordHash'>> & { password?: string }): Promise<User> {
-    const updateData: any = { ...data };
+export async function getRoles(): Promise<Rol[]> {
+    return await prisma.rol.findMany();
+}
 
-    if (data.password) {
-        const salt = await bcrypt.genSalt(10);
-        updateData.passwordHash = await bcrypt.hash(data.password, salt);
-        delete updateData.password;
+export async function createUser(data: Omit<UserWithRole, 'id' | 'fechaRegistro' | 'passwordHash' | 'roles'> & { password?: string, rolId?: number }): Promise<User> {
+    const { password, rolId, ...userData } = data;
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password || "123456", salt);
+
+    const createData: Prisma.UsuarioCreateInput = {
+        ...userData,
+        passwordHash,
+    };
+
+    if (rolId) {
+        createData.roles = {
+            create: {
+                rolId: Number(rolId)
+            }
+        };
+    }
+
+    return await prisma.usuario.create({
+        data: createData,
+    });
+}
+
+export async function updateUser(id: number, data: Partial<Omit<UserWithRole, 'id' | 'fechaRegistro' | 'passwordHash' | 'roles'>> & { rolId?: number }): Promise<User> {
+    const { rolId, ...userData } = data;
+
+    const updateData: Prisma.UsuarioUpdateInput = {
+        ...userData
+    };
+
+    if (rolId) {
+        await prisma.usuarioRol.deleteMany({
+            where: { usuarioId: id }
+        });
+
+        updateData.roles = {
+            create: {
+                rolId: Number(rolId)
+            }
+        };
     }
 
     return await prisma.usuario.update({
@@ -37,7 +71,8 @@ export async function updateUser(id: number, data: Partial<Omit<User, 'id' | 'fe
 }
 
 export async function deleteUser(id: number): Promise<User> {
-    return await prisma.usuario.delete({
+    return await prisma.usuario.update({
         where: { id },
+        data: { activo: false },
     });
 }

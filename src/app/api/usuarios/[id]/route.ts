@@ -6,15 +6,22 @@ type Params = {
     id: string;
 };
 
+import { updateUserSchema } from "../schema";
+
 export async function PUT(request: Request, context: { params: Params }) {
-    const { id } = context.params;
-    const data = await request.json();
-    const updatedUser = await updateUser(Number(id), data);
-    return NextResponse.json(updatedUser);
+    try {
+        const id = Number(context.params.id);
+        const data = await request.json();
+        const validatedData = updateUserSchema.parse(data);
+        const updatedUser = await updateUser(id, validatedData);
+        return NextResponse.json(updatedUser);
+    } catch (error) {
+        return NextResponse.json(error, { status: 400 });
+    }
 }
 
 export async function DELETE(request: Request, context: { params: Params }) {
-    const { id } = context.params;
-    await deleteUser(Number(id));
-    return new NextResponse(null, { status: 204 });
+    const id = Number(context.params.id);
+    const updatedUser = await deleteUser(id);
+    return NextResponse.json(updatedUser);
 }

@@ -3,40 +3,52 @@
 
 import { useEffect } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
-import { User } from "@/server/usuarios/usuarios.service";
+import { UserWithRole } from "@/server/usuarios/usuarios.service";
 import { Button } from "@/components/ui/Button";
+import { Rol } from "@/generated/prisma";
 
-type Inputs = {
+export type Inputs = {
     nombre: string;
     apellido: string;
     email: string;
     telefono: string;
     activo: boolean;
+    rolId: number;
+    password?: string;
 };
 
 type Props = {
     open: boolean;
     onClose: () => void;
     onSubmit: (data: Inputs) => void;
-    user?: User | null;
+    user?: UserWithRole | null;
+    roles: Rol[];
 };
 
-export default function UsuarioModal({ open, onClose, onSubmit, user }: Props) {
-    const { register, handleSubmit, reset, formState: { errors } } = useForm<Inputs>();
+export default function UsuarioModal({ open, onClose, onSubmit, user, roles }: Props) {
+    const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<Inputs>({
+        defaultValues: {
+            nombre: "",
+            apellido: "",
+            email: "",
+            telefono: "",
+            activo: true,
+            rolId: roles[0]?.id,
+        }
+    });
 
     useEffect(() => {
-        if (user) {
-            reset(user);
-        } else {
-            reset({
-                nombre: "",
-                apellido: "",
-                email: "",
-                telefono: "",
-                activo: true,
-            });
+        if (open && user) {
+            setValue("nombre", user.nombre);
+            setValue("apellido", user.apellido);
+            setValue("email", user.email);
+            setValue("telefono", user.telefono || "");
+            setValue("activo", user.activo);
+            setValue("rolId", user.roles[0]?.rol.id);
+        } else if (open && !user) {
+            reset();
         }
-    }, [user, reset]);
+    }, [open, user, setValue, reset]);
 
     if (!open) return null;
 
@@ -71,9 +83,19 @@ export default function UsuarioModal({ open, onClose, onSubmit, user }: Props) {
                         <label className="block text-sm font-medium text-gray-700">Teléfono</label>
                         <input {...register("telefono")} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
                     </div>
+                    {!user && (
+                        <div className="mt-4">
+                            <label className="block text-sm font-medium text-gray-700">Contraseña</label>
+                            <input type="password" {...register("password")} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                        </div>
+                    )}
                     <div className="mt-4">
-                        <label className="block text-sm font-medium text-gray-700">Contraseña</label>
-                        <input type="password" {...register("password")} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                        <label className="block text-sm font-medium text-gray-700">Rol</label>
+                        <select {...register("rolId")} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                            {roles.map(rol => (
+                                <option key={rol.id} value={rol.id}>{rol.nombre}</option>
+                            ))}
+                        </select>
                     </div>
                     <div className="mt-4">
                         <label className="flex items-center">
