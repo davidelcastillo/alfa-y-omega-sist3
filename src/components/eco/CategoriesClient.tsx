@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import CategoryCard from "./CategoryCard";
 
-type Item = { id: number; nombre: string; slug: string };
+type Item = { id: number; nombre: string;};
 
 export default function CategoriesClient({
   items,

@@ -84,7 +84,7 @@ export default function PagosTable({ data, onView, onSort, sortState }: Props) {
                 </td>
 
                 {/* Total */}
-                <td className="px-6 py-4 font-semibold text-gray-900 text-left">
+                <td className="px-6 py-4 font-semibold text-gray-900 text-right">
                   {moneyAR(p.total)}
                 </td>
 

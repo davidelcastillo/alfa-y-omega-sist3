@@ -1,6 +1,6 @@
 // src/components/eco/Categories.tsx
 import CategoriesClient from "./CategoriesClient";
-import { slugify } from "@/lib/eco/slug";
+//import { slugify } from "@/lib/eco/slug";
 import { getBaseUrlServer } from '@/lib/eco/http-server';
 
 type Rubro = { id: number; nombre: string };
@@ -31,10 +31,9 @@ export default async function Categories() {
   const items = rubros.map((r) => ({
     id: r.id,
     nombre: r.nombre,
-    slug: slugify(r.nombre),
   }));
 
-  return (
+return (
     <section id="categorias" className="section py-12">
       <h2 className="text-2xl font-bold mb-6">Categorías</h2>
       <CategoriesClient items={items} visibleCount={5} />

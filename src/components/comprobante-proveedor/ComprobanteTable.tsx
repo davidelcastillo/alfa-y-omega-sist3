@@ -123,11 +123,11 @@ export default function ComprasTable({
 
                   <td className="px-6 py-4 text-gray-700">{depositoNombre}</td>
 
-                  <td className="px-6 py-4 font-semibold text-gray-900 text-left">
+                  <td className="px-6 py-4 font-semibold text-gray-900 text-right">
                     {moneyAR(comprobante.total)}
                   </td>
 
-                  <td className="px-6 py-4 font-semibold text-gray-900 text-left">
+                  <td className="px-6 py-4 font-semibold text-gray-900 text-right">
                     {moneyAR(comprobante.saldo)}
                   </td>
 

@@ -1,15 +1,15 @@
+// src/components/eco/productos/ProductsToolbar.tsx
 "use client"
 
 import { useRouter, useSearchParams } from "next/navigation"
 import { useState, useEffect } from "react"
-import { slugify  } from "@/lib/eco/slug"
 
 type CatalogosResponse = {
   ok: boolean
   data?: {
     rubros: { id: number; nombre: string }[]
     marcas: { id: number; nombre: string }[]
-    unidades: { id: number; nombre: string }[]
+    unidades: { id: number; nombre: string }[]   // 👈 Asegurate de devolver {id,nombre}
   }
   error?: string
 }
@@ -18,16 +18,15 @@ export default function ProductsToolbar() {
   const router = useRouter()
   const sp = useSearchParams()
 
-  const [q, setQ] = useState(sp.get("q") ?? "")
-  const [brand, setBrand] = useState(sp.get("brand") ?? "")
-  const [category, setCategory] = useState(sp.get("category") ?? "")
-  const [unit, setUnit] = useState(sp.get("unit") ?? "")
+  const [q, setQ]                 = useState(sp.get("q") ?? "")
+  const [brandId, setBrandId]     = useState<string>(sp.get("brandId") ?? "")
+  const [categoryId, setCategoryId]= useState<string>(sp.get("categoryId") ?? "")
+  const [unitId, setUnitId]       = useState<string>(sp.get("unitId") ?? "")
 
-  // Catálogos
-  const [rubros, setRubros] = useState<{ id: number; nombre: string }[]>([])
-  const [marcas, setMarcas] = useState<{ id: number; nombre: string }[]>([])
-  const [unidades, setUnidades] = useState<string[]>([])
-  const [loading, setLoading] = useState(true)
+  const [rubros, setRubros]       = useState<{ id: number; nombre: string }[]>([])
+  const [marcas, setMarcas]       = useState<{ id: number; nombre: string }[]>([])
+  const [unidades, setUnidades]   = useState<{ id: number; nombre: string }[]>([])
+  const [loading, setLoading]     = useState(true)
 
   useEffect(() => {
     async function fetchCatalogos() {
@@ -37,7 +36,7 @@ export default function ProductsToolbar() {
         if (data.ok && data.data) {
           setRubros(data.data.rubros)
           setMarcas(data.data.marcas)
-          setUnidades(data.data.unidades.map(u => u.nombre))
+          setUnidades(data.data.unidades) // 👈 ahora es {id,nombre}
         }
       } catch (err) {
         console.error("Error cargando catálogos:", err)
@@ -50,15 +49,16 @@ export default function ProductsToolbar() {
 
   function apply() {
     const params = new URLSearchParams()
-    if (q) params.set("q", q)
-    if (brand) params.set("brand", brand)
-    if (category) params.set("category", category)
-    if (unit) params.set("unit", unit)
+      // 👇 CAMBIO AQUÍ
+    if (q) params.set("search", q) // Cambiado de "q" a "search"
+    if (brandId) params.set("brandId", brandId)
+    if (categoryId) params.set("categoryId", categoryId)
+    if (unitId) params.set("unitId", unitId)
     router.push(`/eco/productos?${params.toString()}`)
   }
 
   function clearAll() {
-    setQ(""); setBrand(""); setCategory(""); setUnit("")
+    setQ(""); setBrandId(""); setCategoryId(""); setUnitId("")
     router.push(`/eco/productos`)
   }
 
@@ -86,39 +86,41 @@ export default function ProductsToolbar() {
           <div>
             <label className="block text-sm text-gray-600 mb-1">Marca</label>
             <select
-              value={brand}
-              onChange={(e) => setBrand(e.target.value)}
+              value={brandId}
+              onChange={(e) => setBrandId(e.target.value)}
               className="w-full border rounded-lg h-10 px-2"
             >
               <option value="">Todas</option>
               {marcas.map(m => (
-                <option key={m.id} value={m.nombre.toLowerCase()}>{m.nombre}</option>
+                <option key={m.id} value={String(m.id)}>{m.nombre}</option>
               ))}
             </select>
           </div>
+
           <div>
             <label className="block text-sm text-gray-600 mb-1">Rubro</label>
             <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
               className="w-full border rounded-lg h-10 px-2"
             >
               <option value="">Todos</option>
               {rubros.map(r => (
-                <option key={r.id} value={r.nombre.toLowerCase()}>{r.nombre}</option>
+                <option key={r.id} value={String(r.id)}>{r.nombre}</option>
               ))}
             </select>
           </div>
+
           <div>
             <label className="block text-sm text-gray-600 mb-1">Unidad</label>
             <select
-              value={unit}
-              onChange={(e) => setUnit(e.target.value)}
+              value={unitId}
+              onChange={(e) => setUnitId(e.target.value)}
               className="w-full border rounded-lg h-10 px-2"
             >
               <option value="">Todas</option>
               {unidades.map(u => (
-                <option key={u} value={u.toLowerCase()}>{u}</option>
+                <option key={u.id} value={String(u.id)}>{u.nombre}</option>
               ))}
             </select>
           </div>

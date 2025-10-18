@@ -204,6 +204,16 @@ export default function CarritoPage() {
     }
   }, [coupon, isHydrated]);
 
+  // ➤ Notifica al Header y otros componentes sobre cambios en el carrito.
+  useEffect(() => {
+    // Solo notificar DESPUÉS de la carga inicial desde localStorage.
+    if (!isHydrated) return;
+
+    // Despachamos el mismo evento que usa ProductCard
+    window.dispatchEvent(new Event("eco:cart-changed"));
+
+  }, [items, isHydrated]); // Se ejecuta cada vez que 'items' cambia.
+
   // Totales y contador
   const { count, subtotal, discount, total } = useMemo(() => {
     const count = items.reduce((a, it) => a + (it.quantity || 0), 0);
