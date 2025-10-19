@@ -4,8 +4,7 @@
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import { moneyAR } from "@/lib/format/money";
-import type { VentaDetail } from "@/app/ventas/[id]/detalles/page";
-
+import type { VentaDetail } from "@/lib/ventas/types";
 type Props = { venta: VentaDetail };
 
 export default function VentasDetalles({ venta }: Props) {

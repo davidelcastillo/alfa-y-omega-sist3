@@ -44,7 +44,7 @@ export default function VentasClient({ initialOrders, initialWarehouses }: Props
   const stats: Stats = useMemo(() => {
     const totalOrders = allOrders.length;
     const shippedOrders = allOrders.filter(o => o.status === "Enviado").length;
-    const pendingOrders = allOrders.filter(o => o.status === "Pendiente de enviar").length;
+    const pendingOrders = allOrders.filter(o => o.status === "En Preparación").length;
     return { totalOrders, shippedOrders, pendingOrders, balance };
   }, [allOrders, balance]);
 
@@ -126,7 +126,7 @@ export default function VentasClient({ initialOrders, initialWarehouses }: Props
       <VentasTable
         orders={orders}
         onViewDetail={handleViewDetail}     // 👈 pasa la acción
-        //onDoShipment={handleDoShipment}
+        onDoShipment={handleDoShipment}
       />
 
       {/* Modal Envío */}

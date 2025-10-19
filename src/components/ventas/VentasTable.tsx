@@ -22,7 +22,7 @@ type Order = {
   totalProducts: number;
   cardNumber: string;
   total: number;
-  status: "Enviado" | "Pendiente de enviar";
+  status: "Enviado" | "Pendiente de enviar" | "En Preparación";                 //modificar aqui si es necesario otro estado
   shippedDate?: string;
   products: OrderProduct[];
   history: { date: string; action: string; user: string }[];
@@ -43,7 +43,7 @@ export type SortState = { key: SortKey; dir: "asc" | "desc" };
 type VentasTableProps = {
   orders: Order[];
   onViewDetail?: (order: Order) => void;
-  //onDoShipment?: (order: Order) => void;
+  onDoShipment?: (order: Order) => void;
   // Opcionales para ordenar (matching ComprasTable UX)
   onSort?: (s: SortState) => void;
   sortState?: SortState;
@@ -52,7 +52,7 @@ type VentasTableProps = {
 export default function VentasTable({
   orders,
   onViewDetail,
-  //onDoShipment,
+  onDoShipment,
   onSort,
   sortState,
 }: VentasTableProps) {
@@ -120,7 +120,7 @@ export default function VentasTable({
 
                 <td className="px-6 py-4 text-gray-700 text-center">{order.cardNumber}</td>
 
-                <td className="px-6 py-4 font-semibold text-gray-900 text-left">
+                <td className="px-6 py-4 font-semibold text-gray-900 text-right">
                   {moneyAR(order.total)}
                 </td>
 
@@ -148,7 +148,7 @@ export default function VentasTable({
                       <Eye className="w-4 h-4" />
                     </Button>
 
-                    {/*{order.status === "Pendiente de enviar" && (
+                    {order.status === "En Preparación" && (       //si muestra otro estado modificar aqui, a "Pndiente de enviar"
                       <Button
                         size="sm"
                         variant="ghost"
@@ -158,7 +158,7 @@ export default function VentasTable({
                       >
                         <Truck className="w-4 h-4" />
                       </Button>
-                    )}*/}
+                    )}
                   </div>
                 </td>
               </tr>

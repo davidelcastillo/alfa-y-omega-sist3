@@ -72,8 +72,8 @@ export default function Header() {
 
     // Evento propio cuando se modifica el carrito
     const onCartChanged = () => update();
-    window.addEventListener("cart-updated", onCartChanged);
-
+    window.addEventListener("eco:cart-changed", onCartChanged);
+    
     // Evento 'storage' para actualizaciones desde otras pestañas
     const onStorage = (e: StorageEvent) => {
       if (e.key === LS_CART) update();
@@ -81,7 +81,7 @@ export default function Header() {
     window.addEventListener("storage", onStorage);
 
     return () => {
-      window.removeEventListener("cart-updated", onCartChanged);
+      window.removeEventListener("eco:cart-changed", onCartChanged);
       window.removeEventListener("storage", onStorage);
     };
   }, []);

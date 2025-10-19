@@ -22,7 +22,7 @@ export type Order = {
   totalProducts: number;
   cardNumber: string;
   total: number;
-  status: "Enviado" | "Pendiente de enviar";
+  status: "Enviado" | "Pendiente de enviar" | "En Preparación";
   shippedDate?: string;
   products: OrderProduct[];
   history: HistoryEvent[];
@@ -61,7 +61,7 @@ export type VentaDetail = {
   orderTime: string;        // "HH:mm:ss"
   customerName: string;
   cardNumber: string;
-  status: "Enviado" | "Pendiente de enviar";
+  status: "Enviado" | "Pendiente de enviar" | "En Preparación";
   shippedDate?: string;
   warehouse?: string;
   total: number;

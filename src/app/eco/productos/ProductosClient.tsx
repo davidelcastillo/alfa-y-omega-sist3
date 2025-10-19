@@ -1,3 +1,4 @@
+"eco/productos/ProductosClient.tsx"
 "use client"
 import ProductsToolbar from "@/components/eco/productos/ProductsToolbar"
 import ProductsGrid from "@/components/eco/productos/ProductsGrid"

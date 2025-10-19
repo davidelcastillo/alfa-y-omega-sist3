@@ -1,9 +1,9 @@
-// src/components/eco/productos/ProductCard.tsx
+// src/components/eco/productos/TopBrandsCircles.tsx
 "use client"
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { slugify } from "@/lib/eco/slug"
+//import { slugify } from "@/lib/eco/slug"
 
 type Marca = { id: number; nombre: string }
 type CatalogosResponse = {
@@ -33,8 +33,6 @@ export default function ProductCard() {
 
         const marcas = json.data.marcas ?? []
         const dict = new Map(marcas.map(m => [m.id, m]))
-
-        // Seleccionar SOLO los TARGET_IDS (y mantener el orden del array)
         const seleccion = TARGET_IDS.map(id => dict.get(id)).filter(Boolean) as Marca[]
 
         if (!stop) setTop(seleccion)
@@ -48,8 +46,8 @@ export default function ProductCard() {
   }, [])
 
   function go(m: Marca) {
-    const brandSlug = slugify(m.nombre)
-    router.push(`/eco/productos?brand=${encodeURIComponent(brandSlug)}`)
+    // Cambiamos 'brand' por 'brandId' y pasamos el ID numérico de la marca.
+    router.push(`/eco/productos?brandId=${m.id}`)
   }
 
   return (
