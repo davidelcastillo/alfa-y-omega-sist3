@@ -22,6 +22,7 @@ model Usuario {
   direcciones   Direccion[]
   pedidos       Pedido[]
   roles         UsuarioRol[]
+  comprobantes   ComprobanteCliente[]
 }
 
 /// Define los roles en el sistema (ej: "CLIENTE", "ADMIN").
@@ -56,6 +57,7 @@ model Direccion {
   esPrincipal  Boolean  @default(false)
   usuario      Usuario  @relation(fields: [usuarioId], references: [id])
   pedidos      Pedido[]
+  comprobantes ComprobanteCliente[]
 }
 
 /// Representa el carrito de compras de un usuario.
@@ -201,6 +203,7 @@ model Producto {
   rubro                  Rubro                         @relation(fields: [rubroId], references: [id])
   unidad                 Unidad                        @relation(fields: [unidadId], references: [id])
   stockProductos         StockPorDeposito[]
+  comprobanteClientes   DetalleComprobanteCliente[]
 
   @@index([estado], map: "idx_producto_estado")
   @@index([nombre, rubroId], map: "idx_producto_nombre_rubro")
@@ -228,6 +231,7 @@ model Deposito {
   ComprobanteProveedor ComprobanteProveedor[]
   movimientos          MovimientoStock[]
   stock                StockPorDeposito[]
+  comprobanteCliente  ComprobanteCliente[]
 }
 
 model StockPorDeposito {
@@ -273,6 +277,7 @@ model TipoComprobante {
   nombre               String
   ComprobanteProveedor ComprobanteProveedor[]
   movimientos          MovimientoStock[]
+  comprobantesCliente  ComprobanteCliente[]
 }
 
 model TipoMovimiento {
@@ -280,11 +285,13 @@ model TipoMovimiento {
   nombre      String
   saldo       Boolean
   movimientos MovimientoStock[]
+  comprobantesCliente ComprobanteCliente[]
 }
 
 model ComprobanteProveedor {
   id                 Int                           @id @default(autoincrement())
   ordenCompraId      Int
+  numeroComprobante  Int?
   proveedorId        Int
   letra              String?
   numeroSucursal     String?
@@ -319,6 +326,48 @@ model DetalleComprobanteProveedor {
   precioXCantidad        Float?
   observaciones          String?
   comprobanteProveedor   ComprobanteProveedor @relation(fields: [comprobanteProveedorId], references: [id])
+  producto               Producto             @relation(fields: [productoId], references: [id])
+}
+
+
+model ComprobanteCliente {
+  id                 Int                           @id @default(autoincrement())
+  numeroComprobante  Int?
+  usuarioId          Int
+  letra              String?
+  numeroSucursal     String?
+  numero             String?
+  tipoComprobanteId  Int
+  fecha              DateTime
+  hora               String?
+  total              Float?
+  saldo              Float?
+  metodoPagoId       Int?
+  estado             Boolean                       @default(true)
+  observaciones      String?
+  tipoMovimientoId   Int?
+  depositoId         Int
+  moneda             String?
+  direccionId        Int
+  Deposito           Deposito                      @relation(fields: [depositoId], references: [id])
+  metodoPago         MetodoPago?                   @relation(fields: [metodoPagoId], references: [id])
+  usuario            Usuario                       @relation(fields: [usuarioId], references: [id])
+  tipoMovimiento     TipoMovimiento?               @relation(fields: [tipoMovimientoId], references: [id])
+  direccion          Direccion                     @relation(fields: [direccionId], references: [id])
+  tipoComprobante    TipoComprobante               @relation(fields: [tipoComprobanteId], references: [id])
+  detalleComprobante DetalleComprobanteCliente[]
+}
+
+model DetalleComprobanteCliente {
+  id                     Int                  @id @default(autoincrement())
+  comprobanteClienteId   Int
+  productoId             Int
+  precioUnitario         Float
+  cantidad               Int
+  descuento              Float?
+  precioXCantidad        Float?
+  observaciones          String?
+  comprobanteCliente     ComprobanteCliente  @relation(fields: [comprobanteClienteId], references: [id])
   producto               Producto             @relation(fields: [productoId], references: [id])
 }
 
@@ -379,6 +428,7 @@ model MetodoPago {
   nombre       String
   comprobantes ComprobanteProveedor[]
   OrdenPago    OrdenPago[]
+  comprobanteCliente ComprobanteCliente[]
 }
 
 model CategoriaFiscal {
