@@ -1,69 +1,42 @@
 "use client";
 
-import {
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    Tooltip,
-    CartesianGrid,
-    ResponsiveContainer,
-} from "recharts";
-import type { DashboardPoint } from "@/lib/dashboard/types";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from "recharts";
 
 type Props = {
     title: string;
-    data: DashboardPoint[];
-    dataKey: "ingresos" | "egresos" | "resultado";
+    data: { periodo: string; ingresos: number; egresos: number }[];
 };
 
-export default function ChartBlock({ title, data, dataKey }: Props) {
-    const hasData = data.length > 0 && data.some(d => Number(d[dataKey] ?? 0) !== 0);
-
-    const domain: [number, number] = [
-        Math.min(0, ...data.map(d => Number(d[dataKey] ?? 0))),
-        Math.max(0, ...data.map(d => Number(d[dataKey] ?? 0))),
-    ];
-
-    const fill =
-        dataKey === "ingresos" ? "#22c55e" : dataKey === "egresos" ? "#ef4444" : "#6366f1";
-
+export default function ChartBlock({ title, data }: Props) {
     return (
-        <div className="glass rounded-2xl p-6">
-            <h3 className="text-lg font-semibold mb-4">{title}</h3>
-            {!hasData ? (
-                <div className="h-72 flex items-center justify-center text-sm text-gray-500">
-                    Sin datos para el período seleccionado
-                </div>
-            ) : (
-                <div className="w-full h-72">
-                    <ResponsiveContainer width="99%" height="100%">
-                        <BarChart
-                            data={data}
-                            margin={{ top: 8, right: 12, left: 8, bottom: 8 }}
-                            barSize={28}
-                            barCategoryGap="18%"
-                        >
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="periodo" tickMargin={6} />
-                            <YAxis
-                                domain={domain}
-                                tickFormatter={(v) => Number(v).toLocaleString("es-AR")}
-                            />
-                            <Tooltip
-                                formatter={(v: number, k: string) =>
-                                    [
-                                        Number(v).toLocaleString("es-AR", { style: "currency", currency: "ARS" }),
-                                        k,
-                                    ] as any
-                                }
-                                labelFormatter={(lbl) => `Período: ${lbl}`}
-                            />
-                            <Bar dataKey={dataKey} fill={fill} radius={[6, 6, 0, 0]} />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
-            )}
+        <div className="glass rounded-2xl p-4 shadow-md">
+            <h3 className="text-xl font-semibold mb-4 text-gray-700">{title}</h3>
+            <div className="w-full h-80">
+                <ResponsiveContainer width="100%" height="100%">a
+                    <BarChart
+                        data={data}
+                        margin={{ top: 10, right: 20, left: 0, bottom: 10 }}
+                        barGap={6} // separación entre barras del mismo grupo
+                        barCategoryGap="20%"
+                    >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="periodo" />
+                        <YAxis />
+                        <Tooltip formatter={(value: number) => value.toLocaleString("es-AR", { style: "currency", currency: "ARS" })} />
+                        <Legend />
+                        <Bar
+                            dataKey="ingresos"
+                            fill="#22c55e" // verde
+                            name="Ingresos"
+                        />
+                        <Bar
+                            dataKey="egresos"
+                            fill="#ef4444" // rojo
+                            name="Egresos"
+                        />
+                    </BarChart>
+                </ResponsiveContainer>
+            </div>
         </div>
     );
 }
