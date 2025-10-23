@@ -152,8 +152,8 @@ export default function VentasTable({
                       <Button
                         size="sm"
                         variant="ghost"
-                        title="Realizar envío"
-                        aria-label={`Realizar envío de ${order.orderNumber}`}
+                        title="Registrar Movimiento de Stock"
+                        aria-label={`Registrar Movimiento de Stock para ${order.orderNumber}`}
                         onClick={() => onDoShipment?.(order)}
                       >
                         <Truck className="w-4 h-4" />
