@@ -92,7 +92,6 @@ export default function VentasModal({
   // --- Función Buscar Pedido ---
   const handleBuscarPedido = useCallback(async (numeroComprobante: string) => {
     if (!numeroComprobante) return;
-    console.log(`handleBuscarPedido: ${numeroComprobante}`);
     setIsBuscando(true); setErrorCarga(null);
     setDetalles([]); setDireccionEnvio(''); setPedidoDbId(null); setComentario(''); setNumero(''); setDepositoNombre('');
     setDepositoId(DEPOSITO_CENTRAL_ID); setTipoMovimientoId(EGRESO_VENTA_ID);
@@ -100,7 +99,6 @@ export default function VentasModal({
     let data: PedidoApiResponse | null = null;
     try {
       const response = await fetch(`/api/pedidos/${numeroComprobante.trim()}`);
-      console.log(`Fetch response: ${response.status} ${response.ok}`);
       if (!response.ok) {
          let errorMsg = `Error ${response.status}: ${response.statusText}`; let errorBody = null;
          try { errorBody = await response.json(); errorMsg = errorBody?.error || errorBody?.message || errorMsg; } catch (e) {/* Ignorar */}
@@ -112,68 +110,89 @@ export default function VentasModal({
          if (!data) throw new Error(errorMsg);
       }
       if (!data) { data = await response.json() as PedidoApiResponse; }
-      console.log("API Data:", data);
       if (!data?.pedido?.id || !Array.isArray(data.pedido.items)) { throw new Error("API response format invalid."); }
 
       const { pedido, deposito } = data;
       setPedidoDbId(pedido.id); setNumero(pedido.numeroPedido);
 
        if (pedido.items.length === 0) {
-           console.warn(`Pedido ${numeroComprobante} sin items.`); setComentario(`Mov. stock Venta ${pedido.numeroPedido} (SIN ITEMS)`);
+           setComentario(`Mov. stock Venta ${pedido.numeroPedido} (SIN ITEMS)`);
        } else {
            setComentario(`Mov. stock Venta ${pedido.numeroPedido}`);
            const productosCargados: ProductRow[] = pedido.items
             .map((item: PedidoItemType): ProductRow | null => {
-             if (!item?.producto?.id || typeof item.cantidad !== 'number') { console.error("Invalid item:", item); return null; }
+             if (!item?.producto?.id || typeof item.cantidad !== 'number') { return null; }
              const stock = Number(item.stockActualDepositoCentral ?? 0);
-             if (isNaN(stock)) { console.error("Invalid stock:", item); return null; }
+             if (isNaN(stock)) { return null; }
              return { productoId: item.producto.id, nombre: item.producto.nombre || 'N/A', cantidad: item.cantidad, stockActual: stock };
            }).filter((item): item is ProductRow => item !== null);
-            console.log("Mapped products:", productosCargados); setDetalles(productosCargados);
+           setDetalles(productosCargados);
        }
         if (pedido.direccionEnvio) {
           const dir = pedido.direccionEnvio; const d = [ dir.calle, dir.numero, dir.pisoDepto ? `(${dir.pisoDepto})` : '', dir.ciudad, dir.provincia, dir.codigoPostal ? `CP ${dir.codigoPostal}` : '' ].filter(Boolean).join(', '); setDireccionEnvio(d);
         } else { setDireccionEnvio('N/A'); }
-        if (deposito) { setDepositoNombre(deposito.nombre); } else { console.warn("Depósito ID:1 missing."); setDepositoNombre('Dep. Central (ID:1)'); }
+        if (deposito) { setDepositoNombre(deposito.nombre); } else { setDepositoNombre('Dep. Central (ID:1)'); }
     } catch (error: any) {
-      console.error('handleBuscarPedido error:', error); setErrorCarga(error.message || 'Error cargando datos.');
+      setErrorCarga(error.message || 'Error cargando datos.');
       setDetalles([]); setNumero(numeroComprobante.trim()); setDireccionEnvio(''); setDepositoNombre(''); setPedidoDbId(null); setComentario('');
-    } finally { setIsBuscando(false); console.log("handleBuscarPedido finished."); }
+    } finally { setIsBuscando(false); }
   }, []);
 
   // --- Función Submit ---
   const handleSubmit = useCallback(async () => {
-    console.log("handleSubmit triggered. Checking conditions...");
-    if (!Array.isArray(detalles)) { console.error("ABORT: 'detalles' not an array:", detalles); return; }
-    
-    if (!canSubmit) { 
-        console.warn("ABORT: !canSubmit."); 
-        return; 
+    if (!canSubmit) {
+      return;
     }
     
-    console.log("Conditions met. Submitting...");
     setIsSubmitting(true);
-    try {
-      const movimientoData = { tipoMovimientoId: EGRESO_VENTA_ID, depositoId: DEPOSITO_CENTRAL_ID, numeroComprobante: numero, detalles: detalles.map(p => ({ productoId: p.productoId, cantidad: p.cantidad, })), comentario: comentario, };
-      console.log("-> /api/movimientos (POST):", JSON.stringify(movimientoData, null, 2));
-      const movResponse = await fetch('/api/movimientos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(movimientoData) });
-      if (!movResponse.ok) { let e = `Err ${movResponse.status} mov.`; try {const b=await movResponse.json();e=b?.message||e;}catch(_){} console.error("API Mov Err:", e); throw new Error(e); }
-      console.log("Movimiento OK.");
+    setErrorCarga(null);
 
-      if (!pedidoDbId) { console.warn("pedidoDbId null. Mov OK, no act. pedido."); onClose(); refreshVentasData?.(); return; }
-      console.log(`-> /api/ventas/${pedidoDbId} (PUT)`);
-      const pedidoResponse = await fetch(`/api/ventas/${pedidoDbId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estadoPedidoId: ESTADO_ENVIADO_ID }) });
-      if (!pedidoResponse.ok) { let e = `Err ${pedidoResponse.status} pedido.`; try{const b=await pedidoResponse.json();e=b?.error||e;}catch(_){} console.error('Mov OK, Err act. pedido:', e); }
-      else { console.log(`Pedido ${pedidoDbId} updated to ${ESTADO_ENVIADO_ID}.`); }
-      onClose(); refreshVentasData?.();
-    } catch (error: any) { console.error('handleSubmit catch error:', error); }
-    finally { setIsSubmitting(false); console.log("handleSubmit finished."); }
-  }, [detalles, numero, comentario, pedidoDbId, hayStockInsuficiente, isBuscando, isSubmitting, onClose, refreshVentasData, depositoId, tipoMovimientoId, canSubmit]);
+    const payload = {
+      pedidoDbId,
+      numeroComprobante: numero,
+      comentario,
+      detalles: detalles.map(d => ({
+        productoId: d.productoId,
+        cantidad: d.cantidad,
+      })),
+    };
+
+    try {
+      const response = await fetch('/api/ventas/registrar-envio', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Error: ${response.status}`);
+      }
+
+      onClose();
+      if(refreshVentasData) {
+        refreshVentasData()
+      };
+    } catch (error: any) {
+      setErrorCarga(error.message || 'Ocurrió un error inesperado.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [
+    canSubmit,
+    pedidoDbId,
+    numero,
+    comentario,
+    detalles,
+    onClose,
+    refreshVentasData,
+  ]);
 
   // ---- Efectos ----
    useEffect(() => {
     if (isOpen && pedidoIdProp) {
-        console.log(`Effect: Opening modal ${pedidoIdProp}. Resetting and calling handleBuscarPedido.`);
         setErrorCarga(null); setDetalles([]); setDireccionEnvio(''); setPedidoDbId(null); setComentario(''); setNumero(''); setDepositoNombre('');
         setDepositoId(DEPOSITO_CENTRAL_ID); setTipoMovimientoId(EGRESO_VENTA_ID);
         setIsBuscando(true); setIsSubmitting(false);
@@ -195,7 +214,7 @@ export default function VentasModal({
      if (tiposMovimiento.length > 0 && tipoMovimientoId) {
        const tm = tiposMovimiento.find((t) => t.id === tipoMovimientoId);
        if (tm) { setTipoMovimiento(tm.nombre as TipoMovimiento); setMovimiento(tm.saldo ? 'Ingreso' : 'Egreso'); }
-       else { console.warn(`ID ${tipoMovimientoId} not found.`); setTipoMovimiento('Egreso Venta (Fallback)'); setMovimiento('Egreso'); }
+       else { setTipoMovimiento('Egreso Venta (Fallback)'); setMovimiento('Egreso'); }
      } else {
         setTipoMovimiento('Egreso Venta (Fallback)'); setMovimiento('Egreso');
      }

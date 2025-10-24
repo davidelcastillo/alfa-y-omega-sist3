@@ -35,8 +35,10 @@ export default function VentasClient({ initialOrders, initialWarehouses }: Props
           throw new Error('Error al cargar tipos de movimiento');
         }
         const data = await response.json();
-        setTiposMovimientoList(data);
-        console.log("Tipos de Movimiento cargados:", data);
+        if(Array.isArray(data)) {
+          setTiposMovimientoList(data);
+        }
+
       } catch (error) {
         console.error("Error fetching tipos de movimiento:", error);
       }
@@ -119,7 +121,6 @@ export default function VentasClient({ initialOrders, initialWarehouses }: Props
       <VentasModal
         isOpen={openMovimientoModal}
         onClose={() => {
-          console.log("Cerrando modal...");
           setOpenMovimientoModal(false);
           setSelectedPedidoId(null);
         }}
