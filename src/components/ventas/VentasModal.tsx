@@ -46,7 +46,6 @@ type Props = {
   productosPorDeposito: Record<number, ProductoLite[]>;
   stockIndex: StockIndex;
   tiposMovimiento: TipoMovimientoDTO[];
-  onSubmit: (payload: MovimientoPayload) => void;
   pedidoId: string | null;
 };
 
@@ -79,8 +78,9 @@ export default function VentasModal({
   const [comentario, setComentario] = useState('');
   const [items, setItems] = useState<ProductRow[]>([]);
   const [isBuscando, setIsBuscando] = useState(false);
-  const [pedidoId, setPedidoId] = useState<number | null>(null); // DB id of the order
+  const [pedidoDbId, setPedidoDbId] = useState<number | null>(null);
   const [direccionEnvio, setDireccionEnvio] = useState('');
+  const [depositoNombre, setDepositoNombre] = useState('');
 
   // ---- Opciones para selects ----
   const depOptions = useMemo(
@@ -116,26 +116,50 @@ export default function VentasModal({
     setIsBuscando(true);
     setItems([]);
     setDireccionEnvio('');
-    setPedidoId(null);
+    setPedidoDbId(null);
     setComentario('');
+    setDepositoNombre('');
+
     try {
       const response = await fetch(`/api/pedidos/${numeroComprobante.trim()}`);
       if (!response.ok) {
         throw new Error(`Error en la API: ${response.statusText}`);
       }
-      const pedido = await response.json();
+      const data = await response.json();
 
-      if (pedido && pedido.items && pedido.items.length > 0) {
-        setPedidoId(pedido.id);
+      if (data && data.pedido && data.pedido.items && data.pedido.items.length > 0) {
+        const { pedido, deposito } = data;
+
+        setPedidoDbId(pedido.id);
         setNumero(numeroComprobante.trim());
-        setDireccionEnvio(pedido.DireccionEnvioId ?? 'No especificada');
         setComentario(`Movimiento de stock automático por venta del Pedido N° ${numeroComprobante.trim()}`);
 
         const nuevosItems = pedido.items.map((item: any) => ({
-          productoId: item.productoId,
+          productoId: item.producto.id,
           cantidad: item.cantidad,
         }));
         setItems(nuevosItems);
+
+        if (pedido.direccionEnvio) {
+          const dir = pedido.direccionEnvio;
+          const direccionCompleta = [
+            dir.calle,
+            dir.numero,
+            dir.piso ? `Piso ${dir.piso}` : '',
+            dir.depto ? `Depto ${dir.depto}` : '',
+            dir.ciudad,
+            dir.provincia,
+            `(${dir.codigoPostal || ''})`
+          ].filter(Boolean).join(' ');
+          setDireccionEnvio(direccionCompleta);
+        } else {
+          setDireccionEnvio('Dirección no especificada');
+        }
+
+        if (deposito) {
+          setDepositoNombre(deposito.nombre);
+          setDeposito(1); // Hardcode to ID 1
+        }
       } else {
         console.log('Pedido no encontrado o sin items.');
       }
@@ -146,28 +170,51 @@ export default function VentasModal({
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!canSubmit()) return;
 
-    const tipoSeleccionado = tiposMovimiento.find((t) => t.id === tipoMovimientoId);
-    const esIngreso = tipoSeleccionado?.saldo ?? true;
+    try {
+      // Step 1: Register the stock movement
+      const movimientoData = {
+        tipoMovimientoId: 2, // Hardcoded: "Egreso por Venta"
+        depositoId: 1,       // Hardcoded: Depósito "idUno"
+        numeroComprobante: numero,
+        detalles: items.map(p => ({
+          productoId: p.productoId,
+          cantidad: p.cantidad * -1, // Ensure egress is negative
+        })),
+        comentario: comentario,
+      };
 
-    const payload: MovimientoPayload = {
-      movimiento: esIngreso ? 'Ingreso' : 'Egreso',
-      tipoMovimiento,
-      depositoId: Number(deposito),
-      tipoMovimientoId: Number(tipoMovimientoId),
-      numeroComprobante: numero || undefined,
-      comentario: comentario || undefined,
-      productos: items.map((it) => ({
-        productoId: Number(it.productoId),
-        cantidad: esIngreso ? Math.abs(Number(it.cantidad) || 0) : -Math.abs(Number(it.cantidad) || 0),
-      })),
-      pedidoId: pedidoId ?? undefined,
-    };
+      const movResponse = await fetch('/api/movimientos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(movimientoData),
+      });
 
-    onSubmit(payload);
-    onClose();
+      if (!movResponse.ok) {
+        throw new Error('Error al registrar el movimiento de stock');
+      }
+
+      // Step 2: Update the order status
+      if (pedidoDbId) {
+        const pedidoResponse = await fetch(`/api/ventas/${pedidoDbId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ estadoPedidoId: 18 }), // 18 = "Enviado"
+        });
+
+        if (!pedidoResponse.ok) {
+          console.error('Movimiento registrado, pero falló la actualización del estado del pedido.');
+        }
+      }
+
+      // toast.success('Envío registrado y pedido actualizado con éxito.');
+      onClose(); // Close modal on success
+    } catch (error) {
+      console.error('Error en el proceso de envío:', error);
+      // toast.error('Hubo un error al registrar el envío.');
+    }
   };
 
   // ---- Efectos ----
@@ -264,25 +311,20 @@ export default function VentasModal({
           </div>
 
           {/* Depósito único */}
-          <Select
+          <Input
             label="Depósito *"
-            value={String(deposito || 0)}
+            value={depositoNombre}
             readOnly
+            disabled
             className="input-focus bg-gray-100"
-          >
-            <option value="0" disabled>Seleccionar depósito</option>
-            {depOptions.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.nombre}
-              </option>
-            ))}
-          </Select>
+          />
 
           {/* Dirección de envío */}
           <Input
             label="Dirección de Envío"
             value={direccionEnvio}
             readOnly
+            disabled
             className="input-focus bg-gray-100"
           />
 

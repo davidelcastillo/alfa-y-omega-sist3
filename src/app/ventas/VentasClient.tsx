@@ -80,24 +80,6 @@ export default function VentasClient({ initialOrders, initialWarehouses }: Props
     setOpenMovimientoModal(true);
   };
 
-  const handleSubmitMovimiento = async (payload: MovimientoPayload) => {
-    try {
-      // Here you would call the API to create the stock movement
-      console.log("Submitting stock movement:", payload);
-      // On success, you might want to update the order status
-      setAllOrders(prev =>
-        prev.map(o =>
-          o.orderNumber === payload.numeroComprobante
-            ? { ...o, status: "Enviado" }
-            : o
-        )
-      );
-    } catch (error) {
-      console.error("Failed to submit stock movement:", error);
-    }
-    setOpenMovimientoModal(false);
-    setSelectedPedidoId(null);
-  };
 
   return (
     <main className="w-full max-w-none mx-auto px-3 sm:px-4 lg:px-6 py-8 fade-in">
@@ -144,7 +126,6 @@ export default function VentasClient({ initialOrders, initialWarehouses }: Props
           setOpenMovimientoModal(false);
           setSelectedPedidoId(null);
         }}
-        onSubmit={handleSubmitMovimiento}
         pedidoId={selectedPedidoId}
         depositos={mockDepositos}
         productosPorDeposito={mockProductosPorDeposito}

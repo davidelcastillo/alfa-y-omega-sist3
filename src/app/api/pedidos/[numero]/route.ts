@@ -25,23 +25,38 @@ export async function GET(
       return NextResponse.json(null, { status: 200 });
     }
 
-    // Si numeroPedido NO es @unique en Prisma, usá findFirst
-    const pedido = await prisma.pedido.findFirst({
-      where: { 
+    const pedidoEncontrado = await prisma.pedido.findFirst({
+      where: {
         numeroPedido,
-        estadoPedidoId: 17, // "En preparación" 
+        estadoPedidoId: 17, // "En preparación"
       },
       include: {
-        items: { include: { producto: true } },
+        items: {
+          include: {
+            producto: true,
+          },
+        },
+        direccionEnvio: true, // <--- AÑADIDO
       },
     });
 
-    if (!pedido) return NextResponse.json(null, { status: 200 });
-     if (pedido.estadoPedidoId != 17) {
-      return NextResponse.json({ error: 'El pedido está cancelado' }, { status: 400 });
+    if (!pedidoEncontrado) return NextResponse.json(null, { status: 200 });
+
+    if (pedidoEncontrado.estadoPedidoId != 17) {
+      return NextResponse.json({ error: 'El pedido está cancelado o ya fue procesado' }, { status: 400 });
     }
 
-    return NextResponse.json(pedido, { status: 200 });
+    const depositoDefault = await prisma.deposito.findUnique({
+      where: { id: 1 }, // Asumimos que el depósito con ID 1 es el de envíos.
+    });
+
+    return new Response(
+      JSON.stringify({
+        pedido: pedidoEncontrado,
+        deposito: depositoDefault,
+      }),
+      { status: 200 }
+    );
   } catch (error) {
     console.error('Error al buscar el pedido:', error);
     return NextResponse.json(
