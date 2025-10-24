@@ -23,7 +23,7 @@ export type TipoMovimiento =
 export type Deposito = { id: number; nombre: string };
 export type ProductoLite = { id: number; descripcion: string; codigo?: string };
 
-type ProductRow = { productoId: number; cantidad: number };
+type ProductRow = { productoId: number; cantidad: number; nombre: string; };
 type StockIndex = Record<number, Record<number, number>>;
 
 type TipoMovimientoDTO = { id: number; nombre: string; saldo: boolean };
@@ -76,7 +76,7 @@ export default function VentasModal({
   const [numero, setNumero] = useState('');
   const [deposito, setDeposito] = useState<number>(2); // 2: Deposito Norte (default)
   const [comentario, setComentario] = useState('');
-  const [items, setItems] = useState<ProductRow[]>([]);
+  const [detalles, setDetalles] = useState<ProductRow[]>([]);
   const [isBuscando, setIsBuscando] = useState(false);
   const [pedidoDbId, setPedidoDbId] = useState<number | null>(null);
   const [direccionEnvio, setDireccionEnvio] = useState('');
@@ -105,8 +105,8 @@ export default function VentasModal({
   // ---- Helpers de formulario ----
   const canSubmit = () => {
     const hasProducts =
-      items.length > 0 &&
-      items.every((it) => Number(it.productoId) > 0 && Number(it.cantidad) > 0);
+      detalles.length > 0 &&
+      detalles.every((it) => Number(it.productoId) > 0 && Number(it.cantidad) > 0);
     if (!hasProducts || isBuscando) return false;
     return deposito > 0 && tipoMovimientoId > 0;
   };
@@ -114,7 +114,7 @@ export default function VentasModal({
   const handleBuscarPedido = async (numeroComprobante: string) => {
     if (!numeroComprobante) return;
     setIsBuscando(true);
-    setItems([]);
+    setDetalles([]);
     setDireccionEnvio('');
     setPedidoDbId(null);
     setComentario('');
@@ -134,11 +134,12 @@ export default function VentasModal({
         setNumero(numeroComprobante.trim());
         setComentario(`Movimiento de stock automático por venta del Pedido N° ${numeroComprobante.trim()}`);
 
-        const nuevosItems = pedido.items.map((item: any) => ({
+        const productosCargados = pedido.items.map((item: any) => ({
           productoId: item.producto.id,
+          nombre: item.producto.nombre,
           cantidad: item.cantidad,
         }));
-        setItems(nuevosItems);
+        setDetalles(productosCargados);
 
         if (pedido.direccionEnvio) {
           const dir = pedido.direccionEnvio;
@@ -179,7 +180,7 @@ export default function VentasModal({
         tipoMovimientoId: 2, // Hardcoded: "Egreso por Venta"
         depositoId: 1,       // Hardcoded: Depósito "idUno"
         numeroComprobante: numero,
-        detalles: items.map(p => ({
+        detalles: detalles.map(p => ({
           productoId: p.productoId,
           cantidad: p.cantidad * -1, // Ensure egress is negative
         })),
@@ -222,9 +223,9 @@ export default function VentasModal({
     if (isOpen && pedidoIdProp) {
       handleBuscarPedido(pedidoIdProp);
     } else if (!isOpen) {
-      setItems([]);
+      setDetalles([]);
       setDireccionEnvio('');
-      setPedidoId(null);
+      setPedidoDbId(null);
       setComentario('');
       setNumero('');
     }
@@ -277,7 +278,7 @@ export default function VentasModal({
         <div className="flex-auto overflow-y-auto p-8 space-y-8">
           {isBuscando && <p className="text-center">Buscando datos del pedido...</p>}
 
-          {!isBuscando && items.length === 0 && pedidoIdProp && (
+          {!isBuscando && detalles.length === 0 && pedidoIdProp && (
             <p className="text-center text-red-500">
               No se encontraron los datos del pedido.
             </p>
@@ -341,7 +342,7 @@ export default function VentasModal({
           <div>
             <h4 className="text-md font-semibold text-gray-800 mb-4">Productos *</h4>
             <div className="space-y-3">
-              {items.map((row, idx) => {
+              {detalles.map((row, idx) => {
                 const stockActual =
                   row.productoId && deposito
                     ? getStockDisponible(row.productoId, deposito, stockIndex)
