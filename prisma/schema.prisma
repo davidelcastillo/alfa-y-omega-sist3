@@ -10,19 +10,19 @@ datasource db {
 
 /// Gestiona los clientes y administradores del sistema.
 model Usuario {
-  id            Int          @id @default(autoincrement())
-  email         String       @unique
+  id            Int                  @id @default(autoincrement())
+  email         String               @unique
   nombre        String
   apellido      String
   passwordHash  String
   telefono      String?
-  fechaRegistro DateTime     @default(now())
-  activo        Boolean      @default(true)
+  fechaRegistro DateTime             @default(now())
+  activo        Boolean              @default(true)
   carrito       Carrito?
+  comprobantes  ComprobanteCliente[]
   direcciones   Direccion[]
   pedidos       Pedido[]
   roles         UsuarioRol[]
-  comprobantes   ComprobanteCliente[]
 }
 
 /// Define los roles en el sistema (ej: "CLIENTE", "ADMIN").
@@ -45,7 +45,7 @@ model UsuarioRol {
 
 /// Almacena las direcciones de los usuarios (envío, facturación).
 model Direccion {
-  id           Int      @id @default(autoincrement())
+  id           Int                  @id @default(autoincrement())
   usuarioId    Int
   calle        String
   numero       String
@@ -54,10 +54,10 @@ model Direccion {
   ciudad       String
   provincia    String
   pais         String
-  esPrincipal  Boolean  @default(false)
-  usuario      Usuario  @relation(fields: [usuarioId], references: [id])
-  pedidos      Pedido[]
+  esPrincipal  Boolean              @default(false)
   comprobantes ComprobanteCliente[]
+  usuario      Usuario              @relation(fields: [usuarioId], references: [id])
+  pedidos      Pedido[]
 }
 
 /// Representa el carrito de compras de un usuario.
@@ -94,7 +94,7 @@ model Pedido {
   total            Float
   metodoEnvioId    Int
   observaciones    String?
-  numeroPedido     String?         
+  numeroPedido     String?
   items            DetallePedido[]
   envio            Envio?
   pagos            Pago[]
@@ -193,6 +193,7 @@ model Producto {
   publicado              Boolean                       @default(false)
   sku                    String?                       @unique
   slug                   String?                       @unique
+  comprobanteClientes    DetalleComprobanteCliente[]
   detalleComprobanteProv DetalleComprobanteProveedor[]
   detalleMovimiento      DetalleMovimiento[]
   detalleOrdenCompra     DetalleOrdenCompra[]
@@ -203,7 +204,6 @@ model Producto {
   rubro                  Rubro                         @relation(fields: [rubroId], references: [id])
   unidad                 Unidad                        @relation(fields: [unidadId], references: [id])
   stockProductos         StockPorDeposito[]
-  comprobanteClientes   DetalleComprobanteCliente[]
 
   @@index([estado], map: "idx_producto_estado")
   @@index([nombre, rubroId], map: "idx_producto_nombre_rubro")
@@ -228,10 +228,10 @@ model Deposito {
   estado               Boolean                @default(true)
   ciudad               String?
   provincia            String?
+  comprobanteCliente   ComprobanteCliente[]
   ComprobanteProveedor ComprobanteProveedor[]
   movimientos          MovimientoStock[]
   stock                StockPorDeposito[]
-  comprobanteCliente  ComprobanteCliente[]
 }
 
 model StockPorDeposito {
@@ -275,23 +275,22 @@ model DetalleMovimiento {
 model TipoComprobante {
   id                   Int                    @id @default(autoincrement())
   nombre               String
+  comprobantesCliente  ComprobanteCliente[]
   ComprobanteProveedor ComprobanteProveedor[]
   movimientos          MovimientoStock[]
-  comprobantesCliente  ComprobanteCliente[]
 }
 
 model TipoMovimiento {
-  id          Int               @id @default(autoincrement())
-  nombre      String
-  saldo       Boolean
-  movimientos MovimientoStock[]
+  id                  Int                  @id @default(autoincrement())
+  nombre              String
+  saldo               Boolean
   comprobantesCliente ComprobanteCliente[]
+  movimientos         MovimientoStock[]
 }
 
 model ComprobanteProveedor {
   id                 Int                           @id @default(autoincrement())
   ordenCompraId      Int
-  numeroComprobante  Int?
   proveedorId        Int
   letra              String?
   numeroSucursal     String?
@@ -307,6 +306,7 @@ model ComprobanteProveedor {
   tipoMovimientoId   Int?
   depositoId         Int
   moneda             String?
+  numeroComprobante  Int?
   Deposito           Deposito                      @relation(fields: [depositoId], references: [id])
   metodoPago         MetodoPago?                   @relation(fields: [metodoPagoId], references: [id])
   ordenCompra        OrdenCompra                   @relation(fields: [ordenCompraId], references: [id])
@@ -329,9 +329,8 @@ model DetalleComprobanteProveedor {
   producto               Producto             @relation(fields: [productoId], references: [id])
 }
 
-
 model ComprobanteCliente {
-  id                 Int                           @id @default(autoincrement())
+  id                 Int                         @id @default(autoincrement())
   numeroComprobante  Int?
   usuarioId          Int
   letra              String?
@@ -343,32 +342,32 @@ model ComprobanteCliente {
   total              Float?
   saldo              Float?
   metodoPagoId       Int?
-  estado             Boolean                       @default(true)
+  estado             Boolean                     @default(true)
   observaciones      String?
   tipoMovimientoId   Int?
   depositoId         Int
   moneda             String?
   direccionId        Int
-  Deposito           Deposito                      @relation(fields: [depositoId], references: [id])
-  metodoPago         MetodoPago?                   @relation(fields: [metodoPagoId], references: [id])
-  usuario            Usuario                       @relation(fields: [usuarioId], references: [id])
-  tipoMovimiento     TipoMovimiento?               @relation(fields: [tipoMovimientoId], references: [id])
-  direccion          Direccion                     @relation(fields: [direccionId], references: [id])
-  tipoComprobante    TipoComprobante               @relation(fields: [tipoComprobanteId], references: [id])
+  Deposito           Deposito                    @relation(fields: [depositoId], references: [id])
+  direccion          Direccion                   @relation(fields: [direccionId], references: [id])
+  metodoPago         MetodoPago?                 @relation(fields: [metodoPagoId], references: [id])
+  tipoComprobante    TipoComprobante             @relation(fields: [tipoComprobanteId], references: [id])
+  tipoMovimiento     TipoMovimiento?             @relation(fields: [tipoMovimientoId], references: [id])
+  usuario            Usuario                     @relation(fields: [usuarioId], references: [id])
   detalleComprobante DetalleComprobanteCliente[]
 }
 
 model DetalleComprobanteCliente {
-  id                     Int                  @id @default(autoincrement())
-  comprobanteClienteId   Int
-  productoId             Int
-  precioUnitario         Float
-  cantidad               Int
-  descuento              Float?
-  precioXCantidad        Float?
-  observaciones          String?
-  comprobanteCliente     ComprobanteCliente  @relation(fields: [comprobanteClienteId], references: [id])
-  producto               Producto             @relation(fields: [productoId], references: [id])
+  id                   Int                @id @default(autoincrement())
+  comprobanteClienteId Int
+  productoId           Int
+  precioUnitario       Float
+  cantidad             Int
+  descuento            Float?
+  precioXCantidad      Float?
+  observaciones        String?
+  comprobanteCliente   ComprobanteCliente @relation(fields: [comprobanteClienteId], references: [id])
+  producto             Producto           @relation(fields: [productoId], references: [id])
 }
 
 model OrdenCompra {
@@ -424,11 +423,11 @@ model Proveedores {
 }
 
 model MetodoPago {
-  id           Int                    @id @default(autoincrement())
-  nombre       String
-  comprobantes ComprobanteProveedor[]
-  OrdenPago    OrdenPago[]
+  id                 Int                    @id @default(autoincrement())
+  nombre             String
   comprobanteCliente ComprobanteCliente[]
+  comprobantes       ComprobanteProveedor[]
+  OrdenPago          OrdenPago[]
 }
 
 model CategoriaFiscal {

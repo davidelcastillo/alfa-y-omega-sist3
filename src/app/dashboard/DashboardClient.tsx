@@ -18,6 +18,7 @@ import KpiCard from "@/components/dashboard/KpiCard";
 import ProductosMasVendidosChart from "@/components/dashboard/ProductosMasVendidosChart";
 import AlertaStockTable from "@/components/dashboard/AlertaStockTable";
 import ChartBlock from "@/components/dashboard/ChartBlock";
+import CombinedIngresosEgresosChart from "@/components/dashboard/CombinedIngresosEgresosChart";
 import { DollarSign, ShoppingCart, UserPlus, TrendingDown } from "lucide-react";
 
 type Props = {
@@ -143,6 +144,8 @@ export default function DashboardClient({
                         />
                     </div>
 
+                    
+
                     {/* Gráficos y Tablas */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                         <ProductosMasVendidosChart data={productosMasVendidos} />
@@ -150,11 +153,13 @@ export default function DashboardClient({
                     </div>
 
                     {/* Gráficos por período */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <ChartBlock title="Ingresos por Período" data={resumen?.series ?? []} dataKey="ingresos" />
-                        <ChartBlock title="Egresos por Período" data={resumen?.series ?? []} dataKey="egresos" />
-                        <ChartBlock title="Resultado por Período" data={resumen?.series ?? []} dataKey="resultado" />
+                    <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
+                        <div className="rounded-2xl border p-4 shadow-sm">
+                            <h3 className="text-lg font-medium mb-3">Ingresos vs Egresos por período</h3>
+                            <CombinedIngresosEgresosChart data={resumen?.series ?? []} height={360} />
+                        </div>
                     </div>
+
                 </>
             )}
         </main>
