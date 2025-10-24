@@ -10,7 +10,6 @@ import {
   AlertDialogContent,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-// import { toast } from 'sonner';
 
 // ---- Tipos locales ----
 export type MovimientoBasico = 'Ingreso' | 'Egreso';
@@ -55,7 +54,6 @@ export default function VentasModal({
   refreshVentasData,
 }: Props) {
   // ---- Constantes ----
-  // *** ¡¡VERIFICA ESTOS IDS!! ***
   const EGRESO_VENTA_ID = 6;
   const ESTADO_ENVIADO_ID = 18;
   const DEPOSITO_CENTRAL_ID = 1;
@@ -75,7 +73,6 @@ export default function VentasModal({
   const [direccionEnvio, setDireccionEnvio] = useState('');
   const [errorCarga, setErrorCarga] = useState<string | null>(null);
 
-  // Variable interna segura que SIEMPRE es un array
   const tiposMovimiento = useMemo(() => Array.isArray(tiposMovimientoProp) ? tiposMovimientoProp : [], [tiposMovimientoProp]);
 
   // ---- Helpers ----
@@ -142,7 +139,6 @@ export default function VentasModal({
       console.error('handleBuscarPedido error:', error); setErrorCarga(error.message || 'Error cargando datos.');
       setDetalles([]); setNumero(numeroComprobante.trim()); setDireccionEnvio(''); setDepositoNombre(''); setPedidoDbId(null); setComentario('');
     } finally { setIsBuscando(false); console.log("handleBuscarPedido finished."); }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // --- Función Submit ---
@@ -150,10 +146,8 @@ export default function VentasModal({
     console.log("handleSubmit triggered. Checking conditions...");
     if (!Array.isArray(detalles)) { console.error("ABORT: 'detalles' not an array:", detalles); return; }
     
-    // --- CORRECCIÓN AQUÍ: Llamar a 'canSubmit' (el valor boolean) ---
     if (!canSubmit) { 
         console.warn("ABORT: !canSubmit."); 
-        // console.log("canSubmit details:", { hasProducts: Array.isArray(detalles) && detalles.length > 0, isBuscando, isSubmitting, hayStockInsuficiente }); // Debug
         return; 
     }
     
@@ -172,9 +166,8 @@ export default function VentasModal({
       if (!pedidoResponse.ok) { let e = `Err ${pedidoResponse.status} pedido.`; try{const b=await pedidoResponse.json();e=b?.error||e;}catch(_){} console.error('Mov OK, Err act. pedido:', e); }
       else { console.log(`Pedido ${pedidoDbId} updated to ${ESTADO_ENVIADO_ID}.`); }
       onClose(); refreshVentasData?.();
-    } catch (error: any) { console.error('handleSubmit catch error:', error); /* toast.error(error.message || 'Error.'); */ }
+    } catch (error: any) { console.error('handleSubmit catch error:', error); }
     finally { setIsSubmitting(false); console.log("handleSubmit finished."); }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detalles, numero, comentario, pedidoDbId, hayStockInsuficiente, isBuscando, isSubmitting, onClose, refreshVentasData, depositoId, tipoMovimientoId, canSubmit]);
 
   // ---- Efectos ----
@@ -184,25 +177,21 @@ export default function VentasModal({
         setErrorCarga(null); setDetalles([]); setDireccionEnvio(''); setPedidoDbId(null); setComentario(''); setNumero(''); setDepositoNombre('');
         setDepositoId(DEPOSITO_CENTRAL_ID); setTipoMovimientoId(EGRESO_VENTA_ID);
         setIsBuscando(true); setIsSubmitting(false);
-        const timer = setTimeout(() => handleBuscarPedido(pedidoIdProp), 50); // Small delay
+        const timer = setTimeout(() => handleBuscarPedido(pedidoIdProp), 50);
         return () => clearTimeout(timer);
     } else if (!isOpen) {
-         // Reset state when modal closes
          setErrorCarga(null); setDetalles([]); setDireccionEnvio(''); setPedidoDbId(null); setComentario(''); setNumero(''); setDepositoNombre('');
          setIsBuscando(false); setIsSubmitting(false);
     }
-  }, [isOpen, pedidoIdProp, handleBuscarPedido]); // handleBuscarPedido is stable due to useCallback([])
+  }, [isOpen, pedidoIdProp, handleBuscarPedido]);
 
-  // Efecto ESC
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape' && !isSubmitting) onClose(); };
     if (isOpen) window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
   }, [isOpen, onClose, isSubmitting]);
 
-  // Efecto Nombre Tipo Movimiento
    useEffect(() => {
-     // Use the safe 'tiposMovimiento' array here
      if (tiposMovimiento.length > 0 && tipoMovimientoId) {
        const tm = tiposMovimiento.find((t) => t.id === tipoMovimientoId);
        if (tm) { setTipoMovimiento(tm.nombre as TipoMovimiento); setMovimiento(tm.saldo ? 'Ingreso' : 'Egreso'); }
@@ -210,13 +199,12 @@ export default function VentasModal({
      } else {
         setTipoMovimiento('Egreso Venta (Fallback)'); setMovimiento('Egreso');
      }
-   }, [tipoMovimientoId, tiposMovimiento]); // Use safe array in dependency
+   }, [tipoMovimientoId, tiposMovimiento]);
 
   // ---- Render ----
   return (
      <AlertDialog open={isOpen} onOpenChange={(open: boolean) => { if (!open && !isSubmitting) onClose(); }}>
       <AlertDialogContent className="glass-effect p-0 overflow-hidden w-full max-w-3xl md:max-w-5xl h-[90vh] flex flex-col bg-white rounded-lg shadow-xl">
-        {/* Header */}
         <div className="flex-none p-4 md:p-5 border-b border-gray-200 bg-gray-50 rounded-t-lg">
            <div className="flex items-center justify-between">
             <AlertDialogTitle className="text-lg md:text-xl font-medium text-gray-800"> Registrar Salida de Stock por Venta </AlertDialogTitle>
@@ -224,34 +212,28 @@ export default function VentasModal({
           </div>
         </div>
 
-        {/* Body Scrollable */}
         <div className="flex-auto overflow-y-auto p-4 md:p-6 space-y-4">
           {isBuscando && ( <div className="flex justify-center items-center py-10"> <svg className="animate-spin h-6 w-6 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"> <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25"></circle> <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" className="opacity-75"></path> </svg> <p className="text-gray-500 ml-2 text-sm">Buscando...</p> </div> )}
           {errorCarga && !isBuscando && ( <div className="p-4 text-center bg-red-50 border border-red-200 rounded-md"> <p className="text-red-700 font-medium mb-1 text-sm">Error al Cargar</p> <p className="text-gray-700 text-xs"> {errorCarga} </p> </div> )}
 
-          {/* Formulario */}
           { !isBuscando && !errorCarga && pedidoDbId && (
             <>
-              {/* Fila 1 */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
                 <div> <Input label="Nº Pedido" value={numero} readOnly disabled className="input-field-disabled"/> </div>
                 <div className="sm:col-span-2">
                     <Input label="Tipo Movimiento" value={tipoMovimiento} readOnly disabled className="input-field-disabled"/>
                     <select value={String(tipoMovimientoId)} hidden readOnly aria-hidden="true">
                         <option value="0" disabled></option>
-                        {tiposMovimiento.map(tm => (<option key={tm.id} value={tm.id}>{tm.nombre}</option>))}
+                        {Array.isArray(tiposMovimiento) && tiposMovimiento.map(tm => (<option key={tm.id} value={tm.id}>{tm.nombre}</option>))}
                     </select>
                 </div>
               </div>
-              {/* Fila 2 */}
                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                     <Input label="Depósito Origen" value={depositoNombre} readOnly disabled className="input-field-disabled"/>
                     <Input label="Dirección Envío" value={direccionEnvio} readOnly disabled className="input-field-disabled"/>
                </div>
-              {/* Fila 3 */}
               <Input label="Comentario" value={comentario} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setComentario(e.target.value)} disabled={isSubmitting} className="input-field" placeholder="Notas (opcional)..." rows={2}/>
 
-              {/* Sección Productos */}
               <div className="pt-2">
                 <h4 className="text-sm font-semibold text-gray-600 mb-2 border-b pb-1">Productos a Egresar</h4>
                  {(!Array.isArray(detalles) || detalles.length === 0) && !isBuscando && ( <p className="text-gray-500 italic text-xs py-3 text-center">Pedido sin productos.</p> )}
@@ -269,17 +251,15 @@ export default function VentasModal({
                             </div>
                         </div> ); })}
                     </div> )}
-              </div> {/* Fin sección */}
+              </div>
             </>
-          )} {/* Fin formulario */}
-        </div> {/* Fin Body */}
+          )}
+        </div>
 
-         {/* Footer */}
          <div className="flex-none p-3 border-t border-gray-200 bg-gray-50 rounded-b-lg">
              { !isBuscando && !errorCarga && pedidoDbId && (
                 <> <div className="flex justify-end gap-2">
                     <Button variant="outline" size="sm" onClick={onClose} disabled={isSubmitting}> Cancelar </Button>
-                    {/* --- CORRECCIÓN AQUÍ: Llamar a 'canSubmit' (el valor boolean) --- */}
                     <Button variant="primary" size="sm" disabled={!canSubmit} onClick={handleSubmit} > 
                         {isSubmitting ? 'Registrando...' : 'Confirmar Salida'} 
                     </Button>
@@ -292,11 +272,8 @@ export default function VentasModal({
   );
 }
 
-// Helper CSS (opcional)
 const styles = `
 .input-field { display: block; width: 100%; padding: 0.375rem 0.75rem; font-size: 0.875rem; line-height: 1.25rem; border: 1px solid #D1D5DB; border-radius: 0.375rem; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); }
 .input-field:focus { border-color: #4F46E5; outline: 2px solid transparent; outline-offset: 2px; box-shadow: 0 0 0 2px #C7D2FE; }
 .input-field-disabled { display: block; width: 100%; padding: 0.375rem 0.75rem; font-size: 0.875rem; line-height: 1.25rem; border: 1px solid #E5E7EB; background-color: #F3F4F6; color: #6B7280; border-radius: 0.375rem; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); cursor: not-allowed; }
 `;
-// <style>{styles}</style>
-

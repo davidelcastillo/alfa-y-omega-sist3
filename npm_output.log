@@ -1,3 +1,0 @@
-
-> alfa-y-omega-sist3@0.1.0 dev
-> set NODE_OPTIONS=--dns-result-order=ipv4first && next dev --turbopack
