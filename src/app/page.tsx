@@ -7,7 +7,7 @@ import AppShell from '@/components/layout/AppShell'
 import {
   Boxes, Warehouse, MoveRight, Truck, ShoppingCart,
   ReceiptText, CreditCard, Users2, BarChart3,
-  Search,
+  Search, ClipboardCheck, DollarSign,
   // 2. NUEVO: Ícono para el botón de E-commerce
   Store
 } from "lucide-react";
@@ -21,7 +21,8 @@ const modules = [
   { href: '/compras', icon: ShoppingCart, title: 'Órdenes de compras', description: 'Administra y controla todas las órdenes de compra.' },
   { href: '/comprobante-proveedor', icon: ReceiptText, title: 'Comprobantes de proveedor', description: 'Controla los comprobantes de proveedor.' },
   { href: '/pagos', icon: CreditCard, title: 'Pagos a proveedor', description: 'Administra y controla todos los pagos.' },
-  { href: '/ventas', icon: ShoppingCart, title: 'Ventas', description: 'Gestiona y controla todos los pedidos de ventas.' },
+  { href: '/ventas', icon: DollarSign, title: 'Ventas', description: 'Gestiona y controla todos los pedidos de ventas.' },
+    { href: '/facturas', icon: ClipboardCheck, title: 'Facturas', description: 'Gestiona y controla todos los comprobantes de clientes.'},
   { href: '/usuarios', icon: Users2, title: 'Gestión de Usuarios', description: 'Administra y controla los usuarios del sistema.' },
   { href: '/dashboard', icon: BarChart3, title: 'Resumen del Corralón', description: 'Ingresos, egresos y resultado por período.' },
 ];
