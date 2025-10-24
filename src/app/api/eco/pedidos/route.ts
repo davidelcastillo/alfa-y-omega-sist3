@@ -86,6 +86,29 @@ export async function POST(req: Request) {
         },
       });
 
+      // ==== Generar número correlativo formato CC-0001 ====
+      // buscamos el último comprobante con numero que empiece por 'CC-'
+      const last = await tx.comprobanteCliente.findFirst({
+        where: { numero: { startsWith: "CC-" } },
+        orderBy: { id: "desc" },
+        select: { numero: true },
+      });
+
+      let nextNumeroStr = "CC-0001";
+      if (last?.numero) {
+        // extraer la parte numérica después del guion
+        const parts = last.numero.split("-");
+        const lastNum = Number(parts[1] ?? NaN);
+        if (!Number.isNaN(lastNum)) {
+          const next = lastNum + 1;
+          nextNumeroStr = `CC-${String(next).padStart(4, "0")}`;
+        } else {
+          // caso raro: si el last.numero no tiene formato parseable, tratamos como 1
+          nextNumeroStr = "CC-0001";
+        }
+      }
+      // ===================================================
+
       // 2) crear ComprobanteCliente (Factura) ligado al pedido
       const comprobante = await tx.comprobanteCliente.create({
         data: {
@@ -101,6 +124,7 @@ export async function POST(req: Request) {
           direccionId: direccionEnvioId,
           depositoId: depositoCentral.id,       // <-- depósito central fijo = 1
           metodoPagoId: metodoPagoRecord.id,    // <-- MetodoPago: Tarjeta Crédito
+          numero: nextNumeroStr,                // <-- número correlativo CC-0001
           detalleComprobante: {
             create: itemsCalc.map((x) => ({
               productoId: x.productoId,
@@ -132,6 +156,7 @@ export async function POST(req: Request) {
         comprobanteId: comprobante.id,
         pagoId: pago.id,
         total,
+        numeroComprobante: nextNumeroStr,
       };
     });
 
