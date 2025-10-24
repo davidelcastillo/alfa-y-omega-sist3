@@ -94,7 +94,7 @@ export default function FacturasTable({
                 <tr key={factura.id} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
                   <td className="px-6 py-4 font-semibold text-blue-800">
                     {/* Asumiendo que quieres mostrar sucursal-numero */}
-                    {factura.numeroSucursal ?? '0001'}-{factura.numero ?? factura.numeroComprobante}
+                    {factura.numeroSucursal}{factura.numero ?? factura.numeroComprobante}
                   </td>
 
                   <td className="px-6 py-4 text-gray-700">
