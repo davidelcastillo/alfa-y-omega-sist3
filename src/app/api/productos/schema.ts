@@ -7,9 +7,10 @@ export const createProductoSchema = z.object({
     rubroId: z.number().int().positive(),
     marcaId: z.number().int().positive(),
     unidadId: z.number().int().positive(),
-    precioCompra: z.number().nonnegative(),
-    precioVenta: z.number().nonnegative(),
-    estado: z.boolean().optional(), // default true si no viene
+    estado: z.boolean().optional().default(true), // default true si no viene
 });
+
+// Schema para actualizar un producto
+export const updateProductoSchema = createProductoSchema.partial();
 
 export type CreateProductoDTO = z.infer<typeof createProductoSchema>;

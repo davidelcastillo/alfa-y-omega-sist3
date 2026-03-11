@@ -1,0 +1,179 @@
+{
+  "info": {
+    "name": "Comprobante Proveedor API Tests",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Get Comprobante Proveedor Detail",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3001/api/comprobantes-proveedor/1/detalle",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["api", "comprobantes-proveedor", "1", "detalle"]
+        },
+        "description": "Obtiene los detalles de un comprobante de proveedor por ID"
+      },
+      "response": [
+        {
+          "name": "Success Response",
+          "originalRequest": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3001/api/comprobantes-proveedor/1/detalle",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "comprobantes-proveedor", "1", "detalle"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": {
+            "data": {
+              "comprobante": {
+                "id": 1,
+                "ordenCompraId": 1,
+                "proveedorId": 1,
+                "letra": "A",
+                "numeroSucursal": "0001",
+                "numero": "00012345",
+                "tipoComprobanteId": 1,
+                "fecha": "2025-09-26T00:00:00.000Z",
+                "hora": "14:30",
+                "total": 150000,
+                "saldo": 150000,
+                "metodoPagoId": 1,
+                "estado": true,
+                "observaciones": "Ejemplo de comprobante",
+                "tipoMovimientoId": 1,
+                "depositoId": 1,
+                "moneda": "ARS",
+                "ordenCompra": {
+                  "id": 1,
+                  "fecha": "2025-09-25T00:00:00.000Z",
+                  "nroOC": "OC-001",
+                  "detalleOrdenCompra": [
+                    {
+                      "id": 1,
+                      "productoId": 1,
+                      "precioUnitario": 50000,
+                      "cantidad": 3,
+                      "producto": {
+                        "id": 1,
+                        "nombre": "Producto Ejemplo",
+                        "unidad": {
+                          "nombre": "Unidad"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "proveedor": {
+                  "id": 1,
+                  "nombre": "Proveedor Ejemplo",
+                  "razonSocial": "Razón Social Ejemplo S.A."
+                },
+                "detalleComprobante": [
+                  {
+                    "id": 1,
+                    "productoId": 1,
+                    "precioUnitario": 50000,
+                    "cantidad": 3,
+                    "descuento": 0,
+                    "precioXCantidad": 150000,
+                    "observaciones": null,
+                    "producto": {
+                      "id": 1,
+                      "nombre": "Producto Ejemplo",
+                      "unidad": {
+                        "nombre": "Unidad"
+                      }
+                    }
+                  }
+                ],
+                "deposito": {
+                  "id": 1,
+                  "nombre": "Depósito Principal"
+                },
+                "tipoComprobante": {
+                  "id": 1,
+                  "nombre": "Factura"
+                },
+                "metodoPago": {
+                  "id": 1,
+                  "nombre": "Efectivo"
+                }
+              },
+              "opciones": {
+                "tiposComprobante": [
+                  {
+                    "id": 1,
+                    "nombre": "Factura"
+                  },
+                  {
+                    "id": 2,
+                    "nombre": "Nota de Crédito"
+                  }
+                ],
+                "tiposMovimiento": [
+                  {
+                    "id": 1,
+                    "nombre": "Entrada por Compra",
+                    "saldo": true
+                  }
+                ],
+                "metodosPago": [
+                  {
+                    "id": 1,
+                    "nombre": "Efectivo"
+                  },
+                  {
+                    "id": 2,
+                    "nombre": "Transferencia"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "name": "Not Found Response",
+          "originalRequest": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:3001/api/comprobantes-proveedor/999/detalle",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3001",
+              "path": ["api", "comprobantes-proveedor", "999", "detalle"]
+            }
+          },
+          "status": "Not Found",
+          "code": 404,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": {
+            "error": "Comprobante no encontrado"
+          }
+        }
+      ]
+    }
+  ]
+}

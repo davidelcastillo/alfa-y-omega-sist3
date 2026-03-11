@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../src/generated/prisma"
@@ -14,131 +8,455 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-//
-// 1.0 Catálogos de apoyo (Rubro, Unidad, Marca)
-//
+/// Gestiona los clientes y administradores del sistema.
+model Usuario {
+  id            Int                  @id @default(autoincrement())
+  email         String               @unique
+  nombre        String
+  apellido      String
+  passwordHash  String
+  telefono      String?
+  fechaRegistro DateTime             @default(now())
+  activo        Boolean              @default(true)
+  carrito       Carrito?
+  comprobantes  ComprobanteCliente[]
+  direcciones   Direccion[]
+  pedidos       Pedido[]
+  roles         UsuarioRol[]
+}
+
+/// Define los roles en el sistema (ej: "CLIENTE", "ADMIN").
+model Rol {
+  id       Int          @id @default(autoincrement())
+  nombre   String       @unique
+  usuarios UsuarioRol[]
+}
+
+/// Tabla de unión para la relación muchos a muchos entre Usuario y Rol.
+model UsuarioRol {
+  usuarioId  Int
+  rolId      Int
+  asignadoEn DateTime @default(now())
+  rol        Rol      @relation(fields: [rolId], references: [id])
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id])
+
+  @@id([usuarioId, rolId])
+}
+
+/// Almacena las direcciones de los usuarios (envío, facturación).
+model Direccion {
+  id           Int                  @id @default(autoincrement())
+  usuarioId    Int
+  calle        String
+  numero       String
+  pisoDepto    String?
+  codigoPostal String
+  ciudad       String
+  provincia    String
+  pais         String
+  esPrincipal  Boolean              @default(false)
+  comprobantes ComprobanteCliente[]
+  usuario      Usuario              @relation(fields: [usuarioId], references: [id])
+  pedidos      Pedido[]
+}
+
+/// Representa el carrito de compras de un usuario.
+model Carrito {
+  id            Int           @id @default(autoincrement())
+  usuarioId     Int           @unique
+  creadoEn      DateTime      @default(now())
+  actualizadoEn DateTime      @updatedAt
+  usuario       Usuario       @relation(fields: [usuarioId], references: [id])
+  items         ItemCarrito[]
+}
+
+/// Representa un item dentro del carrito de compras.
+model ItemCarrito {
+  id         Int      @id @default(autoincrement())
+  carritoId  Int
+  productoId Int
+  cantidad   Int
+  carrito    Carrito  @relation(fields: [carritoId], references: [id])
+  producto   Producto @relation(fields: [productoId], references: [id])
+
+  @@unique([carritoId, productoId])
+}
+
+/// La orden de venta finalizada por un cliente.
+model Pedido {
+  id               Int             @id @default(autoincrement())
+  usuarioId        Int
+  direccionEnvioId Int
+  fechaPedido      DateTime        @default(now())
+  estadoPedidoId   Int
+  subtotal         Float
+  costoEnvio       Float
+  total            Float
+  metodoEnvioId    Int
+  observaciones    String?
+  numeroPedido     String?
+  items            DetallePedido[]
+  envio            Envio?
+  pagos            Pago[]
+  direccionEnvio   Direccion       @relation(fields: [direccionEnvioId], references: [id])
+  estado           EstadoPedido    @relation(fields: [estadoPedidoId], references: [id])
+  metodoEnvio      MetodoEnvio     @relation(fields: [metodoEnvioId], references: [id])
+  usuario          Usuario         @relation(fields: [usuarioId], references: [id])
+}
+
+/// Detalle de los productos dentro de un pedido.
+model DetallePedido {
+  id                      Int      @id @default(autoincrement())
+  pedidoId                Int
+  productoId              Int
+  cantidad                Int
+  precioUnitarioAlComprar Float
+  pedido                  Pedido   @relation(fields: [pedidoId], references: [id])
+  producto                Producto @relation(fields: [productoId], references: [id])
+
+  @@unique([pedidoId, productoId])
+}
+
+/// Tabla de búsqueda para los posibles estados de un pedido.
+model EstadoPedido {
+  id      Int      @id @default(autoincrement())
+  nombre  String   @unique
+  pedidos Pedido[]
+}
+
+/// Registra la información de la transacción de pago.
+model Pago {
+  id                     Int      @id @default(autoincrement())
+  pedidoId               Int
+  monto                  Float
+  metodoPago             String
+  estado                 String
+  transaccionIdProveedor String?
+  fechaPago              DateTime @default(now())
+  pedido                 Pedido   @relation(fields: [pedidoId], references: [id])
+}
+
+/// Gestiona la información de envío de un pedido.
+model Envio {
+  id                   Int         @id @default(autoincrement())
+  pedidoId             Int         @unique
+  metodoEnvioId        Int
+  codigoSeguimiento    String?
+  estado               String
+  fechaDespacho        DateTime?
+  fechaEntregaEstimada DateTime?
+  metodoEnvio          MetodoEnvio @relation(fields: [metodoEnvioId], references: [id])
+  pedido               Pedido      @relation(fields: [pedidoId], references: [id])
+}
+
+/// Almacena los métodos de envío disponibles.
+model MetodoEnvio {
+  id      Int      @id @default(autoincrement())
+  nombre  String   @unique
+  costo   Float
+  activo  Boolean  @default(true)
+  envios  Envio[]
+  pedidos Pedido[]
+}
+
 model Rubro {
-  id        Int        @id @default(autoincrement())
-  nombre    String
-  productos Producto[]  // Relación con productos
+  id            Int        @id @default(autoincrement())
+  nombre        String
+  padreId       Int?
+  productos     Producto[]
+  padre         Rubro?     @relation("JerarquiaCategorias", fields: [padreId], references: [id])
+  subcategorias Rubro[]    @relation("JerarquiaCategorias")
 }
 
 model Unidad {
   id        Int        @id @default(autoincrement())
   nombre    String
-  productos Producto[]  // Relación con productos
+  productos Producto[]
 }
 
 model Marca {
   id        Int        @id @default(autoincrement())
   nombre    String
-  productos Producto[]  // Relación con productos
+  productos Producto[]
 }
 
-//
-// 1.1 Productos
-//
 model Producto {
-  id            Int      @id @default(autoincrement())
-  nombre        String
-  descripcion   String?
-  rubroId       Int
-  marcaId       Int
-  unidadId      Int
-  precioCompra  Float
-  precioVenta   Float
-  estado        Boolean  @default(true) // true = Activo, false = Inactivo
+  id                     Int                           @id @default(autoincrement())
+  nombre                 String
+  descripcion            String?
+  rubroId                Int
+  marcaId                Int
+  unidadId               Int
+  estado                 Boolean                       @default(true)
+  destacado              Boolean                       @default(false)
+  precioVenta            Float?
+  publicado              Boolean                       @default(false)
+  sku                    String?                       @unique
+  slug                   String?                       @unique
+  comprobanteClientes    DetalleComprobanteCliente[]
+  detalleComprobanteProv DetalleComprobanteProveedor[]
+  detalleMovimiento      DetalleMovimiento[]
+  detalleOrdenCompra     DetalleOrdenCompra[]
+  itemsPedido            DetallePedido[]
+  imagenes               ImagenProducto[]
+  itemsCarrito           ItemCarrito[]
+  marca                  Marca                         @relation(fields: [marcaId], references: [id])
+  rubro                  Rubro                         @relation(fields: [rubroId], references: [id])
+  unidad                 Unidad                        @relation(fields: [unidadId], references: [id])
+  stockProductos         StockPorDeposito[]
 
-  rubro   Rubro   @relation(fields: [rubroId], references: [id])
-  marca   Marca   @relation(fields: [marcaId], references: [id])
-  unidad  Unidad  @relation(fields: [unidadId], references: [id])
-
-  stockProductos StockPorDeposito[]  // Relación con stock en depósitos
-
-  @@index([estado], name: "idx_producto_estado")
-  @@index([nombre, rubroId], name: "idx_producto_nombre_rubro")
+  @@index([estado], map: "idx_producto_estado")
+  @@index([nombre, rubroId], map: "idx_producto_nombre_rubro")
+  @@index([sku], map: "idx_producto_sku")
+  @@index([sku, estado], map: "idx_producto_sku_estado")
 }
 
-//
-// 2.0 Depósito
-//
+model ImagenProducto {
+  id         Int      @id @default(autoincrement())
+  productoId Int
+  url        String
+  orden      Int      @default(0)
+  producto   Producto @relation(fields: [productoId], references: [id])
+}
+
 model Deposito {
-  id          Int              @id @default(autoincrement())
-  nombre      String
-  ubicacion   String
-  tipo        String           // Principal, Sucursal, Temporal, Tránsito
-  capacidad   Int?             // Representada en m2
-  estado      Boolean          @default(true)
-
-  stock       StockPorDeposito[]   // Inventario de productos en este depósito
-  movimientos MovimientoStock[]
+  id                   Int                    @id @default(autoincrement())
+  nombre               String
+  ubicacion            String
+  tipo                 String
+  capacidad            Int?
+  estado               Boolean                @default(true)
+  ciudad               String?
+  provincia            String?
+  comprobanteCliente   ComprobanteCliente[]
+  ComprobanteProveedor ComprobanteProveedor[]
+  movimientos          MovimientoStock[]
+  stock                StockPorDeposito[]
 }
 
-//
-// 2.1 Stock por Depósito
-//
 model StockPorDeposito {
-  id              Int       @id @default(autoincrement())
+  id              Int      @id @default(autoincrement())
   productoId      Int
   depositoId      Int
-  stockActual     Int       @default(0)
-  stockMinimo     Int       @default(0)
+  stockActual     Int      @default(0)
+  stockMinimo     Int      @default(0)
   stockMaximo     Int?
   capacidadMaxima Int?
+  deposito        Deposito @relation(fields: [depositoId], references: [id])
+  producto        Producto @relation(fields: [productoId], references: [id])
 
-  producto Producto @relation(fields: [productoId], references: [id])
-  deposito Deposito @relation(fields: [depositoId], references: [id])
-
-  @@unique([productoId, depositoId]) // un producto único por depósito
-
-  detallesMovimiento DetalleMovimiento[]
+  @@unique([productoId, depositoId])
 }
 
-//
-// 2.2 Movimientos de Stock
-//
 model MovimientoStock {
-  id                Int       @id @default(autoincrement())
+  id                Int                 @id @default(autoincrement())
   depositoId        Int
   tipoMovimientoId  Int
   tipoComprobanteId Int
-  fecha             DateTime  @default(now())
-  hora              DateTime  @default(now())
-
-  deposito        Deposito        @relation(fields: [depositoId], references: [id])
-  tipoMovimiento  TipoMovimiento  @relation(fields: [tipoMovimientoId], references: [id])
-  tipoComprobante TipoComprobante @relation(fields: [tipoComprobanteId], references: [id])
-  detalles        DetalleMovimiento[]
+  numeroComprobante String?
+  fecha             DateTime            @default(now())
+  hora              DateTime            @default(now())
+  comentario        String?             @map("Comentario")
+  detalles          DetalleMovimiento[]
+  deposito          Deposito            @relation(fields: [depositoId], references: [id])
+  tipoComprobante   TipoComprobante     @relation(fields: [tipoComprobanteId], references: [id])
+  tipoMovimiento    TipoMovimiento      @relation(fields: [tipoMovimientoId], references: [id])
 }
 
-//
-// 2.2.4 Detalle de Movimiento
-//
 model DetalleMovimiento {
-  id            Int             @id @default(autoincrement())
-  movimientoId  Int
-  stockId       Int
-  cantidad      Int
-
-  movimiento MovimientoStock @relation(fields: [movimientoId], references: [id])
-  stock      StockPorDeposito @relation(fields: [stockId], references: [id])
+  id           Int             @id @default(autoincrement())
+  movimientoId Int
+  productoId   Int
+  cantidad     Int
+  movimiento   MovimientoStock @relation(fields: [movimientoId], references: [id])
+  producto     Producto        @relation(fields: [productoId], references: [id])
 }
 
-//
-// 2.2.5 Tipos de Comprobante
-//
 model TipoComprobante {
-  id          Int              @id @default(autoincrement())
-  nombre      String            // Remito - Factura - Orden de Compra
-  movimientos MovimientoStock[]
+  id                   Int                    @id @default(autoincrement())
+  nombre               String
+  comprobantesCliente  ComprobanteCliente[]
+  ComprobanteProveedor ComprobanteProveedor[]
+  movimientos          MovimientoStock[]
 }
 
-//
-// 2.2.6 Tipos de Movimiento
-//
 model TipoMovimiento {
-  id            Int              @id @default(autoincrement())
-  nombre        String           // Ej: "Ingreso", "Egreso"
-  ingresoEgreso Boolean          // true = ingreso, false = egreso
-  movimientos   MovimientoStock[]
+  id                  Int                  @id @default(autoincrement())
+  nombre              String
+  saldo               Boolean
+  comprobantesCliente ComprobanteCliente[]
+  movimientos         MovimientoStock[]
+}
+
+model ComprobanteProveedor {
+  id                 Int                           @id @default(autoincrement())
+  ordenCompraId      Int
+  proveedorId        Int
+  letra              String?
+  numeroSucursal     String?
+  numero             String?
+  tipoComprobanteId  Int
+  fecha              DateTime
+  hora               String?
+  total              Float?
+  saldo              Float?
+  metodoPagoId       Int?
+  estado             Boolean                       @default(true)
+  observaciones      String?
+  tipoMovimientoId   Int?
+  depositoId         Int
+  moneda             String?
+  numeroComprobante  Int?
+  Deposito           Deposito                      @relation(fields: [depositoId], references: [id])
+  metodoPago         MetodoPago?                   @relation(fields: [metodoPagoId], references: [id])
+  ordenCompra        OrdenCompra                   @relation(fields: [ordenCompraId], references: [id])
+  proveedor          Proveedores                   @relation(fields: [proveedorId], references: [id])
+  tipoComprobante    TipoComprobante               @relation(fields: [tipoComprobanteId], references: [id])
+  detalleComprobante DetalleComprobanteProveedor[]
+  DetalleOrdenPago   DetalleOrdenPago[]
+}
+
+model DetalleComprobanteProveedor {
+  id                     Int                  @id @default(autoincrement())
+  comprobanteProveedorId Int
+  productoId             Int
+  precioUnitario         Float
+  cantidad               Int
+  descuento              Float?
+  precioXCantidad        Float?
+  observaciones          String?
+  comprobanteProveedor   ComprobanteProveedor @relation(fields: [comprobanteProveedorId], references: [id])
+  producto               Producto             @relation(fields: [productoId], references: [id])
+}
+
+model ComprobanteCliente {
+  id                 Int                         @id @default(autoincrement())
+  numeroComprobante  Int?
+  usuarioId          Int
+  letra              String?
+  numeroSucursal     String?
+  numero             String?
+  tipoComprobanteId  Int
+  fecha              DateTime
+  hora               String?
+  total              Float?
+  saldo              Float?
+  metodoPagoId       Int?
+  estado             Boolean                     @default(true)
+  observaciones      String?
+  tipoMovimientoId   Int?
+  depositoId         Int
+  moneda             String?
+  direccionId        Int
+  Deposito           Deposito                    @relation(fields: [depositoId], references: [id])
+  direccion          Direccion                   @relation(fields: [direccionId], references: [id])
+  metodoPago         MetodoPago?                 @relation(fields: [metodoPagoId], references: [id])
+  tipoComprobante    TipoComprobante             @relation(fields: [tipoComprobanteId], references: [id])
+  tipoMovimiento     TipoMovimiento?             @relation(fields: [tipoMovimientoId], references: [id])
+  usuario            Usuario                     @relation(fields: [usuarioId], references: [id])
+  detalleComprobante DetalleComprobanteCliente[]
+}
+
+model DetalleComprobanteCliente {
+  id                   Int                @id @default(autoincrement())
+  comprobanteClienteId Int
+  productoId           Int
+  precioUnitario       Float
+  cantidad             Int
+  descuento            Float?
+  precioXCantidad      Float?
+  observaciones        String?
+  comprobanteCliente   ComprobanteCliente @relation(fields: [comprobanteClienteId], references: [id])
+  producto             Producto           @relation(fields: [productoId], references: [id])
+}
+
+model OrdenCompra {
+  id                 Int                    @id @default(autoincrement())
+  fecha              DateTime
+  hora               String?
+  nroOC              String?
+  proveedorId        Int
+  subTotal           Float?
+  otrosGastos        Float?
+  total              Float?
+  fechaEntrega       DateTime?
+  depositoId         Int?
+  estado             Boolean                @default(true)
+  observaciones      String?
+  comprobantes       ComprobanteProveedor[]
+  detalleOrdenCompra DetalleOrdenCompra[]
+  proveedor          Proveedores            @relation(fields: [proveedorId], references: [id])
+}
+
+model DetalleOrdenCompra {
+  id             Int         @id @default(autoincrement())
+  ordenCompraId  Int
+  productoId     Int
+  precioUnitario Float
+  cantidad       Int
+  ordenCompra    OrdenCompra @relation(fields: [ordenCompraId], references: [id])
+  producto       Producto    @relation(fields: [productoId], references: [id])
+}
+
+model Proveedores {
+  id                Int                    @id @default(autoincrement())
+  razonSocial       String?
+  nombre            String
+  nombreComercial   String?
+  codigo            String?
+  genero            String?
+  categoriaFiscalId Int?
+  cuil              String?
+  pais              String?
+  provincia         String?
+  localidad         String?
+  barrio            String?
+  codigoPostal      String?
+  telefono          String?
+  paginaWeb         String?
+  correoElectronico String?
+  estado            Boolean                @default(true)
+  comprobantes      ComprobanteProveedor[]
+  ordenesCompra     OrdenCompra[]
+  OrdenPago         OrdenPago[]
+  categoriaFiscal   CategoriaFiscal?       @relation(fields: [categoriaFiscalId], references: [id])
+}
+
+model MetodoPago {
+  id                 Int                    @id @default(autoincrement())
+  nombre             String
+  comprobanteCliente ComprobanteCliente[]
+  comprobantes       ComprobanteProveedor[]
+  OrdenPago          OrdenPago[]
+}
+
+model CategoriaFiscal {
+  id          Int           @id @default(autoincrement())
+  nombre      String
+  proveedores Proveedores[]
+}
+
+model DetalleOrdenPago {
+  id                   Int                  @id @default(autoincrement())
+  ordenPagoId          Int
+  comprobanteId        Int
+  montoPagado          Float
+  saldoPrevio          Float?
+  saldoRestante        Float?
+  ComprobanteProveedor ComprobanteProveedor @relation(fields: [comprobanteId], references: [id])
+  OrdenPago            OrdenPago            @relation(fields: [ordenPagoId], references: [id])
+}
+
+model OrdenPago {
+  id               Int                @id @default(autoincrement())
+  proveedorId      Int
+  fecha            DateTime           @default(now())
+  nroInterno       String?
+  metodoPagoId     Int
+  observaciones    String?
+  estado           Boolean            @default(true)
+  totalPagado      Float              @default(0)
+  DetalleOrdenPago DetalleOrdenPago[]
+  MetodoPago       MetodoPago         @relation(fields: [metodoPagoId], references: [id])
+  Proveedores      Proveedores        @relation(fields: [proveedorId], references: [id])
 }
