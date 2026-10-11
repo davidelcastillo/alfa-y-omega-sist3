@@ -31,27 +31,25 @@ import { filterSuppliers, computeStats, toggleStatus, formatCuil } from "@/lib/p
 function supplierToForm(s: Supplier): SupplierForm {
   return {
     id: s.id,
-    codigo: (s as any).codigo ?? "",
-    tipo: (s as any).tipo ?? "empresa",
-    razonSocial: (s as any).razonSocial ?? "",
-    nombreCompleto: (s as any).nombreCompleto ?? "",
-    nombreFantasia: (s as any).nombreFantasia ?? "",
-    genero: (s as any).genero ?? "",
+    codigo: s.codigo ?? "",
+    tipo: s.tipo,
+    razonSocial: s.razonSocial ?? "",
+    nombreCompleto: s.nombreCompleto ?? "",
+    nombreFantasia: s.nombreFantasia ?? "",
+    genero: s.genero ?? "",
     // en el form guardamos el ID como string
-    categoriaFiscal: s && (s as any).categoriaFiscal
-      ? String((s as any).categoriaFiscal.id ?? "")
-      : "",
-    cuitCuil: s ? formatCuil((s as any).cuitCuil ?? (s as any).cuil ?? "") : "",
-    pais: (s as any).pais ?? "Argentina",
-    codigoPostal: (s as any).codigoPostal ?? "",
-    provincia: (s as any).provincia ?? "",
-    localidad: (s as any).localidad ?? "",
-    zona: (s as any).zona ?? "",
-    barrio: (s as any).barrio ?? "",
-    telefono: (s as any).telefono ?? "",
-    email: (s as any).email ?? (s as any).correoElectronico ?? "",
-    paginaWeb: (s as any).paginaWeb ?? "",
-    estado: (s as any).estado ?? "Activo",
+    categoriaFiscal: s.categoriaFiscal ? String(s.categoriaFiscal.id) : "",
+    cuitCuil: formatCuil(s.cuitCuil ?? ""),
+    pais: s.pais ?? "Argentina",
+    codigoPostal: s.codigoPostal ?? "",
+    provincia: s.provincia ?? "",
+    localidad: s.localidad ?? "",
+    zona: s.zona ?? "",
+    barrio: s.barrio ?? "",
+    telefono: s.telefono ?? "",
+    email: s.email ?? "",
+    paginaWeb: s.paginaWeb ?? "",
+    estado: s.estado,
   };
 }
 

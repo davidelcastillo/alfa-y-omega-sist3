@@ -13,6 +13,7 @@ export interface Supplier {
   id: number;
 
   codigo: string | null;              // Código interno del proveedor (puede ser null en BD)
+  tipo: SupplierType;                 // Derivado en el servicio: "empresa" si tiene razonSocial
 
   // Datos de identidad
   nombreCompleto: string | null;              // Nombre de persona física
