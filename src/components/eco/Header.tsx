@@ -4,6 +4,7 @@
 import Link from "next/link";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { CART_CHANGED_EVENT } from "@/lib/eco/cart";
 
 type AuthUser = {
   id: number;
@@ -72,7 +73,7 @@ export default function Header() {
 
     // Evento propio cuando se modifica el carrito
     const onCartChanged = () => update();
-    window.addEventListener("eco:cart-changed", onCartChanged);
+    window.addEventListener(CART_CHANGED_EVENT, onCartChanged);
     
     // Evento 'storage' para actualizaciones desde otras pestañas
     const onStorage = (e: StorageEvent) => {
@@ -81,7 +82,7 @@ export default function Header() {
     window.addEventListener("storage", onStorage);
 
     return () => {
-      window.removeEventListener("eco:cart-changed", onCartChanged);
+      window.removeEventListener(CART_CHANGED_EVENT, onCartChanged);
       window.removeEventListener("storage", onStorage);
     };
   }, []);

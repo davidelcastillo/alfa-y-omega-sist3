@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 // import { useRouter } from "next/navigation"; // Se elimina la dependencia de Next.js
 import Link from "next/link";
+import { CART_CHANGED_EVENT } from "@/lib/eco/cart";
 // ──────────────────────────────────────────────────────────────────────────────
 // Tipos y helpers
 // ──────────────────────────────────────────────────────────────────────────────
@@ -180,12 +181,12 @@ export default function CarritoPage() {
     loadCart();
     setIsHydrated(true); // Marca que la carga inicial desde LS ha terminado
 
-    // MEJORA: Escuchamos el evento personalizado 'cart:changed' para recargar.
-    window.addEventListener('cart:changed', loadCart);
+    // MEJORA: Escuchamos el evento personalizado del carrito para recargar.
+    window.addEventListener(CART_CHANGED_EVENT, loadCart);
 
     // Limpiamos el listener cuando el componente se desmonta.
     return () => {
-      window.removeEventListener('cart:changed', loadCart);
+      window.removeEventListener(CART_CHANGED_EVENT, loadCart);
     };
   }, []);
 
@@ -210,7 +211,7 @@ export default function CarritoPage() {
     if (!isHydrated) return;
 
     // Despachamos el mismo evento que usa ProductCard
-    window.dispatchEvent(new Event("eco:cart-changed"));
+    window.dispatchEvent(new Event(CART_CHANGED_EVENT));
 
   }, [items, isHydrated]); // Se ejecuta cada vez que 'items' cambia.
 

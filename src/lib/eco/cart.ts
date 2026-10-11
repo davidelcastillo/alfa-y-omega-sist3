@@ -11,6 +11,8 @@ export type CartItemLS = {
 
 const LS_KEY = "cartItems";
 
+export const CART_CHANGED_EVENT = "eco:cart-changed";
+
 export function readCart(): CartItemLS[] {
   if (typeof window === "undefined") return [];
   try {
@@ -25,7 +27,7 @@ export function writeCart(items: CartItemLS[]) {
   if (typeof window === "undefined") return;
   localStorage.setItem(LS_KEY, JSON.stringify(items));
   // Notificar a la UI que cambió el carrito
-  window.dispatchEvent(new Event("cart:changed"));
+  window.dispatchEvent(new Event(CART_CHANGED_EVENT));
 }
 
 export function addToCart(item: Omit<CartItemLS, "quantity"> & { quantity?: number }) {

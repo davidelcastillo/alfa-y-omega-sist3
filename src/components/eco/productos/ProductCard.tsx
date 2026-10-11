@@ -27,10 +27,6 @@ export default function ProductCard({ p }: { p: UiProduct }) {
       description: p.brand ?? null, // opcional
     });
 
-    try {
-      window.dispatchEvent(new Event("eco:cart-changed"));
-    } catch {}
-
     // 2) Intentar sincronizar con backend si hay sesión (no bloquea la UI)
     try {
       const resp = await fetch("/api/eco/carrito/items", {

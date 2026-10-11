@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { CART_CHANGED_EVENT } from "@/lib/eco/cart";
 
 /* ================== Tipos ================== */
 type CartItem = {
@@ -337,7 +338,7 @@ export default function PagosPage() {
       sessionStorage.removeItem("cartTotalCount");
       sessionStorage.removeItem("discountedSubtotal");
       // Disparar evento para actualizar el header
-      window.dispatchEvent(new CustomEvent("cart-updated"));
+      window.dispatchEvent(new Event(CART_CHANGED_EVENT));
     } finally {
       setDone(true);
     }
