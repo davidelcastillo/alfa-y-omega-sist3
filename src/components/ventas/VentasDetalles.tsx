@@ -51,11 +51,6 @@ export default function VentasDetalles({ venta }: Props) {
               <span className="text-sm text-gray-600">Cliente</span>
               <p className="text-lg font-semibold text-gray-900">{venta.customerName}</p>
             </div>
-
-            <div>
-              <span className="text-sm text-gray-600">Tarjeta</span>
-              <p className="text-lg font-semibold text-gray-900">{venta.cardNumber}</p>
-            </div>
           </div>
 
           <div className="space-y-3">
@@ -65,11 +60,6 @@ export default function VentasDetalles({ venta }: Props) {
               {venta.status === "Enviado" && venta.shippedDate && (
                 <p className="text-sm text-gray-500">Enviado el {venta.shippedDate}</p>
               )}
-            </div>
-
-            <div>
-              <span className="text-sm text-gray-600">Depósito</span>
-              <p className="text-lg font-semibold text-gray-900">{venta.warehouse ?? "-"}</p>
             </div>
           </div>
         </div>

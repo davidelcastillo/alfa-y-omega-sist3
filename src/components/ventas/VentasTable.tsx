@@ -20,13 +20,11 @@ type Order = {
   orderTime: string;
   customerName: string;
   totalProducts: number;
-  cardNumber: string;
   total: number;
   status: "Enviado" | "Pendiente de enviar" | "En Preparación";                 //modificar aqui si es necesario otro estado
   shippedDate?: string;
   products: OrderProduct[];
   history: { date: string; action: string; user: string }[];
-  warehouse?: string;
 };
 
 type SortKey =
@@ -34,7 +32,6 @@ type SortKey =
   | "fecha"          // combina fecha y hora
   | "customerName"
   | "totalProducts"
-  | "cardNumber"
   | "total"
   | "status";
 
@@ -95,7 +92,6 @@ export default function VentasTable({
               {headerCell("fecha", "Fecha y hora")}
               {headerCell("customerName", "Cliente")}
               {headerCell("totalProducts", "Cantidad total")}
-              {headerCell("cardNumber", "Tarjeta")}
               {headerCell("total", "Total")}
               {headerCell("status", "Estado")}
               <th className="px-6 py-4 text-left text-sm font-bold text-blue-800">Acciones</th>
@@ -117,8 +113,6 @@ export default function VentasTable({
                 </td>
 
                 <td className="px-6 py-4 text-gray-700 text-center">{order.totalProducts}</td>
-
-                <td className="px-6 py-4 text-gray-700 text-center">{order.cardNumber}</td>
 
                 <td className="px-6 py-4 font-semibold text-gray-900 text-right">
                   {moneyAR(order.total)}
