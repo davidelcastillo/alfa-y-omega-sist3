@@ -39,7 +39,6 @@ export const ordersMock: Order[] = [
     orderTime: "14:30:00",
     customerName: "Juan Pérez",
     totalProducts: 25,
-    cardNumber: "**** **** **** 1234",
     total: 125000,
     status: "Pendiente de enviar",
     products: [
@@ -55,11 +54,9 @@ export const ordersMock: Order[] = [
     orderTime: "09:15:00",
     customerName: "María González",
     totalProducts: 30,
-    cardNumber: "**** **** **** 5678",
     total: 225000,
     status: "Enviado",
     shippedDate: "2024-01-17",
-    warehouse: "Depósito Central",
     products: [
       { id: "3", name: "Producto C", quantity: 20, unitPrice: 3000, subtotal: 60000 },
       { id: "4", name: "Producto D", quantity: 10, unitPrice: 4500, subtotal: 45000 },
@@ -77,7 +74,6 @@ export const ordersMock: Order[] = [
     orderTime: "11:20:00",
     customerName: "Carlos Rodríguez",
     totalProducts: 15,
-    cardNumber: "**** **** **** 9012",
     total: 100000,
     status: "Pendiente de enviar",
     products: [

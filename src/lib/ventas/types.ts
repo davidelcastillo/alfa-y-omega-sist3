@@ -20,13 +20,11 @@ export type Order = {
   orderTime: string; // HH:mm:ss
   customerName: string;
   totalProducts: number;
-  cardNumber: string;
   total: number;
   status: "Enviado" | "Pendiente de enviar" | "En Preparación";
   shippedDate?: string;
   products: OrderProduct[];
   history: HistoryEvent[];
-  warehouse?: string;
 };
 
 export type WarehouseProduct = { id: string; name: string; stock: number; price: number };
@@ -60,10 +58,8 @@ export type VentaDetail = {
   orderDate: string;        // "YYYY-MM-DD"
   orderTime: string;        // "HH:mm:ss"
   customerName: string;
-  cardNumber: string;
   status: "Enviado" | "Pendiente de enviar" | "En Preparación";
   shippedDate?: string;
-  warehouse?: string;
   total: number;
   products: {
     id: string;

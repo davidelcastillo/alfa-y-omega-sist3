@@ -147,7 +147,6 @@ export async function listOrders(filters?: FiltersState): Promise<Order[]> {
       orderTime,
       customerName: `${p.usuario?.nombre ?? ""} ${p.usuario?.apellido ?? ""}`.trim(),
       totalProducts: p.items.reduce((sum, it) => sum + it.cantidad, 0),
-      cardNumber: "**** **** **** " + Math.floor(Math.random() * 9000 + 1000),
       total: p.total,
       status: (p.estado?.nombre ?? "Pendiente de enviar") as "Enviado" | "Pendiente de enviar",
       shippedDate: p.envio?.fechaDespacho ? p.envio.fechaDespacho.toISOString().split("T")[0] : undefined,
@@ -159,7 +158,6 @@ export async function listOrders(filters?: FiltersState): Promise<Order[]> {
         subtotal: it.cantidad * it.precioUnitarioAlComprar,
       })),
       history: [],
-      warehouse: p.envio ? "Almacén Principal" : undefined,
     };
   });
 }
@@ -222,9 +220,6 @@ export async function getOrderDetail(id: string | number): Promise<VentaDetail |
     ? pedido.envio.fechaDespacho.toISOString().split("T")[0]
     : undefined;
 
-  // Warehouse: si más adelante relacionás Envio->Deposito, mapealo aquí
-  const warehouse = pedido.envio ? "Almacén Principal" : undefined;
-
   return {
     id: String(pedido.id),
     /*orderNumber: pedido.numeroPedido ?? String(pedido.id), // usa numeroPedido si está cargado*/
@@ -233,10 +228,8 @@ export async function getOrderDetail(id: string | number): Promise<VentaDetail |
     orderDate,
     orderTime,
     customerName: `${pedido.usuario?.nombre ?? ""} ${pedido.usuario?.apellido ?? ""}`.trim(),
-    cardNumber: "**** **** **** " + Math.floor(Math.random() * 9000 + 1000), // no hay tarjeta en el schema
     status,
     shippedDate,
-    warehouse,
     total: pedido.total,
     products: pedido.items.map((it) => ({
       id: String(it.producto.id),
