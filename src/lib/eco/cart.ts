@@ -49,3 +49,21 @@ export function addToCart(item: Omit<CartItemLS, "quantity"> & { quantity?: numb
   }
   writeCart(items);
 }
+
+export const DISCOUNT_COUPON_CODE = "sistemas";
+export const DISCOUNT_COUPON_FACTOR = 0.8;
+
+export function isDiscountCoupon(coupon: string): boolean {
+  return coupon.trim().toLowerCase() === DISCOUNT_COUPON_CODE;
+}
+
+export function computeTotals(
+  items: Pick<CartItemLS, "price" | "quantity">[],
+  coupon: string
+) {
+  const subtotal = items.reduce((a, it) => a + it.price * it.quantity, 0);
+  const factor = isDiscountCoupon(coupon) ? DISCOUNT_COUPON_FACTOR : 1;
+  const total = subtotal * factor;
+  const discount = subtotal - total;
+  return { subtotal, discount, total };
+}

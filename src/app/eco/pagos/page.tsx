@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { computeTotals } from "@/lib/eco/cart";
 
 /* ================== Tipos ================== */
 type CartItem = {
@@ -30,14 +31,6 @@ function readJSON<T>(key: string, fb: T): T {
   } catch {
     return fb;
   }
-}
-
-function computeTotals(items: CartItem[], coupon: string) {
-  const subtotal = items.reduce((a, it) => a + it.price * it.quantity, 0);
-  const factor = coupon.trim().toLowerCase() === "sistemas" ? 0.8 : 1;
-  const total = subtotal * factor;
-  const discount = subtotal - total;
-  return { subtotal, discount, total };
 }
 
 /* ───────────────── CardPreview ───────────────── */

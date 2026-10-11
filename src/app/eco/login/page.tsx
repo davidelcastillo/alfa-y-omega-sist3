@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLoadScript } from "@react-google-maps/api";
 import { parsePlace } from "@/lib/eco/maps";
+import { computeTotals } from "@/lib/eco/cart";
 import { useMemo } from "react";
 
 /* ================== LocalStorage keys ya usados ================== */
@@ -25,14 +26,8 @@ function totalsFromStore() {
     const items = JSON.parse(
       localStorage.getItem(LS_CART) || "[]"
     ) as { price: number; quantity: number }[];
-    const coupon = (localStorage.getItem(LS_COUPON) || "")
-      .trim()
-      .toLowerCase();
-    const subtotal = items.reduce((a, it) => a + it.price * it.quantity, 0);
-    const factor = coupon === "lenguaje" ? 0.8 : 1;
-    const total = subtotal * factor;
-    const discount = subtotal - total;
-    return { subtotal, total, discount, has: items.length > 0 };
+    const coupon = localStorage.getItem(LS_COUPON) || "";
+    return { ...computeTotals(items, coupon), has: items.length > 0 };
   } catch {
     return { subtotal: 0, total: 0, discount: 0, has: false };
   }

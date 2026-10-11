@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 // import { useRouter } from "next/navigation"; // Se elimina la dependencia de Next.js
 import Link from "next/link";
+import { computeTotals, isDiscountCoupon } from "@/lib/eco/cart";
 // ──────────────────────────────────────────────────────────────────────────────
 // Tipos y helpers
 // ──────────────────────────────────────────────────────────────────────────────
@@ -116,7 +117,7 @@ function CartSummary({ subtotal, discount, total, coupon, onChangeCoupon }: {
   coupon: string;
   onChangeCoupon: (v: string) => void;
 }) {
-  const showTag = coupon.trim().toLowerCase() === "sistemas";  //para el descuento
+  const showTag = isDiscountCoupon(coupon);
   return (
     <aside className="sticky top-24">
       <div className="glass rounded-2xl p-5">
@@ -217,11 +218,7 @@ export default function CarritoPage() {
   // Totales y contador
   const { count, subtotal, discount, total } = useMemo(() => {
     const count = items.reduce((a, it) => a + (it.quantity || 0), 0);
-    const subtotal = items.reduce((a, it) => a + it.price * it.quantity, 0);
-    const factor = coupon.trim().toLowerCase() === "sistemas" ? 0.8 : 1;
-    const total = subtotal * factor;
-    const discount = subtotal - total;
-    return { count, subtotal, discount, total };
+    return { count, ...computeTotals(items, coupon) };
   }, [items, coupon]);
 
   // Handlers core
