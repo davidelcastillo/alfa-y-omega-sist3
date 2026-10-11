@@ -9,10 +9,11 @@ import Button from '@/components/ui/Button';
 import { Plus } from 'lucide-react';
 import type { SupplierPayment } from '@/mocks/pagos.mock';
 import { apiListOrdenesPago } from '@/lib/ordenes-pago/api';
+import { mapOrdenPagoToSupplierPayment, type ProveedorOrdenPago } from '@/lib/ordenes-pago/mappers';
 
 type Props = {
   initialData: SupplierPayment[];
-  suppliers: { id: string; name: string }[];
+  proveedores: ProveedorOrdenPago[];
 };
 
 const resetFilters: PagosFiltersState = {
@@ -22,7 +23,7 @@ const resetFilters: PagosFiltersState = {
   proveedorId: 0,
 };
 
-export default function PagosClient({ initialData, suppliers }: Props) {
+export default function PagosClient({ initialData, proveedores }: Props) {
   const [filters, setFilters] = useState<PagosFiltersState>(resetFilters);
   const [data, setData] = useState<SupplierPayment[]>(initialData);
   const [loading, setLoading] = useState(false);
@@ -36,8 +37,8 @@ export default function PagosClient({ initialData, suppliers }: Props) {
 
   // Opciones para el SearchableSelect de proveedores
   const proveedoresOptions = useMemo(
-    () => suppliers.map((s) => ({ id: Number(s.id), nombre: s.name })),
-    [suppliers]
+    () => proveedores.map((p) => ({ id: p.id, nombre: p.nombre })),
+    [proveedores]
   );
 
   // Estado del modal
@@ -70,53 +71,10 @@ export default function PagosClient({ initialData, suppliers }: Props) {
       const response = await apiListOrdenesPago(params);
 
       // Mapear resultados al formato de la tabla
-      const mappedData: SupplierPayment[] = response.items.map((item) => {
-        const supplier = suppliers.find(s => s.id === item.proveedor.id.toString());
-        
-        let status: 'Pendiente de pago' | 'Pagado' | 'Vencido' = 'Pendiente de pago';
-        if (!item.estado) {
-          status = 'Vencido';
-        } else if (item.estado_pago === 'completo') {
-          status = 'Pagado';
-        }
-
-        const fecha = new Date(item.fecha);
-        const registrationDate = fecha.toISOString().replace('T', ' ').substring(0, 19);
-        const dateOnly = fecha.toISOString().split('T')[0];
-
-        return {
-          id: item.id.toString(),
-          paymentId: item.nro_interno || `PAG-${item.id.toString().padStart(3, '0')}`,
-          registrationDate,
-          invoiceCode: item.nro_interno || `OP-${item.id}`,
-          purchaseOrderNumber: `OC-${item.id.toString().padStart(3, '0')}`,
-          paymentDueDate: dateOnly,
-          dueDate: dateOnly,
-          supplier: {
-            id: item.proveedor.id.toString(),
-            name: item.proveedor.nombre,
-            code: supplier?.id || `PROV${item.proveedor.id.toString().padStart(3, '0')}`,
-          },
-          total: item.total_pagado,
-          payment: item.estado_pago === 'completo' ? item.total_pagado : 0,
-          balance: item.saldo_restante_total,
-          comment: `${item.comprobantes_afectados} comprobante(s) afectado(s)`,
-          status,
-          paymentCompleteDate: item.estado_pago === 'completo' ? dateOnly : undefined,
-          paymentMethod: (item.metodo_pago?.nombre as any) || 'Transferencia',
-          voucherType: 'FAC',
-          voucherNumber: item.nro_interno || `OP-${item.id}`,
-          products: [],
-          history: [
-            {
-              date: registrationDate.substring(0, 16),
-              action: 'Orden de pago registrada',
-              user: 'Sistema',
-            },
-          ],
-          partialPayments: [],
-        };
-      });
+      const proveedoresById = new Map(proveedores.map((p) => [p.id, p]));
+      const mappedData = response.items.map((item) =>
+        mapOrdenPagoToSupplierPayment(item, proveedoresById.get(item.proveedor.id))
+      );
 
       setData(mappedData);
       setFilters(filterState);
